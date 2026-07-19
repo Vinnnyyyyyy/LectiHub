@@ -1,13 +1,19 @@
 <template>
   <div class="auth-page">
     <div class="auth-atmosphere" aria-hidden="true" />
-    <form class="auth-panel" @submit.prevent="handleLogin">
+    <form class="auth-panel" @submit.prevent="handleRegister">
       <p class="brand">LectiHub</p>
-      <h1>Welcome back</h1>
-      <p class="lede">Log in with your registered credentials to open your dashboard.</p>
+      <h1>Create your student account</h1>
+      <p class="lede">Sign up to reach your dashboard, schedule lessons, and track your learning.</p>
+
+      <label for="full_name">Full name</label>
+      <input id="full_name" v-model="fullName" type="text" autocomplete="name" placeholder="Alex Rivera" />
 
       <label for="username">Username</label>
       <input id="username" v-model="username" type="text" required autocomplete="username" />
+
+      <label for="email">Email</label>
+      <input id="email" v-model="email" type="email" required autocomplete="email" />
 
       <label for="password">Password</label>
       <input
@@ -15,18 +21,19 @@
         v-model="password"
         type="password"
         required
-        autocomplete="current-password"
+        minlength="6"
+        autocomplete="new-password"
       />
 
       <button type="submit" :disabled="loading">
-        {{ loading ? 'Logging in...' : 'Log in' }}
+        {{ loading ? 'Creating account...' : 'Create account' }}
       </button>
 
       <p v-if="error" class="error" role="alert">{{ error }}</p>
 
       <p class="switch">
-        New student?
-        <RouterLink to="/register">Create an account</RouterLink>
+        Already registered?
+        <RouterLink to="/login">Log in</RouterLink>
       </p>
     </form>
   </div>
@@ -38,7 +45,9 @@ import { RouterLink, useRouter } from 'vue-router'
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
 
+const fullName = ref('')
 const username = ref('')
+const email = ref('')
 const password = ref('')
 const error = ref('')
 const loading = ref(false)
@@ -46,23 +55,22 @@ const loading = ref(false)
 const authStore = useAuthStore()
 const router = useRouter()
 
-function redirectForRole(role: string | null) {
-  if (role === 'admin') return router.push('/admin')
-  if (role === 'teacher') return router.push('/teacher')
-  return router.push('/student')
-}
-
-async function handleLogin() {
+async function handleRegister() {
   error.value = ''
   loading.value = true
   try {
-    await authStore.login(username.value.trim(), password.value)
-    await redirectForRole(authStore.role)
+    await authStore.register({
+      username: username.value.trim(),
+      email: email.value.trim(),
+      password: password.value,
+      full_name: fullName.value.trim() || undefined,
+    })
+    await router.push('/student')
   } catch (err) {
     if (axios.isAxiosError(err)) {
-      error.value = err.response?.data?.message || 'Login failed'
+      error.value = err.response?.data?.message || 'Could not create account'
     } else {
-      error.value = 'Login failed'
+      error.value = 'Could not create account'
     }
   } finally {
     loading.value = false
@@ -75,6 +83,7 @@ async function handleLogin() {
   --ink: #10231f;
   --moss: #1f6b57;
   --moss-deep: #145043;
+  --mist: #e7f1ec;
   --panel: rgba(255, 252, 247, 0.92);
   --line: rgba(16, 35, 31, 0.12);
   --danger: #a33b2b;

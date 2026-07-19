@@ -14,9 +14,8 @@ import { RouterView } from 'vue-router'
 }
 
 body {
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: 'Manrope', sans-serif;
+  color: #10231f;
+  background: #f4f7f5;
 }
 </style>
