@@ -80,14 +80,6 @@ async function handleRegister() {
 
 <style scoped>
 .auth-page {
-  --ink: #10231f;
-  --moss: #1f6b57;
-  --moss-deep: #145043;
-  --mist: #e7f1ec;
-  --panel: rgba(255, 252, 247, 0.92);
-  --line: rgba(16, 35, 31, 0.12);
-  --danger: #a33b2b;
-
   position: relative;
   width: 100%;
   min-height: 100vh;
@@ -95,18 +87,15 @@ async function handleRegister() {
   place-items: center;
   justify-items: center;
   padding: 2rem 1.25rem;
-  color: var(--ink);
+  color: var(--lh-ink);
   overflow: hidden;
 }
 
 .auth-atmosphere {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(ellipse 70% 55% at 12% 18%, rgba(47, 140, 112, 0.28), transparent 60%),
-    radial-gradient(ellipse 55% 45% at 88% 78%, rgba(196, 146, 74, 0.22), transparent 55%),
-    linear-gradient(160deg, #dfece6 0%, #f7f3ea 48%, #d8e4ef 100%);
-  animation: drift 14s ease-in-out infinite alternate;
+  background: var(--lh-atmosphere);
+  animation: drift 16s ease-in-out infinite alternate;
 }
 
 @keyframes drift {
@@ -114,7 +103,7 @@ async function handleRegister() {
     transform: scale(1) translate3d(0, 0, 0);
   }
   to {
-    transform: scale(1.04) translate3d(-1.5%, 1%, 0);
+    transform: scale(1.03) translate3d(-1%, 0.8%, 0);
   }
 }
 
@@ -125,11 +114,11 @@ async function handleRegister() {
   flex-direction: column;
   gap: 0.55rem;
   padding: 2rem 1.75rem 1.75rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
+  background: var(--lh-panel);
+  border: 1px solid var(--lh-line);
   border-radius: 1.25rem;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 24px 60px rgba(16, 35, 31, 0.12);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--lh-shadow);
   animation: rise 0.55s ease both;
 }
 
@@ -149,7 +138,7 @@ async function handleRegister() {
   font-size: 1.65rem;
   font-weight: 600;
   letter-spacing: -0.03em;
-  color: var(--moss-deep);
+  color: var(--lh-accent);
 }
 
 h1 {
@@ -158,13 +147,14 @@ h1 {
   font-weight: 550;
   line-height: 1.2;
   margin-bottom: 0.15rem;
+  color: var(--lh-ink);
 }
 
 .lede {
   font-family: 'Manrope', sans-serif;
   font-size: 0.95rem;
   line-height: 1.45;
-  color: rgba(16, 35, 31, 0.72);
+  color: var(--lh-muted);
   margin-bottom: 0.65rem;
 }
 
@@ -173,25 +163,30 @@ label {
   font-size: 0.82rem;
   font-weight: 600;
   margin-top: 0.25rem;
+  color: var(--lh-muted);
 }
 
 input {
   font-family: 'Manrope', sans-serif;
   font-size: 0.95rem;
   padding: 0.7rem 0.8rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--lh-line-strong);
   border-radius: 0.7rem;
-  background: #fffefb;
-  color: var(--ink);
+  background: var(--lh-input);
+  color: var(--lh-ink);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
 }
 
+input::placeholder {
+  color: var(--lh-faint);
+}
+
 input:focus {
   outline: none;
-  border-color: rgba(31, 107, 87, 0.55);
-  box-shadow: 0 0 0 3px rgba(31, 107, 87, 0.14);
+  border-color: rgba(126, 184, 164, 0.55);
+  box-shadow: 0 0 0 3px rgba(126, 184, 164, 0.12);
 }
 
 button {
@@ -202,8 +197,8 @@ button {
   padding: 0.8rem 1rem;
   border: none;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, var(--moss) 0%, var(--moss-deep) 100%);
-  color: #f7fffb;
+  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
+  color: #0d1512;
   cursor: pointer;
   transition:
     transform 0.18s ease,
@@ -212,17 +207,17 @@ button {
 
 button:hover:not(:disabled) {
   transform: translateY(-1px);
-  filter: brightness(1.05);
+  filter: brightness(1.04);
 }
 
 button:disabled {
-  opacity: 0.7;
+  opacity: 0.65;
   cursor: wait;
 }
 
 .error {
   font-family: 'Manrope', sans-serif;
-  color: var(--danger);
+  color: var(--lh-danger);
   font-size: 0.88rem;
 }
 
@@ -230,11 +225,11 @@ button:disabled {
   font-family: 'Manrope', sans-serif;
   font-size: 0.9rem;
   margin-top: 0.4rem;
-  color: rgba(16, 35, 31, 0.72);
+  color: var(--lh-muted);
 }
 
 .switch a {
-  color: var(--moss-deep);
+  color: var(--lh-accent);
   font-weight: 700;
   text-decoration: none;
 }

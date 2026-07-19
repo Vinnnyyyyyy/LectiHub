@@ -234,17 +234,9 @@ onMounted(async () => {
 
 <style scoped>
 .dashboard {
-  --ink: #10231f;
-  --moss: #1f6b57;
-  --moss-deep: #145043;
-  --panel: rgba(255, 252, 247, 0.92);
-  --line: rgba(16, 35, 31, 0.12);
-  --danger: #a33b2b;
-  --amber: #8a5a12;
-
   position: relative;
   min-height: 100vh;
-  color: var(--ink);
+  color: var(--lh-ink);
   overflow-x: hidden;
 }
 
@@ -252,10 +244,7 @@ onMounted(async () => {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(ellipse 60% 45% at 8% 0%, rgba(47, 140, 112, 0.2), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 100% 18%, rgba(196, 146, 74, 0.14), transparent 50%),
-    linear-gradient(165deg, #e8f1ec 0%, #f8f5ef 55%, #e4ebf3 100%);
+  background: var(--lh-atmosphere);
 }
 
 .topbar {
@@ -271,7 +260,7 @@ onMounted(async () => {
   font-size: 1.45rem;
   font-weight: 600;
   letter-spacing: -0.03em;
-  color: var(--moss-deep);
+  color: var(--lh-accent);
 }
 
 .greeting,
@@ -287,7 +276,7 @@ strong {
 
 .greeting {
   font-size: 0.92rem;
-  color: rgba(16, 35, 31, 0.7);
+  color: var(--lh-muted);
   margin-top: 0.15rem;
 }
 
@@ -295,9 +284,9 @@ strong {
 .text-btn,
 .request-btn,
 .notice-btn {
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--ink);
+  border: 1px solid var(--lh-line);
+  background: var(--lh-panel-solid);
+  color: var(--lh-ink);
   cursor: pointer;
 }
 
@@ -306,6 +295,11 @@ strong {
   font-weight: 700;
   padding: 0.55rem 0.9rem;
   border-radius: 0.65rem;
+}
+
+.logout:hover,
+.text-btn:hover {
+  border-color: var(--lh-line-strong);
 }
 
 .content {
@@ -322,27 +316,28 @@ strong {
 .slot-card h4 {
   font-family: 'Fraunces', Georgia, serif;
   font-weight: 550;
-  color: var(--moss-deep);
+  color: var(--lh-accent);
 }
 
 .intro h1 {
   font-size: clamp(1.7rem, 3vw, 2.2rem);
   letter-spacing: -0.03em;
+  color: var(--lh-ink);
 }
 
 .intro p {
   margin-top: 0.4rem;
   max-width: 40rem;
-  color: rgba(16, 35, 31, 0.72);
+  color: var(--lh-muted);
   line-height: 1.5;
 }
 
 .panel {
   padding: 1.2rem 1.15rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--lh-line);
   border-radius: 1rem;
-  background: var(--panel);
-  backdrop-filter: blur(8px);
+  background: var(--lh-panel);
+  backdrop-filter: blur(10px);
 }
 
 .section-head {
@@ -367,8 +362,8 @@ strong {
   height: 1.35rem;
   padding: 0 0.35rem;
   border-radius: 999px;
-  background: rgba(196, 146, 74, 0.22);
-  color: var(--amber);
+  background: var(--lh-warm-soft);
+  color: var(--lh-warm);
   font-family: 'Manrope', sans-serif;
   font-size: 0.75rem;
   font-weight: 800;
@@ -407,19 +402,19 @@ strong {
 }
 
 .notice-list li.unread .notice-btn {
-  border-color: rgba(31, 107, 87, 0.35);
-  background: rgba(31, 107, 87, 0.08);
+  border-color: rgba(126, 184, 164, 0.35);
+  background: var(--lh-accent-soft);
 }
 
 .notice-btn span,
 .request-btn p {
-  color: rgba(16, 35, 31, 0.72);
+  color: var(--lh-muted);
   font-size: 0.9rem;
 }
 
 .request-btn.active {
-  border-color: rgba(31, 107, 87, 0.45);
-  background: rgba(31, 107, 87, 0.1);
+  border-color: rgba(126, 184, 164, 0.45);
+  background: var(--lh-accent-soft);
 }
 
 .request-top {
@@ -433,14 +428,14 @@ strong {
   text-transform: capitalize;
   font-size: 0.75rem;
   font-weight: 800;
-  color: var(--amber);
-  background: rgba(196, 146, 74, 0.18);
+  color: var(--lh-warm);
+  background: var(--lh-warm-soft);
   padding: 0.15rem 0.4rem;
   border-radius: 0.35rem;
 }
 
 .hint {
-  color: rgba(16, 35, 31, 0.55);
+  color: var(--lh-faint);
   font-size: 0.9rem;
   font-style: italic;
 }
@@ -453,7 +448,7 @@ strong {
 .student-block p,
 .summary p {
   margin-top: 0.25rem;
-  color: rgba(16, 35, 31, 0.72);
+  color: var(--lh-muted);
   font-size: 0.92rem;
 }
 
@@ -461,15 +456,15 @@ strong {
   margin-top: 0.55rem !important;
   padding: 0.65rem 0.75rem;
   border-radius: 0.65rem;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid var(--line);
+  background: rgba(20, 25, 31, 0.72);
+  border: 1px solid var(--lh-line);
 }
 
 .summary {
   padding: 0.8rem 0.85rem;
   border-radius: 0.75rem;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--lh-line);
+  background: rgba(20, 25, 31, 0.65);
 }
 
 .teacher-chips {
@@ -480,8 +475,8 @@ strong {
 .teacher-chips li {
   padding: 0.4rem 0.55rem;
   border-radius: 0.5rem;
-  background: rgba(31, 107, 87, 0.1);
-  color: var(--moss-deep);
+  background: var(--lh-accent-soft);
+  color: var(--lh-accent);
   font-size: 0.85rem;
   font-weight: 700;
   text-align: center;
@@ -490,13 +485,14 @@ strong {
 .slot-card {
   padding: 0.9rem 0.85rem;
   border-radius: 0.8rem;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--lh-line);
+  background: rgba(20, 25, 31, 0.62);
 }
 
 .slot-card h4 {
   font-size: 1.05rem;
   margin-bottom: 0.55rem;
+  color: var(--lh-ink);
 }
 
 .field-label {
@@ -504,10 +500,11 @@ strong {
   margin-bottom: 0.3rem;
   font-size: 0.8rem;
   font-weight: 800;
+  color: var(--lh-muted);
 }
 
 .conflict-label {
-  color: var(--danger);
+  color: var(--lh-danger);
 }
 
 .teacher-list li {
@@ -515,7 +512,7 @@ strong {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.45rem 0;
-  border-bottom: 1px solid rgba(16, 35, 31, 0.08);
+  border-bottom: 1px solid var(--lh-line);
   font-size: 0.9rem;
 }
 
@@ -524,24 +521,24 @@ strong {
 }
 
 .conflicts .conflict {
-  color: var(--danger);
+  color: var(--lh-danger);
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .muted {
-  color: rgba(16, 35, 31, 0.5);
+  color: var(--lh-faint);
   font-weight: 500;
 }
 
 time {
   font-size: 0.78rem;
-  color: rgba(16, 35, 31, 0.55);
+  color: var(--lh-faint);
 }
 
 .error {
   margin-top: 0.75rem;
-  color: var(--danger);
+  color: var(--lh-danger);
   font-size: 0.9rem;
 }
 
