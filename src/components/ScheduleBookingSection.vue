@@ -220,20 +220,13 @@ onMounted(async () => {
 
 <style scoped>
 .booking {
-  --ink: #10231f;
-  --moss: #1f6b57;
-  --moss-deep: #145043;
-  --panel: rgba(255, 252, 247, 0.92);
-  --line: rgba(16, 35, 31, 0.12);
-  --danger: #a33b2b;
-  --ok: #1f6b57;
-
   margin-top: 0.25rem;
   padding: 1.35rem 1.25rem 1.4rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--lh-line);
   border-radius: 1.1rem;
-  background: var(--panel);
-  backdrop-filter: blur(8px);
+  background: var(--lh-panel);
+  backdrop-filter: blur(10px);
+  color: var(--lh-ink);
   animation: fade-up 0.5s ease both;
 }
 
@@ -241,7 +234,7 @@ onMounted(async () => {
   font-family: 'Fraunces', Georgia, serif;
   font-size: 1.35rem;
   font-weight: 550;
-  color: var(--moss-deep);
+  color: var(--lh-accent);
 }
 
 .booking-intro p,
@@ -260,7 +253,7 @@ time {
 
 .booking-intro p {
   margin-top: 0.35rem;
-  color: rgba(16, 35, 31, 0.72);
+  color: var(--lh-muted);
   line-height: 1.45;
   max-width: 42rem;
 }
@@ -283,6 +276,7 @@ label,
   font-size: 0.82rem;
   font-weight: 700;
   margin-bottom: 0.35rem;
+  color: var(--lh-muted);
 }
 
 input[type='date'],
@@ -292,10 +286,11 @@ textarea {
   font: inherit;
   font-size: 0.95rem;
   padding: 0.7rem 0.8rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--lh-line-strong);
   border-radius: 0.7rem;
-  background: #fffefb;
-  color: var(--ink);
+  background: var(--lh-input);
+  color: var(--lh-ink);
+  color-scheme: dark;
 }
 
 textarea {
@@ -304,11 +299,15 @@ textarea {
   min-height: 5.5rem;
 }
 
+textarea::placeholder {
+  color: var(--lh-faint);
+}
+
 input:focus,
 textarea:focus {
   outline: none;
-  border-color: rgba(31, 107, 87, 0.55);
-  box-shadow: 0 0 0 3px rgba(31, 107, 87, 0.14);
+  border-color: rgba(126, 184, 164, 0.55);
+  box-shadow: 0 0 0 3px rgba(126, 184, 164, 0.12);
 }
 
 .slot-grid {
@@ -322,10 +321,10 @@ textarea:focus {
 .add-slot,
 .submit,
 .remove {
-  border: 1px solid var(--line);
+  border: 1px solid var(--lh-line);
   border-radius: 0.65rem;
-  background: #fff;
-  color: var(--ink);
+  background: var(--lh-panel-solid);
+  color: var(--lh-ink);
   cursor: pointer;
   transition:
     transform 0.15s ease,
@@ -340,9 +339,9 @@ textarea:focus {
 }
 
 .slot.active {
-  background: rgba(31, 107, 87, 0.12);
-  border-color: rgba(31, 107, 87, 0.45);
-  color: var(--moss-deep);
+  background: var(--lh-accent-soft);
+  border-color: rgba(126, 184, 164, 0.45);
+  color: var(--lh-accent);
 }
 
 .add-slot,
@@ -361,15 +360,15 @@ textarea:focus {
 
 .add-slot:disabled,
 .submit:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
   transform: none;
 }
 
 .submit {
   border: none;
-  background: linear-gradient(135deg, var(--moss) 0%, var(--moss-deep) 100%);
-  color: #f7fffb;
+  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
+  color: #0d1512;
 }
 
 .preference-list,
@@ -387,9 +386,9 @@ textarea:focus {
   align-items: center;
   gap: 0.75rem;
   padding: 0.7rem 0.8rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--lh-line);
   border-radius: 0.7rem;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(20, 25, 31, 0.72);
 }
 
 .request-list > li {
@@ -404,33 +403,33 @@ textarea:focus {
 }
 
 .hint {
-  color: rgba(16, 35, 31, 0.55);
+  color: var(--lh-faint);
   font-size: 0.9rem;
   font-style: italic;
 }
 
 .success {
-  color: var(--ok);
+  color: var(--lh-accent);
   font-size: 0.9rem;
   font-weight: 600;
 }
 
 .error {
-  color: var(--danger);
+  color: var(--lh-danger);
   font-size: 0.9rem;
 }
 
 .requests {
   margin-top: 1.4rem;
   padding-top: 1.1rem;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--lh-line);
 }
 
 .requests h3 {
   font-family: 'Fraunces', Georgia, serif;
   font-size: 1.15rem;
   font-weight: 550;
-  color: var(--moss-deep);
+  color: var(--lh-accent);
   margin-bottom: 0.65rem;
 }
 
@@ -448,34 +447,35 @@ textarea:focus {
   letter-spacing: 0.02em;
   padding: 0.2rem 0.45rem;
   border-radius: 0.4rem;
-  background: rgba(196, 146, 74, 0.18);
-  color: #8a5a12;
+  background: var(--lh-warm-soft);
+  color: var(--lh-warm);
 }
 
 .status[data-status='approved'] {
-  background: rgba(31, 107, 87, 0.14);
-  color: var(--moss-deep);
+  background: var(--lh-accent-soft);
+  color: var(--lh-accent);
 }
 
 .status[data-status='rejected'] {
-  background: rgba(163, 59, 43, 0.12);
-  color: var(--danger);
+  background: var(--lh-danger-soft);
+  color: var(--lh-danger);
 }
 
 .request-slots {
   margin-top: 0.45rem;
   font-size: 0.9rem;
+  color: var(--lh-muted);
 }
 
 .request-remarks {
   margin-top: 0.35rem;
   font-size: 0.88rem;
-  color: rgba(16, 35, 31, 0.7);
+  color: var(--lh-muted);
 }
 
 time {
   font-size: 0.8rem;
-  color: rgba(16, 35, 31, 0.55);
+  color: var(--lh-faint);
 }
 
 @keyframes fade-up {

@@ -1,0 +1,26 @@
+:root {
+  color-scheme: dark;
+
+  --lh-bg: #101418;
+  --lh-bg-elevated: #171c22;
+  --lh-panel: rgba(28, 34, 42, 0.88);
+  --lh-panel-solid: #1c222a;
+  --lh-ink: #e7ecef;
+  --lh-muted: rgba(231, 236, 239, 0.62);
+  --lh-faint: rgba(231, 236, 239, 0.42);
+  --lh-line: rgba(231, 236, 239, 0.1);
+  --lh-line-strong: rgba(231, 236, 239, 0.16);
+  --lh-accent: #7eb8a4;
+  --lh-accent-deep: #4f8f7b;
+  --lh-accent-soft: rgba(126, 184, 164, 0.14);
+  --lh-warm: #c4a574;
+  --lh-warm-soft: rgba(196, 165, 116, 0.16);
+  --lh-danger: #e08a7a;
+  --lh-danger-soft: rgba(224, 138, 122, 0.14);
+  --lh-input: #14191f;
+  --lh-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+  --lh-atmosphere:
+    radial-gradient(ellipse 65% 50% at 12% 8%, rgba(79, 143, 123, 0.16), transparent 58%),
+    radial-gradient(ellipse 55% 42% at 92% 18%, rgba(196, 165, 116, 0.1), transparent 52%),
+    linear-gradient(165deg, #0e1216 0%, #141a20 48%, #10161c 100%);
+}

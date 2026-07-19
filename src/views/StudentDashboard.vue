@@ -62,15 +62,9 @@ async function handleLogout() {
 
 <style scoped>
 .dashboard {
-  --ink: #10231f;
-  --moss: #1f6b57;
-  --moss-deep: #145043;
-  --panel: rgba(255, 252, 247, 0.9);
-  --line: rgba(16, 35, 31, 0.1);
-
   position: relative;
   min-height: 100vh;
-  color: var(--ink);
+  color: var(--lh-ink);
   overflow-x: hidden;
 }
 
@@ -78,10 +72,7 @@ async function handleLogout() {
   position: fixed;
   inset: 0;
   z-index: -1;
-  background:
-    radial-gradient(ellipse 60% 45% at 8% 0%, rgba(47, 140, 112, 0.22), transparent 55%),
-    radial-gradient(ellipse 50% 40% at 100% 20%, rgba(196, 146, 74, 0.16), transparent 50%),
-    linear-gradient(165deg, #e8f1ec 0%, #f8f5ef 55%, #e4ebf3 100%);
+  background: var(--lh-atmosphere);
 }
 
 .topbar {
@@ -98,13 +89,13 @@ async function handleLogout() {
   font-size: 1.45rem;
   font-weight: 600;
   letter-spacing: -0.03em;
-  color: var(--moss-deep);
+  color: var(--lh-accent);
 }
 
 .greeting {
   font-family: 'Manrope', sans-serif;
   font-size: 0.92rem;
-  color: rgba(16, 35, 31, 0.7);
+  color: var(--lh-muted);
   margin-top: 0.15rem;
 }
 
@@ -114,17 +105,18 @@ async function handleLogout() {
   font-weight: 700;
   padding: 0.55rem 0.9rem;
   border-radius: 0.65rem;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.65);
-  color: var(--ink);
+  border: 1px solid var(--lh-line);
+  background: var(--lh-panel-solid);
+  color: var(--lh-ink);
   cursor: pointer;
   transition:
     background 0.18s ease,
-    transform 0.18s ease;
+    transform 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .logout:hover {
-  background: #fff;
+  border-color: var(--lh-line-strong);
   transform: translateY(-1px);
 }
 
@@ -145,13 +137,14 @@ async function handleLogout() {
   font-size: clamp(1.7rem, 3vw, 2.2rem);
   font-weight: 550;
   letter-spacing: -0.03em;
+  color: var(--lh-ink);
 }
 
 .intro p {
   font-family: 'Manrope', sans-serif;
   margin-top: 0.4rem;
   max-width: 36rem;
-  color: rgba(16, 35, 31, 0.72);
+  color: var(--lh-muted);
   line-height: 1.5;
 }
 
@@ -163,10 +156,10 @@ async function handleLogout() {
 
 .panel {
   padding: 1.25rem 1.2rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--lh-line);
   border-radius: 1rem;
-  background: var(--panel);
-  backdrop-filter: blur(8px);
+  background: var(--lh-panel);
+  backdrop-filter: blur(10px);
   animation: fade-up 0.55s ease both;
   animation-delay: var(--delay);
 }
@@ -175,7 +168,7 @@ async function handleLogout() {
   font-family: 'Fraunces', Georgia, serif;
   font-size: 1.2rem;
   font-weight: 550;
-  color: var(--moss-deep);
+  color: var(--lh-accent);
 }
 
 .panel p {
@@ -183,14 +176,14 @@ async function handleLogout() {
   font-size: 0.92rem;
   line-height: 1.45;
   margin-top: 0.35rem;
-  color: rgba(16, 35, 31, 0.72);
+  color: var(--lh-muted);
 }
 
 .empty {
   margin-top: 1rem !important;
   padding-top: 0.85rem;
-  border-top: 1px solid var(--line);
-  color: rgba(16, 35, 31, 0.55) !important;
+  border-top: 1px solid var(--lh-line);
+  color: var(--lh-faint) !important;
   font-style: italic;
 }
 
