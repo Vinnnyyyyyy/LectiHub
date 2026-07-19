@@ -19,7 +19,24 @@ db.exec(`
     created_by INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id)
-  )
+  );
+
+  CREATE TABLE IF NOT EXISTS schedule_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    remarks TEXT,
+    status TEXT CHECK(status IN ('pending', 'approved', 'rejected')) NOT NULL DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS schedule_request_slots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    request_id INTEGER NOT NULL,
+    preferred_date TEXT NOT NULL,
+    time_slot TEXT NOT NULL,
+    FOREIGN KEY (request_id) REFERENCES schedule_requests(id) ON DELETE CASCADE
+  );
 `);
 
 module.exports = db;
