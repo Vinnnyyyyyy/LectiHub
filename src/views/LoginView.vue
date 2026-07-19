@@ -80,9 +80,11 @@ async function handleLogin() {
   --danger: #a33b2b;
 
   position: relative;
+  width: 100%;
   min-height: 100vh;
   display: grid;
   place-items: center;
+  justify-items: center;
   padding: 2rem 1.25rem;
   color: var(--ink);
   overflow: hidden;
