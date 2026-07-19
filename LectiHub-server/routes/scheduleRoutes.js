@@ -5,9 +5,14 @@ const requireRole = require('../middleware/requireRole');
 const {
   createScheduleRequest,
   listMyScheduleRequests,
+  listScheduleRequestsForAdmin,
+  getScheduleRequestForAdmin,
 } = require('../controllers/scheduleController');
 
 router.post('/', auth, requireRole('student'), createScheduleRequest);
 router.get('/mine', auth, requireRole('student'), listMyScheduleRequests);
+
+router.get('/', auth, requireRole('admin'), listScheduleRequestsForAdmin);
+router.get('/:id', auth, requireRole('admin'), getScheduleRequestForAdmin);
 
 module.exports = router;
