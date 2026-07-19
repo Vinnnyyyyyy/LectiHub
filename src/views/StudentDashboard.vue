@@ -16,13 +16,9 @@
         <p>Your place for scheduling, upcoming classes, notifications, and lesson history.</p>
       </section>
 
-      <div class="panels">
-        <section class="panel" style="--delay: 0ms">
-          <h2>Scheduling</h2>
-          <p>Book and manage lesson times with your teachers.</p>
-          <p class="empty">Scheduling tools will appear here.</p>
-        </section>
+      <ScheduleBookingSection />
 
+      <div class="panels">
         <section class="panel" style="--delay: 80ms">
           <h2>Upcoming classes</h2>
           <p>See what’s next on your learning calendar.</p>
@@ -49,6 +45,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
 
 const authStore = useAuthStore()
 const router = useRouter()
@@ -135,10 +132,11 @@ async function handleLogout() {
   max-width: 68rem;
   margin: 0 auto;
   padding: 1rem 1.5rem 2.5rem;
+  display: grid;
+  gap: 1.1rem;
 }
 
 .intro {
-  margin-bottom: 1.5rem;
   animation: fade-up 0.5s ease both;
 }
 
