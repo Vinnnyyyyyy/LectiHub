@@ -10,6 +10,12 @@ export interface ScheduleSlot {
 export interface ScheduleRequest {
   id: number
   studentId: number
+  student?: {
+    id: number
+    username: string
+    fullName: string
+    email: string
+  }
   remarks: string
   status: 'pending' | 'approved' | 'rejected'
   createdAt: string

@@ -6,7 +6,7 @@ const db = new Database(path.join(__dirname, '../lectihub.db'));
 // Enable foreign key constraints (off by default in SQLite)
 db.pragma('foreign_keys = ON');
 
-// Create users table if it doesn't exist yet
+// Create tables if they don't exist yet
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,6 +36,31 @@ db.exec(`
     preferred_date TEXT NOT NULL,
     time_slot TEXT NOT NULL,
     FOREIGN KEY (request_id) REFERENCES schedule_requests(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS classes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    teacher_id INTEGER NOT NULL,
+    student_id INTEGER,
+    class_date TEXT NOT NULL,
+    time_slot TEXT NOT NULL,
+    title TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (teacher_id) REFERENCES users(id),
+    FOREIGN KEY (student_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT,
+    related_request_id INTEGER,
+    is_read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (related_request_id) REFERENCES schedule_requests(id) ON DELETE SET NULL
   );
 `);
 
