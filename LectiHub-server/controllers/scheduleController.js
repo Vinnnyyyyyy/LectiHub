@@ -2,8 +2,24 @@ const db = require('../config/db');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_SLOT_RE = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
+const SUBJECTS = ['math', 'writing', 'science', 'english', 'history'];
 
-function mapRequest(row, slots, student = null) {
+function mapTeacher(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    username: row.username,
+    fullName: row.full_name || row.username,
+    email: row.email || '',
+    subjectExpertise: row.subject_expertise || '',
+  };
+}
+
+function mapRequest(row, slots, student = null, assignedTeacher = null) {
+  const assignedSlot = row.assigned_slot_id
+    ? slots.find((slot) => slot.id === row.assigned_slot_id)
+    : null;
+
   return {
     id: row.id,
     studentId: row.student_id,
@@ -18,6 +34,17 @@ function mapRequest(row, slots, student = null) {
     remarks: row.remarks || '',
     status: row.status,
     createdAt: row.created_at,
+    assignedTeacherId: row.assigned_teacher_id || null,
+    assignedTeacher: assignedTeacher ? mapTeacher(assignedTeacher) : null,
+    assignedSlotId: row.assigned_slot_id || null,
+    assignedSlot: assignedSlot
+      ? {
+          id: assignedSlot.id,
+          preferredDate: assignedSlot.preferred_date,
+          timeSlot: assignedSlot.time_slot,
+        }
+      : null,
+    assignedAt: row.assigned_at || null,
     slots: slots.map((slot) => ({
       id: slot.id,
       preferredDate: slot.preferred_date,
@@ -43,6 +70,16 @@ function getStudent(studentId) {
     .get(studentId);
 }
 
+function getTeacherById(teacherId) {
+  return db
+    .prepare(
+      `SELECT id, username, full_name, email, subject_expertise
+       FROM users
+       WHERE id = ? AND role = 'teacher'`,
+    )
+    .get(teacherId);
+}
+
 function notifyAdminsAboutRequest(requestId, studentName) {
   const admins = db.prepare(`SELECT id FROM users WHERE role = 'admin'`).all();
   const insert = db.prepare(`
@@ -58,6 +95,13 @@ function notifyAdminsAboutRequest(requestId, studentName) {
   }
 }
 
+function notifyUser(userId, type, title, message, relatedRequestId) {
+  db.prepare(
+    `INSERT INTO notifications (user_id, type, title, message, related_request_id)
+     VALUES (?, ?, ?, ?, ?)`,
+  ).run(userId, type, title, message, relatedRequestId);
+}
+
 function teacherHasConflict(teacherId, preferredDate, timeSlot) {
   return db
     .prepare(
@@ -69,10 +113,16 @@ function teacherHasConflict(teacherId, preferredDate, timeSlot) {
     .get(teacherId, preferredDate, timeSlot);
 }
 
+function getTeacherWorkload(teacherId) {
+  return db
+    .prepare(`SELECT COUNT(*) AS count FROM classes WHERE teacher_id = ?`)
+    .get(teacherId).count;
+}
+
 function getAllTeachers() {
   return db
     .prepare(
-      `SELECT id, username, full_name, email
+      `SELECT id, username, full_name, email, subject_expertise
        FROM users
        WHERE role = 'teacher'
        ORDER BY full_name ASC, username ASC`,
@@ -80,7 +130,90 @@ function getAllTeachers() {
     .all();
 }
 
-function buildAvailability(slots) {
+function detectPreferredSubjects(remarks) {
+  const text = String(remarks || '').toLowerCase();
+  return SUBJECTS.filter((subject) => text.includes(subject));
+}
+
+function buildTeacherCandidates(slots, remarks) {
+  const teachers = getAllTeachers();
+  const preferredSubjects = detectPreferredSubjects(remarks);
+
+  const candidates = teachers.map((teacher) => {
+    const freeSlots = slots.filter(
+      (slot) => !teacherHasConflict(teacher.id, slot.preferred_date, slot.time_slot),
+    );
+    const workload = getTeacherWorkload(teacher.id);
+    const expertise = (teacher.subject_expertise || '').trim();
+    const expertiseLower = expertise.toLowerCase();
+    const preferenceMatch =
+      preferredSubjects.length > 0 &&
+      preferredSubjects.some(
+        (subject) =>
+          expertiseLower.includes(subject) ||
+          String(teacher.full_name || '').toLowerCase().includes(subject) ||
+          String(teacher.username || '').toLowerCase().includes(subject),
+      );
+
+    const nameMentioned =
+      Boolean(remarks) &&
+      String(remarks)
+        .toLowerCase()
+        .includes(String(teacher.full_name || teacher.username).toLowerCase().split(' ')[0]);
+
+    const fullyAvailable = freeSlots.length === slots.length && slots.length > 0;
+    const reasons = [];
+
+    if (fullyAvailable) reasons.push('Free for every preferred slot');
+    else if (freeSlots.length > 0) {
+      reasons.push(`Free for ${freeSlots.length}/${slots.length} preferred slots`);
+    } else {
+      reasons.push('No free preferred slots');
+    }
+
+    if (expertise) reasons.push(`Expertise: ${expertise}`);
+    if (preferenceMatch) reasons.push('Matches student subject preference');
+    if (nameMentioned) reasons.push('Mentioned in student remarks');
+    reasons.push(`Workload: ${workload} class(es)`);
+
+    let score = 0;
+    score += freeSlots.length * 20;
+    if (fullyAvailable) score += 25;
+    if (preferenceMatch) score += 30;
+    if (nameMentioned) score += 15;
+    score += Math.max(0, 20 - workload * 4);
+
+    return {
+      id: teacher.id,
+      username: teacher.username,
+      fullName: teacher.full_name || teacher.username,
+      email: teacher.email || '',
+      subjectExpertise: expertise,
+      workload,
+      availableSlotCount: freeSlots.length,
+      fullyAvailable,
+      preferenceMatch: preferenceMatch || nameMentioned,
+      assignable: freeSlots.length > 0,
+      freeSlots: freeSlots.map((slot) => ({
+        id: slot.id,
+        preferredDate: slot.preferred_date,
+        timeSlot: slot.time_slot,
+      })),
+      matchReasons: reasons,
+      suitabilityScore: score,
+    };
+  });
+
+  candidates.sort((a, b) => {
+    if (a.assignable !== b.assignable) return a.assignable ? -1 : 1;
+    if (b.suitabilityScore !== a.suitabilityScore) return b.suitabilityScore - a.suitabilityScore;
+    return a.workload - b.workload;
+  });
+
+  return { candidates, preferredSubjects };
+}
+
+function buildAvailability(slots, remarks = '') {
   const teachers = getAllTeachers();
   const slotAvailability = slots.map((slot) => {
     const availableTeachers = [];
@@ -93,6 +226,8 @@ function buildAvailability(slots) {
         username: teacher.username,
         fullName: teacher.full_name || teacher.username,
         email: teacher.email || '',
+        subjectExpertise: teacher.subject_expertise || '',
+        workload: getTeacherWorkload(teacher.id),
       };
 
       if (conflict) {
@@ -119,7 +254,6 @@ function buildAvailability(slots) {
     };
   });
 
-  // Teachers free for every preferred slot in this request
   const fullyAvailableTeachers = teachers
     .filter((teacher) =>
       slots.every(
@@ -131,9 +265,19 @@ function buildAvailability(slots) {
       username: teacher.username,
       fullName: teacher.full_name || teacher.username,
       email: teacher.email || '',
+      subjectExpertise: teacher.subject_expertise || '',
+      workload: getTeacherWorkload(teacher.id),
     }));
 
-  return { slotAvailability, fullyAvailableTeachers, teacherCount: teachers.length };
+  const { candidates, preferredSubjects } = buildTeacherCandidates(slots, remarks);
+
+  return {
+    slotAvailability,
+    fullyAvailableTeachers,
+    teacherCount: teachers.length,
+    teacherCandidates: candidates,
+    preferredSubjects,
+  };
 }
 
 async function createScheduleRequest(req, res) {
@@ -214,7 +358,12 @@ async function listMyScheduleRequests(req, res) {
 
     res.json(
       requests.map((request) =>
-        mapRequest(request, getSlotsForRequest(request.id), getStudent(request.student_id)),
+        mapRequest(
+          request,
+          getSlotsForRequest(request.id),
+          getStudent(request.student_id),
+          request.assigned_teacher_id ? getTeacherById(request.assigned_teacher_id) : null,
+        ),
       ),
     );
   } catch (err) {
@@ -232,9 +381,7 @@ async function listScheduleRequestsForAdmin(req, res) {
 
     const requests =
       status === 'all'
-        ? db
-            .prepare(`SELECT * FROM schedule_requests ORDER BY created_at DESC`)
-            .all()
+        ? db.prepare(`SELECT * FROM schedule_requests ORDER BY created_at DESC`).all()
         : db
             .prepare(
               `SELECT * FROM schedule_requests WHERE status = ? ORDER BY created_at DESC`,
@@ -243,7 +390,12 @@ async function listScheduleRequestsForAdmin(req, res) {
 
     res.json(
       requests.map((request) =>
-        mapRequest(request, getSlotsForRequest(request.id), getStudent(request.student_id)),
+        mapRequest(
+          request,
+          getSlotsForRequest(request.id),
+          getStudent(request.student_id),
+          request.assigned_teacher_id ? getTeacherById(request.assigned_teacher_id) : null,
+        ),
       ),
     );
   } catch (err) {
@@ -265,14 +417,132 @@ async function getScheduleRequestForAdmin(req, res) {
 
     const slots = getSlotsForRequest(requestId);
     const student = getStudent(request.student_id);
-    const availability = buildAvailability(slots);
+    const assignedTeacher = request.assigned_teacher_id
+      ? getTeacherById(request.assigned_teacher_id)
+      : null;
+    const availability = buildAvailability(slots, request.remarks);
 
     res.json({
-      request: mapRequest(request, slots, student),
+      request: mapRequest(request, slots, student, assignedTeacher),
       ...availability,
     });
   } catch (err) {
     res.status(500).json({ message: 'Error loading schedule request', error: err.message });
+  }
+}
+
+async function assignTeacherToRequest(req, res) {
+  try {
+    const requestId = Number(req.params.id);
+    const teacherId = Number(req.body?.teacherId);
+    let slotId = req.body?.slotId != null ? Number(req.body.slotId) : null;
+
+    if (!Number.isInteger(requestId) || requestId < 1) {
+      return res.status(400).json({ message: 'Invalid request id' });
+    }
+    if (!Number.isInteger(teacherId) || teacherId < 1) {
+      return res.status(400).json({ message: 'teacherId is required' });
+    }
+
+    const request = db.prepare('SELECT * FROM schedule_requests WHERE id = ?').get(requestId);
+    if (!request) {
+      return res.status(404).json({ message: 'Schedule request not found' });
+    }
+    if (request.status !== 'pending') {
+      return res.status(400).json({ message: 'Only pending requests can be assigned' });
+    }
+
+    const teacher = getTeacherById(teacherId);
+    if (!teacher) {
+      return res.status(400).json({ message: 'Teacher not found' });
+    }
+
+    const slots = getSlotsForRequest(requestId);
+    if (!slots.length) {
+      return res.status(400).json({ message: 'Request has no preferred slots' });
+    }
+
+    let selectedSlot = null;
+    if (slotId != null) {
+      if (!Number.isInteger(slotId) || slotId < 1) {
+        return res.status(400).json({ message: 'Invalid slotId' });
+      }
+      selectedSlot = slots.find((slot) => slot.id === slotId);
+      if (!selectedSlot) {
+        return res.status(400).json({ message: 'Selected slot is not part of this request' });
+      }
+    } else {
+      selectedSlot = slots.find(
+        (slot) => !teacherHasConflict(teacherId, slot.preferred_date, slot.time_slot),
+      );
+      if (!selectedSlot) {
+        return res.status(400).json({
+          message: 'Teacher is unavailable for all preferred slots on this request',
+        });
+      }
+      slotId = selectedSlot.id;
+    }
+
+    if (teacherHasConflict(teacherId, selectedSlot.preferred_date, selectedSlot.time_slot)) {
+      return res.status(409).json({
+        message: 'Teacher has a schedule conflict for the selected slot',
+      });
+    }
+
+    const student = getStudent(request.student_id);
+    const studentName = student?.full_name || student?.username || 'Student';
+    const teacherName = teacher.full_name || teacher.username;
+
+    const assign = db.transaction(() => {
+      db.prepare(
+        `UPDATE schedule_requests
+         SET status = 'approved',
+             assigned_teacher_id = ?,
+             assigned_slot_id = ?,
+             assigned_by = ?,
+             assigned_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND status = 'pending'`,
+      ).run(teacherId, slotId, req.user.id, requestId);
+
+      db.prepare(
+        `INSERT INTO classes (teacher_id, student_id, class_date, time_slot, title, schedule_request_id)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      ).run(
+        teacherId,
+        request.student_id,
+        selectedSlot.preferred_date,
+        selectedSlot.time_slot,
+        `Approved lesson with ${teacherName}`,
+        requestId,
+      );
+
+      notifyUser(
+        request.student_id,
+        'assignment',
+        'Teacher assigned',
+        `${teacherName} was assigned to your scheduling request.`,
+        requestId,
+      );
+      notifyUser(
+        teacherId,
+        'assignment',
+        'New student assignment',
+        `You were assigned to ${studentName} for ${selectedSlot.preferred_date} ${selectedSlot.time_slot}.`,
+        requestId,
+      );
+    });
+
+    assign();
+
+    const updated = db.prepare('SELECT * FROM schedule_requests WHERE id = ?').get(requestId);
+    const updatedSlots = getSlotsForRequest(requestId);
+
+    res.json({
+      message: 'Teacher assigned and request approved',
+      request: mapRequest(updated, updatedSlots, student, teacher),
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Error assigning teacher', error: err.message });
   }
 }
 
@@ -281,4 +551,5 @@ module.exports = {
   listMyScheduleRequests,
   listScheduleRequestsForAdmin,
   getScheduleRequestForAdmin,
+  assignTeacherToRequest,
 };

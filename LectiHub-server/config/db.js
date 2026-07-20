@@ -6,6 +6,13 @@ const db = new Database(path.join(__dirname, '../lectihub.db'));
 // Enable foreign key constraints (off by default in SQLite)
 db.pragma('foreign_keys = ON');
 
+function ensureColumn(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!columns.some((col) => col.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
 // Create tables if they don't exist yet
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -45,9 +52,11 @@ db.exec(`
     class_date TEXT NOT NULL,
     time_slot TEXT NOT NULL,
     title TEXT,
+    schedule_request_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (teacher_id) REFERENCES users(id),
-    FOREIGN KEY (student_id) REFERENCES users(id)
+    FOREIGN KEY (student_id) REFERENCES users(id),
+    FOREIGN KEY (schedule_request_id) REFERENCES schedule_requests(id) ON DELETE SET NULL
   );
 
   CREATE TABLE IF NOT EXISTS notifications (
@@ -63,5 +72,12 @@ db.exec(`
     FOREIGN KEY (related_request_id) REFERENCES schedule_requests(id) ON DELETE SET NULL
   );
 `);
+
+ensureColumn('users', 'subject_expertise', 'TEXT');
+ensureColumn('schedule_requests', 'assigned_teacher_id', 'INTEGER');
+ensureColumn('schedule_requests', 'assigned_slot_id', 'INTEGER');
+ensureColumn('schedule_requests', 'assigned_by', 'INTEGER');
+ensureColumn('schedule_requests', 'assigned_at', 'DATETIME');
+ensureColumn('classes', 'schedule_request_id', 'INTEGER');
 
 module.exports = db;

@@ -81,6 +81,13 @@
               {{ formatDate(slot.preferredDate) }} · {{ formatSlot(slot.timeSlot) }}
             </li>
           </ul>
+          <p v-if="request.assignedTeacher" class="request-remarks">
+            Assigned teacher: {{ request.assignedTeacher.fullName }}
+            <span v-if="request.assignedSlot">
+              · {{ formatDate(request.assignedSlot.preferredDate) }}
+              · {{ formatSlot(request.assignedSlot.timeSlot) }}
+            </span>
+          </p>
           <p v-if="request.remarks" class="request-remarks">{{ request.remarks }}</p>
         </li>
       </ul>

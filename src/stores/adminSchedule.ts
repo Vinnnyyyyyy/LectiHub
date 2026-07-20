@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia'
 import api from '../api/axios'
-import type { ScheduleRequest } from './schedule'
+import type { ScheduleRequest, ScheduleSlot } from './schedule'
 
 export interface TeacherSummary {
   id: number
   username: string
   fullName: string
   email: string
+  subjectExpertise?: string
+  workload?: number
 }
 
 export interface UnavailableTeacher extends TeacherSummary {
@@ -26,11 +28,25 @@ export interface SlotAvailability {
   unavailableTeachers: UnavailableTeacher[]
 }
 
+export interface TeacherCandidate extends TeacherSummary {
+  subjectExpertise: string
+  workload: number
+  availableSlotCount: number
+  fullyAvailable: boolean
+  preferenceMatch: boolean
+  assignable: boolean
+  freeSlots: ScheduleSlot[]
+  matchReasons: string[]
+  suitabilityScore: number
+}
+
 export interface ScheduleRequestReview {
   request: ScheduleRequest
   slotAvailability: SlotAvailability[]
   fullyAvailableTeachers: TeacherSummary[]
   teacherCount: number
+  teacherCandidates: TeacherCandidate[]
+  preferredSubjects: string[]
 }
 
 export interface AdminNotification {
@@ -51,6 +67,7 @@ interface AdminScheduleState {
   loadingRequests: boolean
   loadingReview: boolean
   loadingNotifications: boolean
+  assigning: boolean
   error: string | null
 }
 
@@ -63,6 +80,7 @@ export const useAdminScheduleStore = defineStore('adminSchedule', {
     loadingRequests: false,
     loadingReview: false,
     loadingNotifications: false,
+    assigning: false,
     error: null,
   }),
 
@@ -95,6 +113,25 @@ export const useAdminScheduleStore = defineStore('adminSchedule', {
         throw err
       } finally {
         this.loadingReview = false
+      }
+    },
+
+    async assignTeacher(requestId: number, teacherId: number, slotId?: number) {
+      this.assigning = true
+      this.error = null
+      try {
+        const res = await api.post<{ message: string; request: ScheduleRequest }>(
+          `/schedule-requests/${requestId}/assign`,
+          { teacherId, slotId },
+        )
+        this.requests = this.requests.filter((item) => item.id !== requestId)
+        await this.fetchRequestReview(requestId)
+        return res.data
+      } catch (err) {
+        this.error = 'Could not assign teacher'
+        throw err
+      } finally {
+        this.assigning = false
       }
     },
 

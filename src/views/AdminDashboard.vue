@@ -14,8 +14,8 @@
       <section class="intro">
         <h1>Admin Dashboard</h1>
         <p>
-          Review student scheduling requests, see preferred times, and identify teachers who are
-          free during those slots.
+          Review preferred schedules, compare teacher availability/workload/expertise, then assign
+          the best fit to approve the request.
         </p>
       </section>
 
@@ -96,6 +96,80 @@
               <p v-if="selected.request.remarks" class="remarks">
                 Remarks: {{ selected.request.remarks }}
               </p>
+              <p
+                v-if="selected.preferredSubjects.length"
+                class="preference-note"
+              >
+                Detected preference:
+                {{ selected.preferredSubjects.join(', ') }}
+              </p>
+            </div>
+
+            <div
+              v-if="selected.request.status === 'approved' && selected.request.assignedTeacher"
+              class="assigned-banner"
+            >
+              <strong>Approved</strong>
+              <p>
+                {{ selected.request.assignedTeacher.fullName }} assigned for
+                {{
+                  selected.request.assignedSlot
+                    ? `${formatDate(selected.request.assignedSlot.preferredDate)} · ${formatSlot(selected.request.assignedSlot.timeSlot)}`
+                    : 'selected slot'
+                }}
+              </p>
+            </div>
+
+            <div v-if="selected.request.status === 'pending'" class="assignment">
+              <div class="section-head">
+                <h3>Assign teacher</h3>
+              </div>
+              <p class="hint assign-hint">
+                Ranked by availability, workload, subject expertise, and student preference.
+              </p>
+
+              <label for="assign-slot">Class slot to book</label>
+              <select id="assign-slot" v-model="selectedSlotId">
+                <option
+                  v-for="slot in selected.request.slots"
+                  :key="slot.id"
+                  :value="slot.id"
+                >
+                  {{ formatDate(slot.preferredDate) }} · {{ formatSlot(slot.timeSlot) }}
+                </option>
+              </select>
+
+              <ul class="candidate-list">
+                <li
+                  v-for="teacher in selected.teacherCandidates"
+                  :key="teacher.id"
+                  :class="{ disabled: !isTeacherFreeForSelectedSlot(teacher) }"
+                >
+                  <div class="candidate-top">
+                    <div>
+                      <strong>{{ teacher.fullName }}</strong>
+                      <p class="muted">
+                        {{ teacher.subjectExpertise || 'General' }}
+                        · workload {{ teacher.workload }}
+                        · score {{ teacher.suitabilityScore }}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      class="assign-btn"
+                      :disabled="assigning || !isTeacherFreeForSelectedSlot(teacher)"
+                      @click="assign(teacher.id)"
+                    >
+                      {{ assigning ? 'Assigning...' : 'Assign' }}
+                    </button>
+                  </div>
+                  <ul class="reason-list">
+                    <li v-for="reason in teacher.matchReasons" :key="`${teacher.id}-${reason}`">
+                      {{ reason }}
+                    </li>
+                  </ul>
+                </li>
+              </ul>
             </div>
 
             <div class="summary">
@@ -122,8 +196,13 @@
               <p class="field-label">Available teachers</p>
               <ul v-if="slot.availableTeachers.length" class="teacher-list">
                 <li v-for="teacher in slot.availableTeachers" :key="teacher.id">
-                  {{ teacher.fullName }}
-                  <span class="muted">@{{ teacher.username }}</span>
+                  <span>
+                    {{ teacher.fullName }}
+                    <span class="muted">
+                      · {{ teacher.subjectExpertise || 'General' }}
+                      · load {{ teacher.workload ?? 0 }}
+                    </span>
+                  </span>
                 </li>
               </ul>
               <p v-else class="hint">No teachers available for this slot.</p>
@@ -144,7 +223,10 @@
             </div>
           </div>
 
-          <p v-if="error" class="error" role="alert">{{ error }}</p>
+          <p v-if="successMessage" class="success" role="status">{{ successMessage }}</p>
+          <p v-if="errorMessage || error" class="error" role="alert">
+            {{ errorMessage || error }}
+          </p>
         </section>
       </div>
     </main>
@@ -152,13 +234,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
 import {
   useAdminScheduleStore,
   type AdminNotification,
+  type TeacherCandidate,
 } from '../stores/adminSchedule'
 
 const authStore = useAuthStore()
@@ -173,8 +257,22 @@ const {
   loadingRequests,
   loadingReview,
   loadingNotifications,
+  assigning,
   error,
 } = storeToRefs(adminStore)
+
+const selectedSlotId = ref<number | null>(null)
+const successMessage = ref('')
+const errorMessage = ref('')
+
+watch(
+  () => selected.value?.request.id,
+  () => {
+    successMessage.value = ''
+    errorMessage.value = ''
+    selectedSlotId.value = selected.value?.request.slots[0]?.id ?? null
+  },
+)
 
 function formatSlot(slot: string) {
   return slot.replace('-', ' – ')
@@ -201,7 +299,14 @@ function formatDateTime(value: string) {
   })
 }
 
+function isTeacherFreeForSelectedSlot(teacher: TeacherCandidate) {
+  if (!selectedSlotId.value) return false
+  return teacher.freeSlots.some((slot) => slot.id === selectedSlotId.value)
+}
+
 async function openRequest(id: number) {
+  successMessage.value = ''
+  errorMessage.value = ''
   await adminStore.fetchRequestReview(id)
 }
 
@@ -220,6 +325,28 @@ async function openFromNotification(item: AdminNotification) {
 
 async function markAllRead() {
   await adminStore.markAllNotificationsRead()
+}
+
+async function assign(teacherId: number) {
+  if (!selected.value || !selectedSlotId.value) return
+  successMessage.value = ''
+  errorMessage.value = ''
+  try {
+    const result = await adminStore.assignTeacher(
+      selected.value.request.id,
+      teacherId,
+      selectedSlotId.value,
+    )
+    successMessage.value =
+      result.message ||
+      `Assigned ${result.request.assignedTeacher?.fullName || 'teacher'} and approved the request.`
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      errorMessage.value = err.response?.data?.message || 'Could not assign teacher'
+    } else {
+      errorMessage.value = 'Could not assign teacher'
+    }
+  }
 }
 
 async function handleLogout() {
@@ -452,12 +579,130 @@ strong {
   font-size: 0.92rem;
 }
 
-.remarks {
-  margin-top: 0.55rem !important;
+.remarks,
+.preference-note,
+.assigned-banner,
+.assignment {
+  margin-top: 0.55rem;
   padding: 0.65rem 0.75rem;
   border-radius: 0.65rem;
   background: rgba(20, 25, 31, 0.72);
   border: 1px solid var(--lh-line);
+}
+
+.preference-note {
+  color: var(--lh-warm);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.assigned-banner {
+  border-color: rgba(126, 184, 164, 0.35);
+  background: var(--lh-accent-soft);
+}
+
+.assigned-banner p {
+  margin-top: 0.25rem;
+  color: var(--lh-muted);
+}
+
+.assignment {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.assignment .section-head {
+  margin-bottom: 0;
+}
+
+.assignment h3 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.1rem;
+  color: var(--lh-accent);
+}
+
+.assign-hint {
+  margin: 0;
+}
+
+.assignment label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--lh-muted);
+}
+
+.assignment select {
+  width: 100%;
+  max-width: 24rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--lh-line-strong);
+  background: var(--lh-input);
+  color: var(--lh-ink);
+  color-scheme: dark;
+}
+
+.candidate-list,
+.reason-list {
+  list-style: none;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.candidate-list > li {
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.7rem;
+  background: rgba(16, 20, 26, 0.55);
+}
+
+.candidate-list > li.disabled {
+  opacity: 0.55;
+}
+
+.candidate-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.assign-btn {
+  border: none;
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
+  color: #0d1512;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.assign-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reason-list {
+  margin-top: 0.45rem;
+  gap: 0.2rem;
+}
+
+.reason-list li {
+  font-size: 0.82rem;
+  color: var(--lh-muted);
+}
+
+.reason-list li::before {
+  content: '· ';
+  color: var(--lh-accent);
+}
+
+.success {
+  margin-top: 0.75rem;
+  color: var(--lh-accent);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .summary {
