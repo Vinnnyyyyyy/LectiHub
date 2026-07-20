@@ -120,6 +120,38 @@
               </p>
             </div>
 
+            <div v-if="selected.confirmedSchedule" class="confirmed-schedule">
+              <h3>Confirmed class schedule</h3>
+              <p><strong>{{ selected.confirmedSchedule.title }}</strong></p>
+              <p>
+                {{ formatDate(selected.confirmedSchedule.classDate) }}
+                ·
+                {{
+                  formatTimeRange(
+                    selected.confirmedSchedule.startTime,
+                    selected.confirmedSchedule.endTime,
+                    selected.confirmedSchedule.timeSlot,
+                  )
+                }}
+                · {{ selected.confirmedSchedule.durationMinutes }} minutes
+              </p>
+              <p v-if="selected.confirmedSchedule.subject">
+                Subject: {{ selected.confirmedSchedule.subject }}
+              </p>
+              <p v-if="selected.confirmedSchedule.meetingInfo">
+                {{ selected.confirmedSchedule.meetingInfo }}
+              </p>
+              <a
+                v-if="selected.confirmedSchedule.meetingLink"
+                class="meet-link"
+                :href="selected.confirmedSchedule.meetingLink"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open meeting link
+              </a>
+            </div>
+
             <div v-if="selected.request.status === 'pending'" class="assignment">
               <div class="section-head">
                 <h3>Assign teacher</h3>
@@ -297,6 +329,15 @@ function formatDateTime(value: string) {
     hour: 'numeric',
     minute: '2-digit',
   })
+}
+
+function formatTimeRange(
+  startTime: string | null,
+  endTime: string | null,
+  timeSlot: string,
+) {
+  if (startTime && endTime) return `${startTime} – ${endTime}`
+  return formatSlot(timeSlot)
 }
 
 function isTeacherFreeForSelectedSlot(teacher: TeacherCandidate) {
@@ -596,14 +637,39 @@ strong {
   font-weight: 600;
 }
 
-.assigned-banner {
+.assigned-banner,
+.confirmed-schedule {
   border-color: rgba(126, 184, 164, 0.35);
   background: var(--lh-accent-soft);
 }
 
-.assigned-banner p {
+.assigned-banner p,
+.confirmed-schedule p {
   margin-top: 0.25rem;
   color: var(--lh-muted);
+}
+
+.confirmed-schedule {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.confirmed-schedule h3 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.05rem;
+  color: var(--lh-accent);
+}
+
+.meet-link {
+  margin-top: 0.35rem;
+  color: var(--lh-accent);
+  font-weight: 700;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.meet-link:hover {
+  text-decoration: underline;
 }
 
 .assignment {

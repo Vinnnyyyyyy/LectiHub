@@ -1,13 +1,72 @@
 <template>
   <div class="dashboard">
     <div class="atmosphere" aria-hidden="true" />
+
+    <header class="topbar">
+      <div>
+        <p class="brand">LectiHub</p>
+        <p class="greeting">Welcome, {{ displayName }}</p>
+      </div>
+      <button type="button" class="logout" @click="handleLogout">Log out</button>
+    </header>
+
     <main class="content">
-      <p class="brand">LectiHub</p>
-      <h1>Teacher Dashboard</h1>
-      <p>Your teaching workspace will appear here.</p>
+      <section class="intro">
+        <h1>Teacher Dashboard</h1>
+        <p>Your confirmed class schedules with students, times, and meeting details.</p>
+      </section>
+
+      <UpcomingClassesPanel
+        title="Upcoming classes"
+        subtitle="Schedules created after admin approval and teacher assignment."
+        empty-text="No upcoming classes assigned yet."
+        :items="upcoming"
+        :loading="loading"
+        show-student
+      />
+
+      <UpcomingClassesPanel
+        title="Past classes"
+        subtitle="Earlier confirmed lessons."
+        empty-text="No past classes yet."
+        :items="past"
+        :loading="loading"
+        show-student
+      />
     </main>
   </div>
 </template>
+
+<script setup lang="ts">
+import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import { useClassesStore } from '../stores/classes'
+import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
+
+const authStore = useAuthStore()
+const classesStore = useClassesStore()
+const router = useRouter()
+
+const { loading } = storeToRefs(classesStore)
+const upcoming = computed(() => classesStore.upcoming)
+const past = computed(() => classesStore.past)
+const displayName = computed(() => authStore.fullName || authStore.username || 'teacher')
+
+async function handleLogout() {
+  authStore.logout()
+  await router.push('/login')
+}
+
+onMounted(async () => {
+  try {
+    await classesStore.fetchMine()
+  } catch {
+    // keep empty state
+  }
+})
+</script>
 
 <style scoped>
 .dashboard {
@@ -23,29 +82,61 @@
   background: var(--lh-atmosphere);
 }
 
-.content {
-  max-width: 40rem;
-  margin: 0 auto;
-  padding: 2.5rem 1.5rem;
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.4rem 1.5rem 0.5rem;
 }
 
 .brand {
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.4rem;
+  font-size: 1.45rem;
   font-weight: 600;
   color: var(--lh-accent);
 }
 
-h1 {
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 2rem;
-  font-weight: 550;
-  margin-top: 0.75rem;
+.greeting,
+.logout,
+.intro p {
+  font-family: 'Manrope', sans-serif;
 }
 
-p {
-  font-family: 'Manrope', sans-serif;
+.greeting {
+  font-size: 0.92rem;
+  color: var(--lh-muted);
+  margin-top: 0.15rem;
+}
+
+.logout {
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 0.55rem 0.9rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--lh-line);
+  background: var(--lh-panel-solid);
+  color: var(--lh-ink);
+  cursor: pointer;
+}
+
+.content {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 2.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.intro h1 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: clamp(1.7rem, 3vw, 2.2rem);
+  font-weight: 550;
+}
+
+.intro p {
   margin-top: 0.4rem;
   color: var(--lh-muted);
+  max-width: 36rem;
 }
 </style>

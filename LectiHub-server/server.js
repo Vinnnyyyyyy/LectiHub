@@ -6,6 +6,7 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const classRoutes = require('./routes/classRoutes');
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/schedule-requests', scheduleRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/classes', classRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

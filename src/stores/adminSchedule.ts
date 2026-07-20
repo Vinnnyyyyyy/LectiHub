@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import api from '../api/axios'
 import type { ScheduleRequest, ScheduleSlot } from './schedule'
+import type { ConfirmedSchedule } from './classes'
 
 export interface TeacherSummary {
   id: number
@@ -42,6 +43,7 @@ export interface TeacherCandidate extends TeacherSummary {
 
 export interface ScheduleRequestReview {
   request: ScheduleRequest
+  confirmedSchedule: ConfirmedSchedule | null
   slotAvailability: SlotAvailability[]
   fullyAvailableTeachers: TeacherSummary[]
   teacherCount: number
@@ -120,10 +122,11 @@ export const useAdminScheduleStore = defineStore('adminSchedule', {
       this.assigning = true
       this.error = null
       try {
-        const res = await api.post<{ message: string; request: ScheduleRequest }>(
-          `/schedule-requests/${requestId}/assign`,
-          { teacherId, slotId },
-        )
+        const res = await api.post<{
+          message: string
+          request: ScheduleRequest
+          confirmedSchedule: ConfirmedSchedule
+        }>(`/schedule-requests/${requestId}/assign`, { teacherId, slotId })
         this.requests = this.requests.filter((item) => item.id !== requestId)
         await this.fetchRequestReview(requestId)
         return res.data
