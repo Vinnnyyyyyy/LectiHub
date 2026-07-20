@@ -50,7 +50,7 @@
 
         <UpcomingClassesPanel
           title="Lesson history"
-          subtitle="Past confirmed lessons from your schedule."
+          subtitle="Past lessons with attendance notes and recordings when available."
           empty-text="No lessons recorded yet."
           :items="past"
           :loading="loadingClasses"

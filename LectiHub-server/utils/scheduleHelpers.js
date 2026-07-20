@@ -127,9 +127,55 @@ function getJoinAvailability(classRow, now = new Date()) {
   };
 }
 
+const ATTENDANCE_STATUSES = new Set([
+  'not_recorded',
+  'present',
+  'late',
+  'absent',
+  'excused',
+]);
+
+const PARTICIPATION_LEVELS = new Set([
+  'not_recorded',
+  'low',
+  'medium',
+  'high',
+]);
+
+function normalizeAttendanceStatus(value) {
+  const status = String(value || 'not_recorded').toLowerCase().trim();
+  return ATTENDANCE_STATUSES.has(status) ? status : 'not_recorded';
+}
+
+function normalizeParticipationLevel(value) {
+  const level = String(value || 'not_recorded').toLowerCase().trim();
+  return PARTICIPATION_LEVELS.has(level) ? level : 'not_recorded';
+}
+
+function labelFromSnake(value) {
+  return String(value || '')
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function isValidHttpUrl(value) {
+  if (!value) return true;
+  try {
+    const url = new URL(String(value));
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function mapClassRow(row, teacher = null, student = null) {
   const status = normalizeClassStatus(row.status);
   const join = getJoinAvailability(row);
+  const attendanceStatus = normalizeAttendanceStatus(row.attendance_status);
+  const participationLevel = normalizeParticipationLevel(row.participation_level);
+  const recordingUrl = String(row.recording_url || '').trim();
 
   return {
     id: row.id,
@@ -157,6 +203,16 @@ function mapClassRow(row, teacher = null, student = null) {
     joinReason: join.reason,
     withinJoinWindow: join.withinWindow,
     startedAt: row.started_at || null,
+    curriculumPlan: row.curriculum_plan || '',
+    attendanceStatus,
+    attendanceStatusLabel: labelFromSnake(attendanceStatus),
+    attendanceRecordedAt: row.attendance_recorded_at || null,
+    participationLevel,
+    participationLevelLabel: labelFromSnake(participationLevel),
+    participationNotes: row.participation_notes || '',
+    recordingUrl,
+    hasRecording: Boolean(recordingUrl),
+    completedAt: row.completed_at || null,
     createdAt: row.created_at,
     teacher: teacher
       ? {
@@ -190,4 +246,9 @@ module.exports = {
   getJoinAvailability,
   getMeetingProvider,
   canJoin,
+  normalizeAttendanceStatus,
+  normalizeParticipationLevel,
+  isValidHttpUrl,
+  ATTENDANCE_STATUSES,
+  PARTICIPATION_LEVELS,
 };

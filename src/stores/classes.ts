@@ -22,6 +22,16 @@ export interface ConfirmedSchedule {
   joinReason?: string
   withinJoinWindow?: boolean
   startedAt?: string | null
+  curriculumPlan?: string
+  attendanceStatus?: string
+  attendanceStatusLabel?: string
+  attendanceRecordedAt?: string | null
+  participationLevel?: string
+  participationLevelLabel?: string
+  participationNotes?: string
+  recordingUrl?: string
+  hasRecording?: boolean
+  completedAt?: string | null
   createdAt: string
   teacher: {
     id: number
@@ -38,6 +48,14 @@ export interface ConfirmedSchedule {
   } | null
 }
 
+export interface LessonConductPayload {
+  curriculumPlan?: string
+  attendanceStatus?: string
+  participationLevel?: string
+  participationNotes?: string
+  recordingUrl?: string
+}
+
 interface JoinClassResponse {
   message: string
   class: ConfirmedSchedule
@@ -48,12 +66,19 @@ interface JoinClassResponse {
   }
 }
 
+interface ConductResponse {
+  message: string
+  class: ConfirmedSchedule
+}
+
 interface ClassesState {
   schedules: ConfirmedSchedule[]
   loading: boolean
   joiningId: number | null
+  savingId: number | null
   error: string | null
   joinMessage: string | null
+  conductMessage: string | null
 }
 
 export const useClassesStore = defineStore('classes', {
@@ -61,8 +86,10 @@ export const useClassesStore = defineStore('classes', {
     schedules: [],
     loading: false,
     joiningId: null,
+    savingId: null,
     error: null,
     joinMessage: null,
+    conductMessage: null,
   }),
 
   getters: {
@@ -82,9 +109,21 @@ export const useClassesStore = defineStore('classes', {
           (item.status !== 'in_progress' && item.classDate < today),
       )
     },
+    inProgress(state): ConfirmedSchedule[] {
+      return state.schedules.filter((item) => item.status === 'in_progress')
+    },
   },
 
   actions: {
+    upsertSchedule(updated: ConfirmedSchedule) {
+      const index = this.schedules.findIndex((item) => item.id === updated.id)
+      if (index >= 0) {
+        this.schedules[index] = updated
+      } else {
+        this.schedules.push(updated)
+      }
+    },
+
     async fetchMine() {
       this.loading = true
       this.error = null
@@ -105,15 +144,9 @@ export const useClassesStore = defineStore('classes', {
       this.joinMessage = null
       try {
         const res = await api.post<JoinClassResponse>(`/classes/${classId}/join`)
-        const updated = res.data.class
-        const index = this.schedules.findIndex((item) => item.id === updated.id)
-        if (index >= 0) {
-          this.schedules[index] = updated
-        } else {
-          this.schedules.push(updated)
-        }
+        this.upsertSchedule(res.data.class)
         this.joinMessage = res.data.message
-        const link = res.data.meeting?.link || updated.meetingLink
+        const link = res.data.meeting?.link || res.data.class.meetingLink
         if (link && typeof window !== 'undefined') {
           window.open(link, '_blank', 'noopener,noreferrer')
         }
@@ -126,6 +159,46 @@ export const useClassesStore = defineStore('classes', {
         throw err
       } finally {
         this.joiningId = null
+      }
+    },
+
+    async saveConduct(classId: number, payload: LessonConductPayload) {
+      this.savingId = classId
+      this.error = null
+      this.conductMessage = null
+      try {
+        const res = await api.patch<ConductResponse>(`/classes/${classId}/conduct`, payload)
+        this.upsertSchedule(res.data.class)
+        this.conductMessage = res.data.message
+        return res.data
+      } catch (err: unknown) {
+        const message =
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          'Could not save lesson details'
+        this.error = message
+        throw err
+      } finally {
+        this.savingId = null
+      }
+    },
+
+    async completeClass(classId: number, payload: LessonConductPayload = {}) {
+      this.savingId = classId
+      this.error = null
+      this.conductMessage = null
+      try {
+        const res = await api.post<ConductResponse>(`/classes/${classId}/complete`, payload)
+        this.upsertSchedule(res.data.class)
+        this.conductMessage = res.data.message
+        return res.data
+      } catch (err: unknown) {
+        const message =
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          'Could not complete the lesson'
+        this.error = message
+        throw err
+      } finally {
+        this.savingId = null
       }
     },
   },
