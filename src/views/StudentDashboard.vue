@@ -19,11 +19,14 @@
       <ScheduleBookingSection />
 
       <div class="panels">
-        <section class="panel" style="--delay: 80ms">
-          <h2>Upcoming classes</h2>
-          <p>See what’s next on your learning calendar.</p>
-          <p class="empty">No upcoming classes yet.</p>
-        </section>
+        <UpcomingClassesPanel
+          title="Upcoming classes"
+          subtitle="Confirmed schedules after admin approval."
+          empty-text="No upcoming classes yet."
+          :items="upcoming"
+          :loading="loadingClasses"
+          show-teacher
+        />
 
         <section class="panel" style="--delay: 160ms">
           <h2>Notifications</h2>
@@ -31,24 +34,35 @@
           <p class="empty">You’re all caught up.</p>
         </section>
 
-        <section class="panel" style="--delay: 240ms">
-          <h2>Lesson history</h2>
-          <p>Review past sessions and what you covered.</p>
-          <p class="empty">No lessons recorded yet.</p>
-        </section>
+        <UpcomingClassesPanel
+          title="Lesson history"
+          subtitle="Past confirmed lessons from your schedule."
+          empty-text="No lessons recorded yet."
+          :items="past"
+          :loading="loadingClasses"
+          show-teacher
+        />
       </div>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useClassesStore } from '../stores/classes'
 import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
+import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 
 const authStore = useAuthStore()
+const classesStore = useClassesStore()
 const router = useRouter()
+
+const { loading: loadingClasses } = storeToRefs(classesStore)
+const upcoming = computed(() => classesStore.upcoming)
+const past = computed(() => classesStore.past)
 
 const displayName = computed(
   () => authStore.fullName || authStore.username || 'student',
@@ -58,6 +72,14 @@ async function handleLogout() {
   authStore.logout()
   await router.push('/login')
 }
+
+onMounted(async () => {
+  try {
+    await classesStore.fetchMine()
+  } catch {
+    // store keeps the error state
+  }
+})
 </script>
 
 <style scoped>

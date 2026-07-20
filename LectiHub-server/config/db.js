@@ -79,5 +79,12 @@ ensureColumn('schedule_requests', 'assigned_slot_id', 'INTEGER');
 ensureColumn('schedule_requests', 'assigned_by', 'INTEGER');
 ensureColumn('schedule_requests', 'assigned_at', 'DATETIME');
 ensureColumn('classes', 'schedule_request_id', 'INTEGER');
+ensureColumn('classes', 'start_time', 'TEXT');
+ensureColumn('classes', 'end_time', 'TEXT');
+ensureColumn('classes', 'duration_minutes', 'INTEGER');
+ensureColumn('classes', 'meeting_info', 'TEXT');
+ensureColumn('classes', 'meeting_link', 'TEXT');
+ensureColumn('classes', 'status', "TEXT DEFAULT 'confirmed'");
+ensureColumn('classes', 'subject', 'TEXT');
 
 module.exports = db;

@@ -1,8 +1,27 @@
 const db = require('../config/db');
+const {
+  parseTimeSlot,
+  buildMeetingDetails,
+  mapClassRow,
+} = require('../utils/scheduleHelpers');
+const { hydrateClass } = require('./classController');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_SLOT_RE = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
 const SUBJECTS = ['math', 'writing', 'science', 'english', 'history'];
+
+function getConfirmedScheduleForRequest(requestId) {
+  const row = db
+    .prepare(
+      `SELECT *
+       FROM classes
+       WHERE schedule_request_id = ?
+       ORDER BY id DESC
+       LIMIT 1`,
+    )
+    .get(requestId);
+  return row ? hydrateClass(row) : null;
+}
 
 function mapTeacher(row) {
   if (!row) return null;
@@ -421,9 +440,11 @@ async function getScheduleRequestForAdmin(req, res) {
       ? getTeacherById(request.assigned_teacher_id)
       : null;
     const availability = buildAvailability(slots, request.remarks);
+    const confirmedSchedule = getConfirmedScheduleForRequest(requestId);
 
     res.json({
       request: mapRequest(request, slots, student, assignedTeacher),
+      confirmedSchedule,
       ...availability,
     });
   } catch (err) {
@@ -492,6 +513,16 @@ async function assignTeacherToRequest(req, res) {
     const student = getStudent(request.student_id);
     const studentName = student?.full_name || student?.username || 'Student';
     const teacherName = teacher.full_name || teacher.username;
+    const { startTime, endTime, durationMinutes } = parseTimeSlot(selectedSlot.time_slot);
+    const { meetingInfo, meetingLink } = buildMeetingDetails(
+      requestId,
+      selectedSlot.preferred_date,
+      startTime,
+    );
+    const subject = teacher.subject_expertise || 'General';
+    const title = `${subject} lesson · ${studentName} with ${teacherName}`;
+
+    let createdClassId = null;
 
     const assign = db.transaction(() => {
       db.prepare(
@@ -504,30 +535,43 @@ async function assignTeacherToRequest(req, res) {
          WHERE id = ? AND status = 'pending'`,
       ).run(teacherId, slotId, req.user.id, requestId);
 
-      db.prepare(
-        `INSERT INTO classes (teacher_id, student_id, class_date, time_slot, title, schedule_request_id)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      ).run(
-        teacherId,
-        request.student_id,
-        selectedSlot.preferred_date,
-        selectedSlot.time_slot,
-        `Approved lesson with ${teacherName}`,
-        requestId,
-      );
+      const classResult = db
+        .prepare(
+          `INSERT INTO classes (
+             teacher_id, student_id, class_date, time_slot, title, schedule_request_id,
+             start_time, end_time, duration_minutes, meeting_info, meeting_link, status, subject
+           )
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)`,
+        )
+        .run(
+          teacherId,
+          request.student_id,
+          selectedSlot.preferred_date,
+          selectedSlot.time_slot,
+          title,
+          requestId,
+          startTime,
+          endTime,
+          durationMinutes,
+          meetingInfo,
+          meetingLink,
+          subject,
+        );
+
+      createdClassId = classResult.lastInsertRowid;
 
       notifyUser(
         request.student_id,
-        'assignment',
-        'Teacher assigned',
-        `${teacherName} was assigned to your scheduling request.`,
+        'schedule_confirmed',
+        'Class schedule confirmed',
+        `${title} on ${selectedSlot.preferred_date} ${selectedSlot.time_slot}. ${meetingInfo}`,
         requestId,
       );
       notifyUser(
         teacherId,
-        'assignment',
-        'New student assignment',
-        `You were assigned to ${studentName} for ${selectedSlot.preferred_date} ${selectedSlot.time_slot}.`,
+        'schedule_confirmed',
+        'Class schedule confirmed',
+        `You have a confirmed class with ${studentName} on ${selectedSlot.preferred_date} ${selectedSlot.time_slot}. ${meetingInfo}`,
         requestId,
       );
     });
@@ -536,10 +580,13 @@ async function assignTeacherToRequest(req, res) {
 
     const updated = db.prepare('SELECT * FROM schedule_requests WHERE id = ?').get(requestId);
     const updatedSlots = getSlotsForRequest(requestId);
+    const classRow = db.prepare('SELECT * FROM classes WHERE id = ?').get(createdClassId);
+    const confirmedSchedule = mapClassRow(classRow, teacher, student);
 
     res.json({
-      message: 'Teacher assigned and request approved',
+      message: 'Teacher assigned, request approved, and class schedule confirmed',
       request: mapRequest(updated, updatedSlots, student, teacher),
+      confirmedSchedule,
     });
   } catch (err) {
     res.status(500).json({ message: 'Error assigning teacher', error: err.message });
