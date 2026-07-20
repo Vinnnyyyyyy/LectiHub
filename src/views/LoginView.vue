@@ -3,7 +3,7 @@
     <div class="auth-atmosphere" aria-hidden="true" />
     <form class="auth-panel" @submit.prevent="handleLogin">
       <p class="brand">LectiHub</p>
-      <h1>Welcome back</h1>
+      <h1>Welcome</h1>
       <p class="lede">Log in with your registered credentials to open your dashboard.</p>
 
       <label for="username">Username</label>
