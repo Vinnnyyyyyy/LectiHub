@@ -345,9 +345,13 @@ async function assign(teacherId: number) {
     const emailNote = result.emails?.enabled
       ? ' Confirmation emails were also sent (if recipients have email addresses).'
       : ''
+    const calendarNote = result.calendarSync
+      ? ' Calendars updated for student and teacher.'
+      : ''
     successMessage.value =
       (result.message ||
         `Assigned ${result.request.assignedTeacher?.fullName || 'teacher'} and approved the request.`) +
+      calendarNote +
       emailNote
   } catch (err) {
     if (axios.isAxiosError(err)) {

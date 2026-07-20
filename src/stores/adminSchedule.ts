@@ -126,6 +126,7 @@ export const useAdminScheduleStore = defineStore('adminSchedule', {
           message: string
           request: ScheduleRequest
           confirmedSchedule: ConfirmedSchedule
+          calendarSync?: unknown
           emails?: {
             enabled: boolean
             mode?: string

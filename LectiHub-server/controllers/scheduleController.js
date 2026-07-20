@@ -5,6 +5,7 @@ const {
   mapClassRow,
 } = require('../utils/scheduleHelpers');
 const { sendScheduleConfirmationEmails } = require('../utils/emailService');
+const { syncClassToCalendars, teacherHasCalendarConflict } = require('../utils/calendarService');
 const { hydrateClass } = require('./classController');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -186,7 +187,7 @@ function scheduleStudentReminders(studentId, requestId, classId, scheduleDetails
 }
 
 function teacherHasConflict(teacherId, preferredDate, timeSlot) {
-  return db
+  const classConflict = db
     .prepare(
       `SELECT id, title, class_date, time_slot
        FROM classes
@@ -194,6 +195,20 @@ function teacherHasConflict(teacherId, preferredDate, timeSlot) {
        LIMIT 1`,
     )
     .get(teacherId, preferredDate, timeSlot);
+
+  if (classConflict) return classConflict;
+
+  const calendarConflict = teacherHasCalendarConflict(teacherId, preferredDate, timeSlot);
+  if (calendarConflict) {
+    return {
+      id: calendarConflict.id,
+      title: calendarConflict.title || `Calendar (${calendarConflict.provider})`,
+      class_date: preferredDate,
+      time_slot: timeSlot,
+    };
+  }
+
+  return null;
 }
 
 function getTeacherWorkload(teacherId) {
@@ -695,6 +710,13 @@ async function assignTeacherToRequest(req, res) {
     const classRow = db.prepare('SELECT * FROM classes WHERE id = ?').get(createdClassId);
     const confirmedSchedule = mapClassRow(classRow, teacher, student);
 
+    // Add the approved schedule to student + teacher calendars (and external providers if connected)
+    const calendarSync = await syncClassToCalendars(
+      classRow,
+      request.student_id,
+      teacherId,
+    );
+
     // Optional: if email integration is enabled, send confirmation emails automatically.
     const emailResult = await sendScheduleConfirmationEmails({
       student,
@@ -715,10 +737,11 @@ async function assignTeacherToRequest(req, res) {
 
     res.json({
       message: emailResult.enabled
-        ? 'Teacher assigned, request approved, class schedule confirmed, and confirmation emails processed'
-        : 'Teacher assigned, request approved, and class schedule confirmed',
+        ? 'Teacher assigned, schedule confirmed, calendars synced, and confirmation emails processed'
+        : 'Teacher assigned, schedule confirmed, and calendars synced',
       request: mapRequest(updated, updatedSlots, student, teacher),
       confirmedSchedule,
+      calendarSync,
       emails: emailResult,
     });
   } catch (err) {
