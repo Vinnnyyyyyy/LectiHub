@@ -48,9 +48,18 @@
       <p v-if="joinMessage" class="join-feedback" role="status">{{ joinMessage }}</p>
       <p v-if="joinError" class="join-feedback error" role="alert">{{ joinError }}</p>
 
+      <ConductLessonPanel
+        :items="inProgress"
+        :loading="loading"
+        :saving-id="savingId"
+        @save="handleSaveConduct"
+        @complete="handleCompleteLesson"
+      />
+      <p v-if="conductMessage" class="join-feedback" role="status">{{ conductMessage }}</p>
+
       <UpcomingClassesPanel
         title="Past classes"
-        subtitle="Earlier confirmed lessons."
+        subtitle="Completed lessons with attendance, participation, and recordings."
         empty-text="No past classes yet."
         :items="past"
         :loading="loading"
@@ -65,10 +74,15 @@ import { computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useClassesStore, type ConfirmedSchedule } from '../stores/classes'
+import {
+  useClassesStore,
+  type ConfirmedSchedule,
+  type LessonConductPayload,
+} from '../stores/classes'
 import { useNotificationsStore } from '../stores/notifications'
 import { useCalendarStore } from '../stores/calendar'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
+import ConductLessonPanel from '../components/ConductLessonPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue'
@@ -79,16 +93,40 @@ const notificationsStore = useNotificationsStore()
 const calendarStore = useCalendarStore()
 const router = useRouter()
 
-const { loading, joiningId, joinMessage, error: joinError } = storeToRefs(classesStore)
+const {
+  loading,
+  joiningId,
+  savingId,
+  joinMessage,
+  conductMessage,
+  error: joinError,
+} = storeToRefs(classesStore)
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
+const inProgress = computed(() => classesStore.inProgress)
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 const displayName = computed(() => authStore.fullName || authStore.username || 'teacher')
 
 async function handleJoinClass(item: ConfirmedSchedule) {
   try {
     await classesStore.joinClass(item.id)
+  } catch {
+    // store sets error message
+  }
+}
+
+async function handleSaveConduct(classId: number, payload: LessonConductPayload) {
+  try {
+    await classesStore.saveConduct(classId, payload)
+  } catch {
+    // store sets error message
+  }
+}
+
+async function handleCompleteLesson(classId: number, payload: LessonConductPayload) {
+  try {
+    await classesStore.completeClass(classId, payload)
   } catch {
     // store sets error message
   }

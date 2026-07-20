@@ -33,6 +33,29 @@
         <p v-if="item.meetingProvider" class="meta provider">
           Platform: {{ formatProvider(item.meetingProvider) }}
         </p>
+        <p v-if="item.curriculumPlan" class="meta">Curriculum: {{ item.curriculumPlan }}</p>
+        <p
+          v-if="item.attendanceStatus && item.attendanceStatus !== 'not_recorded'"
+          class="meta"
+        >
+          Attendance: {{ item.attendanceStatusLabel || item.attendanceStatus }}
+        </p>
+        <p
+          v-if="item.participationLevel && item.participationLevel !== 'not_recorded'"
+          class="meta"
+        >
+          Participation: {{ item.participationLevelLabel || item.participationLevel }}
+          <span v-if="item.participationNotes"> · {{ item.participationNotes }}</span>
+        </p>
+        <a
+          v-if="item.recordingUrl"
+          class="meet-link"
+          :href="item.recordingUrl"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Watch lesson recording
+        </a>
 
         <div v-if="allowJoin" class="join-row">
           <button

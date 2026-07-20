@@ -124,6 +124,13 @@ ensureColumn('classes', 'meeting_provider', "TEXT DEFAULT 'jitsi'");
 ensureColumn('classes', 'status', "TEXT DEFAULT 'scheduled'");
 ensureColumn('classes', 'started_at', 'DATETIME');
 ensureColumn('classes', 'subject', 'TEXT');
+ensureColumn('classes', 'curriculum_plan', 'TEXT');
+ensureColumn('classes', 'attendance_status', "TEXT DEFAULT 'not_recorded'");
+ensureColumn('classes', 'attendance_recorded_at', 'DATETIME');
+ensureColumn('classes', 'participation_level', "TEXT DEFAULT 'not_recorded'");
+ensureColumn('classes', 'participation_notes', 'TEXT');
+ensureColumn('classes', 'recording_url', 'TEXT');
+ensureColumn('classes', 'completed_at', 'DATETIME');
 ensureColumn('notifications', 'related_class_id', 'INTEGER');
 ensureColumn('notifications', 'details', 'TEXT');
 ensureColumn('notifications', 'deliver_at', 'DATETIME');
@@ -138,6 +145,16 @@ db.exec(`
   UPDATE classes
   SET meeting_provider = 'jitsi'
   WHERE meeting_provider IS NULL OR TRIM(meeting_provider) = ''
+`);
+db.exec(`
+  UPDATE classes
+  SET attendance_status = 'not_recorded'
+  WHERE attendance_status IS NULL OR TRIM(attendance_status) = ''
+`);
+db.exec(`
+  UPDATE classes
+  SET participation_level = 'not_recorded'
+  WHERE participation_level IS NULL OR TRIM(participation_level) = ''
 `);
 
 module.exports = db;
