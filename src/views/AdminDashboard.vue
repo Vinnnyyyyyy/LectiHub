@@ -25,6 +25,16 @@
         @select="openFromNotification"
       />
 
+      <LessonReportsPanel
+        title="Submitted lesson reports"
+        subtitle="Teachers’ reports become available here after each class concludes."
+        empty-text="No lesson reports submitted yet."
+        :items="lessonReports"
+        :loading="loadingReports"
+        show-teacher
+        show-student
+      />
+
       <div class="layout">
         <section class="panel requests-panel">
           <div class="section-head">
@@ -252,11 +262,14 @@ import {
   useNotificationsStore,
   type AppNotification,
 } from '../stores/notifications'
+import { useLessonReportsStore } from '../stores/lessonReports'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
+import LessonReportsPanel from '../components/LessonReportsPanel.vue'
 
 const authStore = useAuthStore()
 const adminStore = useAdminScheduleStore()
 const notificationsStore = useNotificationsStore()
+const lessonReportsStore = useLessonReportsStore()
 const router = useRouter()
 
 const {
@@ -267,6 +280,7 @@ const {
   assigning,
   error,
 } = storeToRefs(adminStore)
+const { loading: loadingReports, reports: lessonReports } = storeToRefs(lessonReportsStore)
 
 const selectedSlotId = ref<number | null>(null)
 const successMessage = ref('')
@@ -368,7 +382,11 @@ async function handleLogout() {
 }
 
 onMounted(async () => {
-  await Promise.all([adminStore.fetchPendingRequests(), notificationsStore.fetchMine()])
+  await Promise.all([
+    adminStore.fetchPendingRequests(),
+    notificationsStore.fetchMine(),
+    lessonReportsStore.fetchMine(),
+  ])
 })
 </script>
 

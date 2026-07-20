@@ -32,6 +32,9 @@ export interface ConfirmedSchedule {
   recordingUrl?: string
   hasRecording?: boolean
   completedAt?: string | null
+  hasLessonReport?: boolean
+  lessonReportId?: number | null
+  lessonReportSubmittedAt?: string | null
   createdAt: string
   teacher: {
     id: number

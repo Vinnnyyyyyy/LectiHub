@@ -57,6 +57,24 @@
       />
       <p v-if="conductMessage" class="join-feedback" role="status">{{ conductMessage }}</p>
 
+      <LessonReportFormPanel
+        :completed-classes="past"
+        :loading="loading"
+        :submitting-id="reportSubmittingId"
+        @submit="handleSubmitReport"
+      />
+      <p v-if="reportMessage" class="join-feedback" role="status">{{ reportMessage }}</p>
+      <p v-if="reportError" class="join-feedback error" role="alert">{{ reportError }}</p>
+
+      <LessonReportsPanel
+        title="Submitted lesson reports"
+        subtitle="Reports you have filed for completed classes."
+        empty-text="No lesson reports submitted yet."
+        :items="lessonReports"
+        :loading="loadingReports"
+        show-student
+      />
+
       <UpcomingClassesPanel
         title="Past classes"
         subtitle="Completed lessons with attendance, participation, and recordings."
@@ -79,16 +97,23 @@ import {
   type ConfirmedSchedule,
   type LessonConductPayload,
 } from '../stores/classes'
+import {
+  useLessonReportsStore,
+  type LessonReportPayload,
+} from '../stores/lessonReports'
 import { useNotificationsStore } from '../stores/notifications'
 import { useCalendarStore } from '../stores/calendar'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 import ConductLessonPanel from '../components/ConductLessonPanel.vue'
+import LessonReportFormPanel from '../components/LessonReportFormPanel.vue'
+import LessonReportsPanel from '../components/LessonReportsPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue'
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
+const lessonReportsStore = useLessonReportsStore()
 const notificationsStore = useNotificationsStore()
 const calendarStore = useCalendarStore()
 const router = useRouter()
@@ -101,6 +126,13 @@ const {
   conductMessage,
   error: joinError,
 } = storeToRefs(classesStore)
+const {
+  loading: loadingReports,
+  submittingId: reportSubmittingId,
+  message: reportMessage,
+  error: reportError,
+  reports: lessonReports,
+} = storeToRefs(lessonReportsStore)
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
@@ -132,6 +164,15 @@ async function handleCompleteLesson(classId: number, payload: LessonConductPaylo
   }
 }
 
+async function handleSubmitReport(classId: number, payload: LessonReportPayload) {
+  try {
+    await lessonReportsStore.submitForClass(classId, payload)
+    await classesStore.fetchMine()
+  } catch {
+    // store sets error message
+  }
+}
+
 async function handleLogout() {
   authStore.logout()
   await router.push('/login')
@@ -140,6 +181,7 @@ async function handleLogout() {
 onMounted(async () => {
   await Promise.allSettled([
     classesStore.fetchMine(),
+    lessonReportsStore.fetchMine(),
     notificationsStore.fetchMine(),
     calendarStore.fetchMine(),
   ])
