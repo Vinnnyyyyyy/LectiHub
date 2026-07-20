@@ -17,6 +17,10 @@ function getUserSummary(id) {
 }
 
 function hydrateReport(row) {
+  const feedback = db
+    .prepare('SELECT id FROM student_feedback WHERE lesson_report_id = ?')
+    .get(row.id);
+
   return mapLessonReport(
     row,
     row.teacher_id ? getUserSummary(row.teacher_id) : null,
@@ -24,6 +28,10 @@ function hydrateReport(row) {
     {
       title: row.class_title,
       subject: row.class_subject,
+    },
+    {
+      hasFeedback: Boolean(feedback),
+      feedbackId: feedback?.id || null,
     },
   );
 }
@@ -93,11 +101,11 @@ function notifyReportSubmitted(report, classRow, teacherName) {
     notifyUser(
       report.student_id,
       'lesson_report',
-      'New lesson report available',
-      `${teacherName} submitted a lesson report for ${topic}.`,
+      'Lesson report ready — please share feedback',
+      `${teacherName} submitted a lesson report for ${topic}. Please complete the feedback form for this lesson.`,
       {
         relatedClassId: report.class_id,
-        details,
+        details: { ...details, promptFeedback: true },
       },
     );
   }

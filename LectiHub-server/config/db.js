@@ -127,6 +127,23 @@ db.exec(`
     FOREIGN KEY (teacher_id) REFERENCES users(id),
     FOREIGN KEY (student_id) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS student_feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    lesson_report_id INTEGER NOT NULL UNIQUE,
+    class_id INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    teacher_id INTEGER NOT NULL,
+    overall_rating INTEGER NOT NULL CHECK(overall_rating BETWEEN 1 AND 5),
+    comments TEXT,
+    suggestions TEXT,
+    learning_experience TEXT,
+    submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (lesson_report_id) REFERENCES lesson_reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id),
+    FOREIGN KEY (teacher_id) REFERENCES users(id)
+  );
 `);
 
 ensureColumn('users', 'subject_expertise', 'TEXT');
@@ -180,5 +197,8 @@ db.exec(`
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_student ON lesson_reports(student_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_teacher ON lesson_reports(teacher_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_submitted ON lesson_reports(submitted_at)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_student_feedback_student ON student_feedback(student_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_student_feedback_teacher ON student_feedback(teacher_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_student_feedback_submitted ON student_feedback(submitted_at)`);
 
 module.exports = db;

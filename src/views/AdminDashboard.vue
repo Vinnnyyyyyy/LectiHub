@@ -35,6 +35,16 @@
         show-student
       />
 
+      <StudentFeedbackPanel
+        title="Student feedback review"
+        subtitle="Feedback submitted after lesson reports, available for administrative review."
+        empty-text="No student feedback submitted yet."
+        :items="studentFeedback"
+        :loading="loadingFeedback"
+        show-teacher
+        show-student
+      />
+
       <div class="layout">
         <section class="panel requests-panel">
           <div class="section-head">
@@ -263,13 +273,16 @@ import {
   type AppNotification,
 } from '../stores/notifications'
 import { useLessonReportsStore } from '../stores/lessonReports'
+import { useStudentFeedbackStore } from '../stores/studentFeedback'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import LessonReportsPanel from '../components/LessonReportsPanel.vue'
+import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
 
 const authStore = useAuthStore()
 const adminStore = useAdminScheduleStore()
 const notificationsStore = useNotificationsStore()
 const lessonReportsStore = useLessonReportsStore()
+const studentFeedbackStore = useStudentFeedbackStore()
 const router = useRouter()
 
 const {
@@ -281,6 +294,7 @@ const {
   error,
 } = storeToRefs(adminStore)
 const { loading: loadingReports, reports: lessonReports } = storeToRefs(lessonReportsStore)
+const { loading: loadingFeedback, feedback: studentFeedback } = storeToRefs(studentFeedbackStore)
 
 const selectedSlotId = ref<number | null>(null)
 const successMessage = ref('')
@@ -386,6 +400,7 @@ onMounted(async () => {
     adminStore.fetchPendingRequests(),
     notificationsStore.fetchMine(),
     lessonReportsStore.fetchMine(),
+    studentFeedbackStore.fetchMine(),
   ])
 })
 </script>

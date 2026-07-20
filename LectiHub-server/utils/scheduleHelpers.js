@@ -234,8 +234,12 @@ function mapClassRow(row, teacher = null, student = null) {
   };
 }
 
-function mapLessonReport(row, teacher = null, student = null, classRow = null) {
+function mapLessonReport(row, teacher = null, student = null, classRow = null, feedbackMeta = null) {
   const attendanceStatus = normalizeAttendanceStatus(row.attendance_status);
+  const hasFeedback =
+    feedbackMeta?.hasFeedback != null
+      ? Boolean(feedbackMeta.hasFeedback)
+      : Boolean(row.feedback_id || row.has_feedback);
   return {
     id: row.id,
     classId: row.class_id,
@@ -254,6 +258,45 @@ function mapLessonReport(row, teacher = null, student = null, classRow = null) {
     updatedAt: row.updated_at || null,
     classTitle: classRow?.title || row.class_title || null,
     classSubject: classRow?.subject || row.class_subject || null,
+    hasFeedback,
+    feedbackId: feedbackMeta?.feedbackId ?? row.feedback_id ?? null,
+    needsFeedback: !hasFeedback,
+    teacher: teacher
+      ? {
+          id: teacher.id,
+          username: teacher.username,
+          fullName: teacher.full_name || teacher.username,
+          email: teacher.email || '',
+        }
+      : null,
+    student: student
+      ? {
+          id: student.id,
+          username: student.username,
+          fullName: student.full_name || student.username,
+          email: student.email || '',
+        }
+      : null,
+  };
+}
+
+function mapStudentFeedback(row, teacher = null, student = null, report = null) {
+  const rating = Number(row.overall_rating);
+  return {
+    id: row.id,
+    lessonReportId: row.lesson_report_id,
+    classId: row.class_id,
+    studentId: row.student_id,
+    teacherId: row.teacher_id,
+    overallRating: Number.isInteger(rating) ? rating : null,
+    comments: row.comments || '',
+    suggestions: row.suggestions || '',
+    learningExperience: row.learning_experience || '',
+    submittedAt: row.submitted_at || null,
+    lessonTopic: report?.lesson_topic || row.lesson_topic || null,
+    reportDate: report?.report_date || row.report_date || null,
+    classTitle: row.class_title || null,
+    classSubject: row.class_subject || null,
     teacher: teacher
       ? {
           id: teacher.id,
@@ -282,6 +325,7 @@ module.exports = {
   buildMeetingDetails,
   mapClassRow,
   mapLessonReport,
+  mapStudentFeedback,
   normalizeClassStatus,
   getJoinAvailability,
   getMeetingProvider,

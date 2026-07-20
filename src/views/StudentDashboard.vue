@@ -65,7 +65,26 @@
           :loading="loadingReports"
           show-teacher
         />
+
+        <StudentFeedbackFormPanel
+          :reports="lessonReports"
+          :loading="loadingReports"
+          :submitting-id="feedbackSubmittingId"
+          @submit="handleSubmitFeedback"
+        />
+
+        <StudentFeedbackPanel
+          title="Your submitted feedback"
+          subtitle="Feedback you have shared after lesson reports."
+          empty-text="No feedback submitted yet."
+          :items="myFeedback"
+          :loading="loadingFeedback"
+          show-teacher
+        />
       </div>
+
+      <p v-if="feedbackMessage" class="join-feedback" role="status">{{ feedbackMessage }}</p>
+      <p v-if="feedbackError" class="join-feedback error" role="alert">{{ feedbackError }}</p>
     </main>
   </div>
 </template>
@@ -77,17 +96,24 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useClassesStore, type ConfirmedSchedule } from '../stores/classes'
 import { useLessonReportsStore } from '../stores/lessonReports'
+import {
+  useStudentFeedbackStore,
+  type StudentFeedbackPayload,
+} from '../stores/studentFeedback'
 import { useNotificationsStore } from '../stores/notifications'
 import { useCalendarStore } from '../stores/calendar'
 import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 import LessonReportsPanel from '../components/LessonReportsPanel.vue'
+import StudentFeedbackFormPanel from '../components/StudentFeedbackFormPanel.vue'
+import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
 const lessonReportsStore = useLessonReportsStore()
+const studentFeedbackStore = useStudentFeedbackStore()
 const notificationsStore = useNotificationsStore()
 const calendarStore = useCalendarStore()
 const router = useRouter()
@@ -95,6 +121,13 @@ const router = useRouter()
 const { loading: loadingClasses, joiningId, joinMessage, error: joinError } =
   storeToRefs(classesStore)
 const { loading: loadingReports, reports: lessonReports } = storeToRefs(lessonReportsStore)
+const {
+  loading: loadingFeedback,
+  submittingId: feedbackSubmittingId,
+  message: feedbackMessage,
+  error: feedbackError,
+  feedback: myFeedback,
+} = storeToRefs(studentFeedbackStore)
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
@@ -112,6 +145,15 @@ async function handleJoinClass(item: ConfirmedSchedule) {
   }
 }
 
+async function handleSubmitFeedback(reportId: number, payload: StudentFeedbackPayload) {
+  try {
+    await studentFeedbackStore.submitForReport(reportId, payload)
+    await lessonReportsStore.fetchMine()
+  } catch {
+    // store sets error message
+  }
+}
+
 async function handleLogout() {
   authStore.logout()
   await router.push('/login')
@@ -121,6 +163,7 @@ onMounted(async () => {
   await Promise.allSettled([
     classesStore.fetchMine(),
     lessonReportsStore.fetchMine(),
+    studentFeedbackStore.fetchMine(),
     notificationsStore.fetchMine(),
     calendarStore.fetchMine(),
   ])
