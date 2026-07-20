@@ -101,24 +101,29 @@ function getTeacherById(teacherId) {
 
 function notifyAdminsAboutRequest(requestId, studentName) {
   const admins = db.prepare(`SELECT id FROM users WHERE role = 'admin'`).all();
-  const insert = db.prepare(`
-    INSERT INTO notifications (user_id, type, title, message, related_request_id)
-    VALUES (?, 'schedule_request', ?, ?, ?)
-  `);
-
   const title = 'New scheduling request';
   const message = `${studentName} submitted a preferred schedule awaiting review.`;
 
   for (const admin of admins) {
-    insert.run(admin.id, title, message, requestId);
+    notifyUser(admin.id, 'schedule_request', title, message, {
+      relatedRequestId: requestId,
+      details: { studentName },
+    });
   }
 }
 
-function notifyUser(userId, type, title, message, relatedRequestId) {
+function notifyUser(userId, type, title, message, options = {}) {
+  const relatedRequestId = options.relatedRequestId ?? null;
+  const relatedClassId = options.relatedClassId ?? null;
+  const details =
+    options.details != null ? JSON.stringify(options.details) : null;
+
   db.prepare(
-    `INSERT INTO notifications (user_id, type, title, message, related_request_id)
-     VALUES (?, ?, ?, ?, ?)`,
-  ).run(userId, type, title, message, relatedRequestId);
+    `INSERT INTO notifications (
+       user_id, type, title, message, related_request_id, related_class_id, details
+     )
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).run(userId, type, title, message, relatedRequestId, relatedClassId, details);
 }
 
 function teacherHasConflict(teacherId, preferredDate, timeSlot) {
@@ -560,19 +565,56 @@ async function assignTeacherToRequest(req, res) {
 
       createdClassId = classResult.lastInsertRowid;
 
+      const scheduleDetails = {
+        studentName,
+        teacherName,
+        classDate: selectedSlot.preferred_date,
+        timeSlot: selectedSlot.time_slot,
+        startTime,
+        endTime,
+        durationMinutes,
+        subject,
+        meetingInfo,
+        meetingLink,
+      };
+
+      const teacherMessage = [
+        `Assigned student: ${studentName}`,
+        `Date and time: ${selectedSlot.preferred_date} ${startTime} – ${endTime}`,
+        `Class duration: ${durationMinutes} minutes`,
+        `Meeting details: ${meetingInfo}`,
+        `Meeting link: ${meetingLink}`,
+      ].join('\n');
+
+      const studentMessage = [
+        `Assigned teacher: ${teacherName}`,
+        `Date and time: ${selectedSlot.preferred_date} ${startTime} – ${endTime}`,
+        `Class duration: ${durationMinutes} minutes`,
+        `Meeting details: ${meetingInfo}`,
+        `Meeting link: ${meetingLink}`,
+      ].join('\n');
+
       notifyUser(
         request.student_id,
         'schedule_confirmed',
-        'Class schedule confirmed',
-        `${title} on ${selectedSlot.preferred_date} ${selectedSlot.time_slot}. ${meetingInfo}`,
-        requestId,
+        'Your class schedule is confirmed',
+        studentMessage,
+        {
+          relatedRequestId: requestId,
+          relatedClassId: createdClassId,
+          details: scheduleDetails,
+        },
       );
       notifyUser(
         teacherId,
         'schedule_confirmed',
-        'Class schedule confirmed',
-        `You have a confirmed class with ${studentName} on ${selectedSlot.preferred_date} ${selectedSlot.time_slot}. ${meetingInfo}`,
-        requestId,
+        'New class assignment confirmed',
+        teacherMessage,
+        {
+          relatedRequestId: requestId,
+          relatedClassId: createdClassId,
+          details: scheduleDetails,
+        },
       );
     });
 

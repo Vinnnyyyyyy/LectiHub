@@ -1,5 +1,14 @@
 const db = require('../config/db');
 
+function parseDetails(raw) {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 function mapNotification(row) {
   return {
     id: row.id,
@@ -7,6 +16,8 @@ function mapNotification(row) {
     title: row.title,
     message: row.message || '',
     relatedRequestId: row.related_request_id,
+    relatedClassId: row.related_class_id ?? null,
+    details: parseDetails(row.details),
     isRead: !!row.is_read,
     createdAt: row.created_at,
   };
