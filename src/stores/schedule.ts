@@ -19,6 +19,17 @@ export interface ScheduleRequest {
   remarks: string
   status: 'pending' | 'approved' | 'rejected'
   createdAt: string
+  assignedTeacherId?: number | null
+  assignedTeacher?: {
+    id: number
+    username: string
+    fullName: string
+    email: string
+    subjectExpertise?: string
+  } | null
+  assignedSlotId?: number | null
+  assignedSlot?: ScheduleSlot | null
+  assignedAt?: string | null
   slots: ScheduleSlot[]
 }
 
