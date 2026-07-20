@@ -168,6 +168,7 @@ ensureColumn('classes', 'participation_level', "TEXT DEFAULT 'not_recorded'");
 ensureColumn('classes', 'participation_notes', 'TEXT');
 ensureColumn('classes', 'recording_url', 'TEXT');
 ensureColumn('classes', 'completed_at', 'DATETIME');
+ensureColumn('classes', 'archived_at', 'DATETIME');
 ensureColumn('notifications', 'related_class_id', 'INTEGER');
 ensureColumn('notifications', 'details', 'TEXT');
 ensureColumn('notifications', 'deliver_at', 'DATETIME');

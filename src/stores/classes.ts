@@ -32,9 +32,19 @@ export interface ConfirmedSchedule {
   recordingUrl?: string
   hasRecording?: boolean
   completedAt?: string | null
+  archivedAt?: string | null
+  isArchived?: boolean
   hasLessonReport?: boolean
   lessonReportId?: number | null
   lessonReportSubmittedAt?: string | null
+  hasStudentFeedback?: boolean
+  studentFeedbackId?: number | null
+  studentFeedbackRating?: number | null
+  studentFeedbackSubmittedAt?: string | null
+  isFullyComplete?: boolean
+  lessonTopic?: string
+  studentProgress?: string
+  homeworkAssigned?: string
   createdAt: string
   teacher: {
     id: number
@@ -76,7 +86,9 @@ interface ConductResponse {
 
 interface ClassesState {
   schedules: ConfirmedSchedule[]
+  history: ConfirmedSchedule[]
   loading: boolean
+  loadingHistory: boolean
   joiningId: number | null
   savingId: number | null
   error: string | null
@@ -87,7 +99,9 @@ interface ClassesState {
 export const useClassesStore = defineStore('classes', {
   state: (): ClassesState => ({
     schedules: [],
+    history: [],
     loading: false,
+    loadingHistory: false,
     joiningId: null,
     savingId: null,
     error: null,
@@ -114,6 +128,11 @@ export const useClassesStore = defineStore('classes', {
     },
     inProgress(state): ConfirmedSchedule[] {
       return state.schedules.filter((item) => item.status === 'in_progress')
+    },
+    archived(state): ConfirmedSchedule[] {
+      return state.history.length
+        ? state.history
+        : state.schedules.filter((item) => item.isArchived || item.archivedAt)
     },
   },
 
@@ -202,6 +221,22 @@ export const useClassesStore = defineStore('classes', {
         throw err
       } finally {
         this.savingId = null
+      }
+    },
+
+    async fetchHistory() {
+      this.loadingHistory = true
+      try {
+        const res = await api.get<ConfirmedSchedule[]>('/classes/history')
+        this.history = res.data
+        for (const item of res.data) {
+          this.upsertSchedule(item)
+        }
+      } catch (err) {
+        this.error = 'Could not load class history'
+        throw err
+      } finally {
+        this.loadingHistory = false
       }
     },
   },

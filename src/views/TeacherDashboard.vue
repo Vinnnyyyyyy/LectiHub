@@ -83,6 +83,15 @@
         :loading="loading"
         show-student
       />
+
+      <ClassHistoryPanel
+        title="Teaching history"
+        subtitle="Classes archived after both the lesson report and student feedback are submitted."
+        empty-text="No archived teaching history yet."
+        :items="archivedHistory"
+        :loading="loadingHistory"
+        show-student
+      />
     </main>
   </div>
 </template>
@@ -107,6 +116,7 @@ import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 import ConductLessonPanel from '../components/ConductLessonPanel.vue'
 import LessonReportFormPanel from '../components/LessonReportFormPanel.vue'
 import LessonReportsPanel from '../components/LessonReportsPanel.vue'
+import ClassHistoryPanel from '../components/ClassHistoryPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue'
@@ -120,6 +130,7 @@ const router = useRouter()
 
 const {
   loading,
+  loadingHistory,
   joiningId,
   savingId,
   joinMessage,
@@ -137,6 +148,7 @@ const { loading: loadingCalendar } = storeToRefs(calendarStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
 const inProgress = computed(() => classesStore.inProgress)
+const archivedHistory = computed(() => classesStore.archived)
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 const displayName = computed(() => authStore.fullName || authStore.username || 'teacher')
 
@@ -167,7 +179,7 @@ async function handleCompleteLesson(classId: number, payload: LessonConductPaylo
 async function handleSubmitReport(classId: number, payload: LessonReportPayload) {
   try {
     await lessonReportsStore.submitForClass(classId, payload)
-    await classesStore.fetchMine()
+    await Promise.allSettled([classesStore.fetchMine(), classesStore.fetchHistory()])
   } catch {
     // store sets error message
   }
@@ -181,6 +193,7 @@ async function handleLogout() {
 onMounted(async () => {
   await Promise.allSettled([
     classesStore.fetchMine(),
+    classesStore.fetchHistory(),
     lessonReportsStore.fetchMine(),
     notificationsStore.fetchMine(),
     calendarStore.fetchMine(),

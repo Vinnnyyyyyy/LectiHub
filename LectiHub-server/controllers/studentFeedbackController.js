@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { finalizeClassIfReady } = require('../utils/classLifecycle');
 const { mapStudentFeedback } = require('../utils/scheduleHelpers');
 
 function getUserSummary(id) {
@@ -249,9 +250,21 @@ async function submitFeedbackForReport(req, res) {
     const studentName = student?.full_name || student?.username || 'Student';
     notifyAdminsAboutFeedback(saved, studentName, report.lesson_topic);
 
+    const finalization = finalizeClassIfReady(db, report.class_id);
+    const message = finalization.newlyArchived
+      ? 'Feedback submitted. The class is now Completed and archived into your learning history and the teacher’s teaching history.'
+      : 'Feedback submitted. Thank you — administrators can now review it.';
+
     return res.status(201).json({
-      message: 'Feedback submitted. Thank you — administrators can now review it.',
+      message,
       feedback: hydrateFeedback(saved),
+      classFinalization: {
+        ready: finalization.ready,
+        finalized: finalization.finalized,
+        newlyArchived: Boolean(finalization.newlyArchived),
+        status: finalization.classRow?.status || null,
+        archivedAt: finalization.classRow?.archived_at || null,
+      },
     });
   } catch (err) {
     console.error('Submit student feedback error:', err);

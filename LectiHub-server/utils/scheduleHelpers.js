@@ -213,6 +213,8 @@ function mapClassRow(row, teacher = null, student = null) {
     recordingUrl,
     hasRecording: Boolean(recordingUrl),
     completedAt: row.completed_at || null,
+    archivedAt: row.archived_at || null,
+    isArchived: Boolean(row.archived_at),
     createdAt: row.created_at,
     teacher: teacher
       ? {

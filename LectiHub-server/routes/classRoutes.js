@@ -8,6 +8,7 @@ const {
   joinClass,
   updateLessonConduct,
   completeClass,
+  listClassHistory,
 } = require('../controllers/classController');
 const {
   getLessonReportForClass,
@@ -15,6 +16,7 @@ const {
 } = require('../controllers/lessonReportController');
 
 router.get('/mine', auth, requireRole('student', 'teacher', 'admin'), listMyClasses);
+router.get('/history', auth, requireRole('student', 'teacher', 'admin'), listClassHistory);
 router.get('/by-request/:requestId', auth, getClassByRequest);
 router.post('/:id/join', auth, requireRole('student', 'teacher', 'admin'), joinClass);
 router.patch(
