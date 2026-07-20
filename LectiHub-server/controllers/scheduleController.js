@@ -4,6 +4,7 @@ const {
   buildMeetingDetails,
   mapClassRow,
 } = require('../utils/scheduleHelpers');
+const { sendScheduleConfirmationEmails } = require('../utils/emailService');
 const { hydrateClass } = require('./classController');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -625,10 +626,31 @@ async function assignTeacherToRequest(req, res) {
     const classRow = db.prepare('SELECT * FROM classes WHERE id = ?').get(createdClassId);
     const confirmedSchedule = mapClassRow(classRow, teacher, student);
 
+    // Optional: if email integration is enabled, send confirmation emails automatically.
+    const emailResult = await sendScheduleConfirmationEmails({
+      student,
+      teacher,
+      details: {
+        studentName,
+        teacherName,
+        classDate: selectedSlot.preferred_date,
+        timeSlot: selectedSlot.time_slot,
+        startTime,
+        endTime,
+        durationMinutes,
+        subject,
+        meetingInfo,
+        meetingLink,
+      },
+    });
+
     res.json({
-      message: 'Teacher assigned, request approved, and class schedule confirmed',
+      message: emailResult.enabled
+        ? 'Teacher assigned, request approved, class schedule confirmed, and confirmation emails processed'
+        : 'Teacher assigned, request approved, and class schedule confirmed',
       request: mapRequest(updated, updatedSlots, student, teacher),
       confirmedSchedule,
+      emails: emailResult,
     });
   } catch (err) {
     res.status(500).json({ message: 'Error assigning teacher', error: err.message });

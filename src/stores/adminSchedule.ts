@@ -126,6 +126,16 @@ export const useAdminScheduleStore = defineStore('adminSchedule', {
           message: string
           request: ScheduleRequest
           confirmedSchedule: ConfirmedSchedule
+          emails?: {
+            enabled: boolean
+            mode?: string
+            sent: Array<{
+              recipient: string
+              email?: string
+              sent: boolean
+              reason?: string
+            }>
+          }
         }>(`/schedule-requests/${requestId}/assign`, { teacherId, slotId })
         this.requests = this.requests.filter((item) => item.id !== requestId)
         await this.fetchRequestReview(requestId)

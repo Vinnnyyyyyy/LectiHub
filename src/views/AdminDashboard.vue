@@ -342,9 +342,13 @@ async function assign(teacherId: number) {
       teacherId,
       selectedSlotId.value,
     )
+    const emailNote = result.emails?.enabled
+      ? ' Confirmation emails were also sent (if recipients have email addresses).'
+      : ''
     successMessage.value =
-      result.message ||
-      `Assigned ${result.request.assignedTeacher?.fullName || 'teacher'} and approved the request.`
+      (result.message ||
+        `Assigned ${result.request.assignedTeacher?.fullName || 'teacher'} and approved the request.`) +
+      emailNote
   } catch (err) {
     if (axios.isAxiosError(err)) {
       errorMessage.value = err.response?.data?.message || 'Could not assign teacher'
