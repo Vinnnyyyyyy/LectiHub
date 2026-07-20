@@ -120,10 +120,24 @@ ensureColumn('classes', 'end_time', 'TEXT');
 ensureColumn('classes', 'duration_minutes', 'INTEGER');
 ensureColumn('classes', 'meeting_info', 'TEXT');
 ensureColumn('classes', 'meeting_link', 'TEXT');
-ensureColumn('classes', 'status', "TEXT DEFAULT 'confirmed'");
+ensureColumn('classes', 'meeting_provider', "TEXT DEFAULT 'jitsi'");
+ensureColumn('classes', 'status', "TEXT DEFAULT 'scheduled'");
+ensureColumn('classes', 'started_at', 'DATETIME');
 ensureColumn('classes', 'subject', 'TEXT');
 ensureColumn('notifications', 'related_class_id', 'INTEGER');
 ensureColumn('notifications', 'details', 'TEXT');
 ensureColumn('notifications', 'deliver_at', 'DATETIME');
+
+// Migrate legacy "confirmed" status → "scheduled" (join flow uses Scheduled → In Progress)
+db.exec(`
+  UPDATE classes
+  SET status = 'scheduled'
+  WHERE status IS NULL OR TRIM(status) = '' OR LOWER(TRIM(status)) = 'confirmed'
+`);
+db.exec(`
+  UPDATE classes
+  SET meeting_provider = 'jitsi'
+  WHERE meeting_provider IS NULL OR TRIM(meeting_provider) = ''
+`);
 
 module.exports = db;
