@@ -3,33 +3,33 @@
     <h2>{{ title }}</h2>
     <p>{{ subtitle }}</p>
 
-    <p v-if="loading" class="empty">Loading lesson reports...</p>
+    <p v-if="loading" class="empty">Loading feedback...</p>
     <p v-else-if="!items.length" class="empty">{{ emptyText }}</p>
 
-    <ul v-else class="report-list">
+    <ul v-else class="feedback-list">
       <li v-for="item in items" :key="item.id">
         <div class="top">
-          <strong>{{ item.lessonTopic }}</strong>
-          <div class="chips">
-            <span class="chip">{{ item.attendanceStatusLabel }}</span>
-            <span v-if="item.hasFeedback" class="chip done">Feedback received</span>
-            <span v-else-if="item.needsFeedback" class="chip pending">Awaiting feedback</span>
-          </div>
+          <strong>{{ item.lessonTopic || 'Lesson feedback' }}</strong>
+          <span class="chip">{{ item.overallRating }}/5</span>
         </div>
         <p class="meta">
-          {{ formatDate(item.reportDate) }} · {{ item.reportTime }}
+          <span v-if="item.reportDate">{{ formatDate(item.reportDate) }}</span>
           <span v-if="item.classSubject"> · {{ item.classSubject }}</span>
-        </p>
-        <p v-if="showTeacher && item.teacher" class="meta">
-          Teacher: {{ item.teacher.fullName }}
         </p>
         <p v-if="showStudent && item.student" class="meta">
           Student: {{ item.student.fullName }}
         </p>
-        <p v-if="item.pagesDiscussed" class="meta">Pages discussed: {{ item.pagesDiscussed }}</p>
-        <p v-if="item.homeworkAssigned" class="meta">Homework: {{ item.homeworkAssigned }}</p>
-        <p v-if="item.remarks" class="meta">Remarks: {{ item.remarks }}</p>
-        <p class="progress">{{ item.studentProgress }}</p>
+        <p v-if="showTeacher && item.teacher" class="meta">
+          Teacher: {{ item.teacher.fullName }}
+        </p>
+        <p class="section-label">Comments</p>
+        <p class="body">{{ item.comments }}</p>
+        <template v-if="item.suggestions">
+          <p class="section-label">Suggestions</p>
+          <p class="body">{{ item.suggestions }}</p>
+        </template>
+        <p class="section-label">Learning experience</p>
+        <p class="body">{{ item.learningExperience }}</p>
         <p v-if="item.submittedAt" class="meta faint">
           Submitted {{ formatDateTime(item.submittedAt) }}
         </p>
@@ -39,13 +39,13 @@
 </template>
 
 <script setup lang="ts">
-import type { LessonReport } from '../stores/lessonReports'
+import type { StudentFeedback } from '../stores/studentFeedback'
 
 defineProps<{
   title: string
   subtitle: string
   emptyText: string
-  items: LessonReport[]
+  items: StudentFeedback[]
   loading?: boolean
   showTeacher?: boolean
   showStudent?: boolean
@@ -93,7 +93,8 @@ h2 {
 p,
 .empty,
 .meta,
-.progress,
+.body,
+.section-label,
 strong,
 .chip {
   font-family: 'Manrope', sans-serif;
@@ -114,14 +115,14 @@ p {
   font-style: italic;
 }
 
-.report-list {
+.feedback-list {
   list-style: none;
   display: grid;
   gap: 0.75rem;
   margin-top: 0.9rem;
 }
 
-.report-list li {
+.feedback-list li {
   padding: 0.8rem 0.85rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.75rem;
@@ -135,13 +136,6 @@ p {
   align-items: center;
 }
 
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  justify-content: flex-end;
-}
-
 .chip {
   font-size: 0.75rem;
   font-weight: 800;
@@ -152,16 +146,6 @@ p {
   white-space: nowrap;
 }
 
-.chip.pending {
-  color: #fcd34d;
-  background: rgba(251, 191, 36, 0.14);
-}
-
-.chip.done {
-  color: #99f6e4;
-  background: rgba(45, 212, 191, 0.14);
-}
-
 .meta {
   font-size: 0.86rem;
 }
@@ -170,8 +154,17 @@ p {
   color: var(--lh-faint);
 }
 
-.progress {
-  margin-top: 0.55rem;
+.section-label {
+  margin-top: 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lh-faint);
+}
+
+.body {
+  margin-top: 0.2rem;
   color: var(--lh-ink);
   font-size: 0.9rem;
   line-height: 1.5;

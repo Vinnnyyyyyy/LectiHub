@@ -20,6 +20,7 @@ app.use('/api/schedule-requests', scheduleRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/classes', classRoutes);
 app.use('/api/lesson-reports', require('./routes/lessonReportRoutes'));
+app.use('/api/student-feedback', require('./routes/studentFeedbackRoutes'));
 app.use('/api/calendar', calendarRoutes);
 
 const PORT = process.env.PORT || 3000;

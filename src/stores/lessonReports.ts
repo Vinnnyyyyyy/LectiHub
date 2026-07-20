@@ -19,6 +19,9 @@ export interface LessonReport {
   updatedAt: string | null
   classTitle?: string | null
   classSubject?: string | null
+  hasFeedback?: boolean
+  feedbackId?: number | null
+  needsFeedback?: boolean
   teacher: {
     id: number
     username: string
