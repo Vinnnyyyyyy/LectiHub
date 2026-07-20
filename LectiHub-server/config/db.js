@@ -107,6 +107,26 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS lesson_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_id INTEGER NOT NULL UNIQUE,
+    teacher_id INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    report_date TEXT NOT NULL,
+    report_time TEXT NOT NULL,
+    lesson_topic TEXT NOT NULL,
+    pages_discussed TEXT,
+    attendance_status TEXT NOT NULL,
+    homework_assigned TEXT,
+    remarks TEXT,
+    student_progress TEXT,
+    submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+    FOREIGN KEY (teacher_id) REFERENCES users(id),
+    FOREIGN KEY (student_id) REFERENCES users(id)
+  );
 `);
 
 ensureColumn('users', 'subject_expertise', 'TEXT');
@@ -156,5 +176,9 @@ db.exec(`
   SET participation_level = 'not_recorded'
   WHERE participation_level IS NULL OR TRIM(participation_level) = ''
 `);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_student ON lesson_reports(student_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_teacher ON lesson_reports(teacher_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_submitted ON lesson_reports(submitted_at)`);
 
 module.exports = db;

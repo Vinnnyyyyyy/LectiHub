@@ -234,6 +234,45 @@ function mapClassRow(row, teacher = null, student = null) {
   };
 }
 
+function mapLessonReport(row, teacher = null, student = null, classRow = null) {
+  const attendanceStatus = normalizeAttendanceStatus(row.attendance_status);
+  return {
+    id: row.id,
+    classId: row.class_id,
+    teacherId: row.teacher_id,
+    studentId: row.student_id,
+    reportDate: row.report_date,
+    reportTime: row.report_time,
+    lessonTopic: row.lesson_topic || '',
+    pagesDiscussed: row.pages_discussed || '',
+    attendanceStatus,
+    attendanceStatusLabel: labelFromSnake(attendanceStatus),
+    homeworkAssigned: row.homework_assigned || '',
+    remarks: row.remarks || '',
+    studentProgress: row.student_progress || '',
+    submittedAt: row.submitted_at || null,
+    updatedAt: row.updated_at || null,
+    classTitle: classRow?.title || row.class_title || null,
+    classSubject: classRow?.subject || row.class_subject || null,
+    teacher: teacher
+      ? {
+          id: teacher.id,
+          username: teacher.username,
+          fullName: teacher.full_name || teacher.username,
+          email: teacher.email || '',
+        }
+      : null,
+    student: student
+      ? {
+          id: student.id,
+          username: student.username,
+          fullName: student.full_name || student.username,
+          email: student.email || '',
+        }
+      : null,
+  };
+}
+
 function canJoin(classRow, now = new Date()) {
   return getJoinAvailability(classRow, now).canJoin;
 }
@@ -242,6 +281,7 @@ module.exports = {
   parseTimeSlot,
   buildMeetingDetails,
   mapClassRow,
+  mapLessonReport,
   normalizeClassStatus,
   getJoinAvailability,
   getMeetingProvider,
@@ -251,4 +291,5 @@ module.exports = {
   isValidHttpUrl,
   ATTENDANCE_STATUSES,
   PARTICIPATION_LEVELS,
+  labelFromSnake,
 };

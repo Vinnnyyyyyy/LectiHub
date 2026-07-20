@@ -9,6 +9,10 @@ const {
   updateLessonConduct,
   completeClass,
 } = require('../controllers/classController');
+const {
+  getLessonReportForClass,
+  submitLessonReport,
+} = require('../controllers/lessonReportController');
 
 router.get('/mine', auth, requireRole('student', 'teacher', 'admin'), listMyClasses);
 router.get('/by-request/:requestId', auth, getClassByRequest);
@@ -24,6 +28,18 @@ router.post(
   auth,
   requireRole('teacher', 'admin'),
   completeClass,
+);
+router.get(
+  '/:id/report',
+  auth,
+  requireRole('student', 'teacher', 'admin'),
+  getLessonReportForClass,
+);
+router.post(
+  '/:id/report',
+  auth,
+  requireRole('teacher', 'admin'),
+  submitLessonReport,
 );
 
 module.exports = router;

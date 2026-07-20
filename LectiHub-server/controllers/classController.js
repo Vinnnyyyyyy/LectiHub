@@ -23,11 +23,22 @@ function getUserSummary(id) {
 }
 
 function hydrateClass(row) {
-  return mapClassRow(
+  const mapped = mapClassRow(
     row,
     row.teacher_id ? getUserSummary(row.teacher_id) : null,
     row.student_id ? getUserSummary(row.student_id) : null,
   );
+
+  const report = db
+    .prepare('SELECT id, submitted_at FROM lesson_reports WHERE class_id = ?')
+    .get(row.id);
+
+  return {
+    ...mapped,
+    hasLessonReport: Boolean(report),
+    lessonReportId: report?.id || null,
+    lessonReportSubmittedAt: report?.submitted_at || null,
+  };
 }
 
 const VISIBLE_STATUSES = new Set(['scheduled', 'in_progress', 'completed']);

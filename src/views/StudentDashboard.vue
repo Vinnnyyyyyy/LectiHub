@@ -56,6 +56,15 @@
           :loading="loadingClasses"
           show-teacher
         />
+
+        <LessonReportsPanel
+          title="Lesson reports"
+          subtitle="Reports submitted by your teacher after each class."
+          empty-text="No lesson reports yet."
+          :items="lessonReports"
+          :loading="loadingReports"
+          show-teacher
+        />
       </div>
     </main>
   </div>
@@ -67,21 +76,25 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useClassesStore, type ConfirmedSchedule } from '../stores/classes'
+import { useLessonReportsStore } from '../stores/lessonReports'
 import { useNotificationsStore } from '../stores/notifications'
 import { useCalendarStore } from '../stores/calendar'
 import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
+import LessonReportsPanel from '../components/LessonReportsPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
+const lessonReportsStore = useLessonReportsStore()
 const notificationsStore = useNotificationsStore()
 const calendarStore = useCalendarStore()
 const router = useRouter()
 
 const { loading: loadingClasses, joiningId, joinMessage, error: joinError } =
   storeToRefs(classesStore)
+const { loading: loadingReports, reports: lessonReports } = storeToRefs(lessonReportsStore)
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
@@ -107,6 +120,7 @@ async function handleLogout() {
 onMounted(async () => {
   await Promise.allSettled([
     classesStore.fetchMine(),
+    lessonReportsStore.fetchMine(),
     notificationsStore.fetchMine(),
     calendarStore.fetchMine(),
   ])
