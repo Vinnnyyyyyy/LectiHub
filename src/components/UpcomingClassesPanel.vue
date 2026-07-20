@@ -13,6 +13,7 @@
             <span class="chip status" :data-status="item.status">{{
               item.statusLabel || formatStatus(item.status)
             }}</span>
+            <span v-if="item.isArchived || item.archivedAt" class="chip archived">Archived</span>
             <span class="chip">{{ item.durationMinutes }} min</span>
           </div>
         </div>
@@ -239,6 +240,11 @@ p {
 .chip.status[data-status='completed'] {
   color: var(--lh-faint);
   background: rgba(148, 163, 184, 0.12);
+}
+
+.chip.archived {
+  color: #99f6e4;
+  background: rgba(45, 212, 191, 0.14);
 }
 
 .meta {

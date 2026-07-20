@@ -81,6 +81,15 @@
           :loading="loadingFeedback"
           show-teacher
         />
+
+        <ClassHistoryPanel
+          title="Learning history"
+          subtitle="Classes archived after both the lesson report and your feedback are submitted."
+          empty-text="No archived learning history yet."
+          :items="archivedHistory"
+          :loading="loadingHistory"
+          show-teacher
+        />
       </div>
 
       <p v-if="feedbackMessage" class="join-feedback" role="status">{{ feedbackMessage }}</p>
@@ -107,6 +116,7 @@ import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 import LessonReportsPanel from '../components/LessonReportsPanel.vue'
 import StudentFeedbackFormPanel from '../components/StudentFeedbackFormPanel.vue'
 import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
+import ClassHistoryPanel from '../components/ClassHistoryPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 
@@ -118,8 +128,13 @@ const notificationsStore = useNotificationsStore()
 const calendarStore = useCalendarStore()
 const router = useRouter()
 
-const { loading: loadingClasses, joiningId, joinMessage, error: joinError } =
-  storeToRefs(classesStore)
+const {
+  loading: loadingClasses,
+  loadingHistory,
+  joiningId,
+  joinMessage,
+  error: joinError,
+} = storeToRefs(classesStore)
 const { loading: loadingReports, reports: lessonReports } = storeToRefs(lessonReportsStore)
 const {
   loading: loadingFeedback,
@@ -131,6 +146,7 @@ const {
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
+const archivedHistory = computed(() => classesStore.archived)
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 
 const displayName = computed(
@@ -148,7 +164,11 @@ async function handleJoinClass(item: ConfirmedSchedule) {
 async function handleSubmitFeedback(reportId: number, payload: StudentFeedbackPayload) {
   try {
     await studentFeedbackStore.submitForReport(reportId, payload)
-    await lessonReportsStore.fetchMine()
+    await Promise.allSettled([
+      lessonReportsStore.fetchMine(),
+      classesStore.fetchMine(),
+      classesStore.fetchHistory(),
+    ])
   } catch {
     // store sets error message
   }
@@ -162,6 +182,7 @@ async function handleLogout() {
 onMounted(async () => {
   await Promise.allSettled([
     classesStore.fetchMine(),
+    classesStore.fetchHistory(),
     lessonReportsStore.fetchMine(),
     studentFeedbackStore.fetchMine(),
     notificationsStore.fetchMine(),

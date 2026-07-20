@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { finalizeClassIfReady } = require('../utils/classLifecycle');
 const {
   ATTENDANCE_STATUSES,
   mapLessonReport,
@@ -368,34 +369,40 @@ async function submitLessonReport(req, res) {
     }
 
     // Keep class attendance in sync with the formal report.
-    const wasInProgress = normalizeClassStatus(classRow.status) === 'in_progress';
     db.prepare(
       `UPDATE classes
        SET attendance_status = ?,
-           attendance_recorded_at = COALESCE(attendance_recorded_at, CURRENT_TIMESTAMP),
-           status = ?,
-           completed_at = CASE
-             WHEN ? = 1 THEN COALESCE(completed_at, CURRENT_TIMESTAMP)
-             ELSE completed_at
-           END
+           attendance_recorded_at = COALESCE(attendance_recorded_at, CURRENT_TIMESTAMP)
        WHERE id = ?`,
-    ).run(
-      values.attendance_status,
-      wasInProgress ? 'completed' : classRow.status,
-      wasInProgress ? 1 : 0,
-      classId,
-    );
+    ).run(values.attendance_status, classId);
+
+    // Fully complete + archive only when student feedback also exists.
+    const finalization = finalizeClassIfReady(db, classId);
 
     const saved = getReportById(reportId);
     if (!existing) {
       notifyReportSubmitted(saved, classRow, teacherName);
     }
 
+    let message = existing
+      ? 'Lesson report updated successfully.'
+      : 'Lesson report submitted. It is now available to the administrator and student.';
+    if (finalization.newlyArchived) {
+      message =
+        'Lesson report submitted. Class is now Completed and archived into learning and teaching history.';
+    } else if (!finalization.hasStudentFeedback) {
+      message += ' Waiting for student feedback to fully complete and archive the class.';
+    }
+
     return res.status(existing ? 200 : 201).json({
-      message: existing
-        ? 'Lesson report updated successfully.'
-        : 'Lesson report submitted. It is now available to the administrator and student.',
+      message,
       report: hydrateReport(saved),
+      classFinalization: {
+        ready: finalization.ready,
+        finalized: finalization.finalized,
+        newlyArchived: Boolean(finalization.newlyArchived),
+        hasStudentFeedback: finalization.hasStudentFeedback,
+      },
     });
   } catch (err) {
     console.error('Submit lesson report error:', err);

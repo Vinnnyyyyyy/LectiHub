@@ -33,11 +33,26 @@ function hydrateClass(row) {
     .prepare('SELECT id, submitted_at FROM lesson_reports WHERE class_id = ?')
     .get(row.id);
 
+  const feedback = report
+    ? db
+        .prepare(
+          `SELECT id, overall_rating, submitted_at
+           FROM student_feedback
+           WHERE lesson_report_id = ?`,
+        )
+        .get(report.id)
+    : null;
+
   return {
     ...mapped,
     hasLessonReport: Boolean(report),
     lessonReportId: report?.id || null,
     lessonReportSubmittedAt: report?.submitted_at || null,
+    hasStudentFeedback: Boolean(feedback),
+    studentFeedbackId: feedback?.id || null,
+    studentFeedbackRating: feedback?.overall_rating ?? null,
+    studentFeedbackSubmittedAt: feedback?.submitted_at || null,
+    isFullyComplete: Boolean(report && feedback),
   };
 }
 
@@ -404,11 +419,89 @@ async function completeClass(req, res) {
   }
 }
 
+async function listClassHistory(req, res) {
+  try {
+    // Ensure any classes that already have report + feedback are archived.
+    const candidates = db
+      .prepare(
+        `SELECT c.id
+         FROM classes c
+         JOIN lesson_reports lr ON lr.class_id = c.id
+         JOIN student_feedback sf ON sf.lesson_report_id = lr.id
+         WHERE c.archived_at IS NULL`,
+      )
+      .all();
+
+    const { finalizeClassIfReady } = require('../utils/classLifecycle');
+    for (const row of candidates) {
+      finalizeClassIfReady(db, row.id);
+    }
+
+    let rows = [];
+    if (req.user.role === 'student') {
+      rows = db
+        .prepare(
+          `SELECT *
+           FROM classes
+           WHERE student_id = ?
+             AND archived_at IS NOT NULL
+           ORDER BY archived_at DESC, class_date DESC, id DESC`,
+        )
+        .all(req.user.id);
+    } else if (req.user.role === 'teacher') {
+      rows = db
+        .prepare(
+          `SELECT *
+           FROM classes
+           WHERE teacher_id = ?
+             AND archived_at IS NOT NULL
+           ORDER BY archived_at DESC, class_date DESC, id DESC`,
+        )
+        .all(req.user.id);
+    } else if (req.user.role === 'admin') {
+      rows = db
+        .prepare(
+          `SELECT *
+           FROM classes
+           WHERE archived_at IS NOT NULL
+           ORDER BY archived_at DESC, class_date DESC, id DESC`,
+        )
+        .all();
+    } else {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const history = rows.map((row) => {
+      const item = hydrateClass(row);
+      const report = row.id
+        ? db
+            .prepare(
+              `SELECT lesson_topic, student_progress, homework_assigned
+               FROM lesson_reports
+               WHERE class_id = ?`,
+            )
+            .get(row.id)
+        : null;
+      return {
+        ...item,
+        lessonTopic: report?.lesson_topic || item.subject || item.title,
+        studentProgress: report?.student_progress || '',
+        homeworkAssigned: report?.homework_assigned || '',
+      };
+    });
+
+    res.json(history);
+  } catch (err) {
+    res.status(500).json({ message: 'Error loading class history', error: err.message });
+  }
+}
+
 module.exports = {
   listMyClasses,
   getClassByRequest,
   joinClass,
   updateLessonConduct,
   completeClass,
+  listClassHistory,
   hydrateClass,
 };
