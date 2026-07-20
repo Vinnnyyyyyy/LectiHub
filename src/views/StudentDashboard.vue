@@ -26,14 +26,20 @@
         :loading="loadingCalendar"
       />
 
+      <p v-if="joinMessage" class="join-feedback" role="status">{{ joinMessage }}</p>
+      <p v-if="joinError" class="join-feedback error" role="alert">{{ joinError }}</p>
+
       <div class="panels">
         <UpcomingClassesPanel
           title="Upcoming classes"
-          subtitle="Confirmed schedules after admin approval."
+          subtitle="At the scheduled time, join your online class from here."
           empty-text="No upcoming classes yet."
           :items="upcoming"
           :loading="loadingClasses"
+          :allow-join="true"
+          :joining-id="joiningId"
           show-teacher
+          @join="handleJoinClass"
         />
 
         <NotificationsPanel
@@ -60,7 +66,7 @@ import { computed, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
-import { useClassesStore } from '../stores/classes'
+import { useClassesStore, type ConfirmedSchedule } from '../stores/classes'
 import { useNotificationsStore } from '../stores/notifications'
 import { useCalendarStore } from '../stores/calendar'
 import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
@@ -74,7 +80,8 @@ const notificationsStore = useNotificationsStore()
 const calendarStore = useCalendarStore()
 const router = useRouter()
 
-const { loading: loadingClasses } = storeToRefs(classesStore)
+const { loading: loadingClasses, joiningId, joinMessage, error: joinError } =
+  storeToRefs(classesStore)
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
@@ -83,6 +90,14 @@ const calendarUpcoming = computed(() => calendarStore.upcoming)
 const displayName = computed(
   () => authStore.fullName || authStore.username || 'student',
 )
+
+async function handleJoinClass(item: ConfirmedSchedule) {
+  try {
+    await classesStore.joinClass(item.id)
+  } catch {
+    // store sets error message
+  }
+}
 
 async function handleLogout() {
   authStore.logout()
@@ -223,6 +238,23 @@ onMounted(async () => {
   border-top: 1px solid var(--lh-line);
   color: var(--lh-faint) !important;
   font-style: italic;
+}
+
+.join-feedback {
+  font-family: 'Manrope', sans-serif;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.7rem;
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  background: rgba(45, 212, 191, 0.1);
+  color: #99f6e4;
+  font-size: 0.9rem;
+}
+
+.join-feedback.error {
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.1);
+  color: #fecaca;
 }
 
 @keyframes fade-up {

@@ -9,7 +9,12 @@
       <li v-for="item in items" :key="item.id">
         <div class="class-top">
           <strong>{{ item.title }}</strong>
-          <span class="chip">{{ item.durationMinutes }} min</span>
+          <div class="chips">
+            <span class="chip status" :data-status="item.status">{{
+              item.statusLabel || formatStatus(item.status)
+            }}</span>
+            <span class="chip">{{ item.durationMinutes }} min</span>
+          </div>
         </div>
         <p>
           {{ formatDate(item.classDate) }}
@@ -25,7 +30,40 @@
           <span v-if="item.subject"> · {{ item.subject }}</span>
         </p>
         <p v-if="item.meetingInfo" class="meta">{{ item.meetingInfo }}</p>
-        <a v-if="item.meetingLink" class="meet-link" :href="item.meetingLink" target="_blank" rel="noreferrer">
+        <p v-if="item.meetingProvider" class="meta provider">
+          Platform: {{ formatProvider(item.meetingProvider) }}
+        </p>
+
+        <div v-if="allowJoin" class="join-row">
+          <button
+            v-if="item.canJoin && item.status !== 'completed' && item.status !== 'cancelled'"
+            type="button"
+            class="join-btn"
+            :disabled="joiningId === item.id"
+            @click="emit('join', item)"
+          >
+            {{ joiningId === item.id ? 'Joining…' : item.status === 'in_progress' ? 'Rejoin class' : 'Join class' }}
+          </button>
+          <p v-else-if="item.status === 'scheduled'" class="join-hint">
+            {{ item.joinReason || 'Join opens near the scheduled start time.' }}
+          </p>
+          <a
+            v-if="item.meetingLink && item.status === 'in_progress'"
+            class="meet-link"
+            :href="item.meetingLink"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open meeting link
+          </a>
+        </div>
+        <a
+          v-else-if="item.meetingLink"
+          class="meet-link"
+          :href="item.meetingLink"
+          target="_blank"
+          rel="noreferrer"
+        >
           Open meeting link
         </a>
       </li>
@@ -44,6 +82,12 @@ defineProps<{
   loading?: boolean
   showTeacher?: boolean
   showStudent?: boolean
+  allowJoin?: boolean
+  joiningId?: number | null
+}>()
+
+const emit = defineEmits<{
+  join: [item: ConfirmedSchedule]
 }>()
 
 function formatDate(value: string) {
@@ -63,6 +107,19 @@ function formatTimeRange(
 ) {
   if (startTime && endTime) return `${startTime} – ${endTime}`
   return timeSlot.replace('-', ' – ')
+}
+
+function formatStatus(status: string) {
+  if (status === 'in_progress') return 'In Progress'
+  if (status === 'scheduled') return 'Scheduled'
+  return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+function formatProvider(provider: string) {
+  if (provider === 'google_meet') return 'Google Meet'
+  if (provider === 'zoom') return 'Zoom'
+  if (provider === 'jitsi') return 'Jitsi'
+  return provider
 }
 </script>
 
@@ -87,7 +144,9 @@ p,
 .meta,
 a,
 strong,
-.chip {
+.chip,
+.join-btn,
+.join-hint {
   font-family: 'Manrope', sans-serif;
 }
 
@@ -127,6 +186,13 @@ p {
   align-items: center;
 }
 
+.chips {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .chip {
   font-size: 0.75rem;
   font-weight: 800;
@@ -137,13 +203,66 @@ p {
   white-space: nowrap;
 }
 
+.chip.status[data-status='scheduled'] {
+  color: var(--lh-accent);
+  background: rgba(125, 211, 252, 0.12);
+}
+
+.chip.status[data-status='in_progress'] {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+.chip.status[data-status='completed'] {
+  color: var(--lh-faint);
+  background: rgba(148, 163, 184, 0.12);
+}
+
 .meta {
   font-size: 0.86rem;
 }
 
+.provider {
+  text-transform: none;
+}
+
+.join-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+}
+
+.join-btn {
+  border: 0;
+  border-radius: 0.55rem;
+  padding: 0.45rem 0.85rem;
+  background: linear-gradient(135deg, #2dd4bf, #0ea5e9);
+  color: #041018;
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.join-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.join-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.join-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--lh-faint);
+}
+
 .meet-link {
   display: inline-block;
-  margin-top: 0.45rem;
+  margin-top: 0.15rem;
   color: var(--lh-accent);
   font-size: 0.86rem;
   font-weight: 700;

@@ -593,7 +593,7 @@ async function assignTeacherToRequest(req, res) {
     const studentName = student?.full_name || student?.username || 'Student';
     const teacherName = teacher.full_name || teacher.username;
     const { startTime, endTime, durationMinutes } = parseTimeSlot(selectedSlot.time_slot);
-    const { meetingInfo, meetingLink } = buildMeetingDetails(
+    const { meetingInfo, meetingLink, meetingProvider } = buildMeetingDetails(
       requestId,
       selectedSlot.preferred_date,
       startTime,
@@ -618,9 +618,10 @@ async function assignTeacherToRequest(req, res) {
         .prepare(
           `INSERT INTO classes (
              teacher_id, student_id, class_date, time_slot, title, schedule_request_id,
-             start_time, end_time, duration_minutes, meeting_info, meeting_link, status, subject
+             start_time, end_time, duration_minutes, meeting_info, meeting_link,
+             meeting_provider, status, subject
            )
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?)`,
         )
         .run(
           teacherId,
@@ -634,6 +635,7 @@ async function assignTeacherToRequest(req, res) {
           durationMinutes,
           meetingInfo,
           meetingLink,
+          meetingProvider,
           subject,
         );
 
