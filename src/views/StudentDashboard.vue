@@ -29,8 +29,9 @@
         />
 
         <NotificationsPanel
-          subtitle="You’ll be notified as soon as a class schedule is confirmed."
+          subtitle="Confirmations include your teacher, schedule, meeting info, plus reminders before class."
           empty-text="You’re all caught up."
+          show-pending-reminders
         />
 
         <UpcomingClassesPanel

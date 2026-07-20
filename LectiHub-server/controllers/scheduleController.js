@@ -112,18 +112,76 @@ function notifyAdminsAboutRequest(requestId, studentName) {
   }
 }
 
+function toSqliteDateTime(date) {
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
 function notifyUser(userId, type, title, message, options = {}) {
   const relatedRequestId = options.relatedRequestId ?? null;
   const relatedClassId = options.relatedClassId ?? null;
   const details =
     options.details != null ? JSON.stringify(options.details) : null;
+  const deliverAt = options.deliverAt ?? null;
 
   db.prepare(
     `INSERT INTO notifications (
-       user_id, type, title, message, related_request_id, related_class_id, details
+       user_id, type, title, message, related_request_id, related_class_id, details, deliver_at
      )
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(userId, type, title, message, relatedRequestId, relatedClassId, details);
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    userId,
+    type,
+    title,
+    message,
+    relatedRequestId,
+    relatedClassId,
+    details,
+    deliverAt,
+  );
+}
+
+function scheduleStudentReminders(studentId, requestId, classId, scheduleDetails) {
+  const startTime = scheduleDetails.startTime || '09:00';
+  const classStart = new Date(`${scheduleDetails.classDate}T${startTime}:00`);
+  if (Number.isNaN(classStart.getTime())) return;
+
+  const now = new Date();
+  const windows = [
+    { key: '24h', ms: 24 * 60 * 60 * 1000, label: '24 hours' },
+    { key: '1h', ms: 60 * 60 * 1000, label: '1 hour' },
+  ];
+
+  for (const window of windows) {
+    const deliverAtDate = new Date(classStart.getTime() - window.ms);
+    // If the reminder time already passed, deliver immediately.
+    const deliverAt =
+      deliverAtDate <= now ? null : toSqliteDateTime(deliverAtDate);
+
+    const reminderMessage = [
+      `Reminder: your class begins in ${window.label}.`,
+      `Assigned teacher: ${scheduleDetails.teacherName}`,
+      `Schedule: ${scheduleDetails.classDate} ${scheduleDetails.startTime} – ${scheduleDetails.endTime} (${scheduleDetails.durationMinutes} minutes)`,
+      `Meeting information: ${scheduleDetails.meetingInfo}`,
+      `Meeting link: ${scheduleDetails.meetingLink}`,
+    ].join('\n');
+
+    notifyUser(
+      studentId,
+      'class_reminder',
+      `Class reminder · ${window.label} before`,
+      reminderMessage,
+      {
+        relatedRequestId: requestId,
+        relatedClassId: classId,
+        deliverAt,
+        details: {
+          ...scheduleDetails,
+          reminderWindow: window.key,
+          reminderLabel: window.label,
+        },
+      },
+    );
+  }
 }
 
 function teacherHasConflict(teacherId, preferredDate, timeSlot) {
@@ -588,10 +646,10 @@ async function assignTeacherToRequest(req, res) {
 
       const studentMessage = [
         `Assigned teacher: ${teacherName}`,
-        `Date and time: ${selectedSlot.preferred_date} ${startTime} – ${endTime}`,
-        `Class duration: ${durationMinutes} minutes`,
-        `Meeting details: ${meetingInfo}`,
+        `Schedule: ${selectedSlot.preferred_date} ${startTime} – ${endTime} (${durationMinutes} minutes)`,
+        `Meeting information: ${meetingInfo}`,
         `Meeting link: ${meetingLink}`,
+        'Reminders: you will also receive notifications 24 hours and 1 hour before class begins.',
       ].join('\n');
 
       notifyUser(
@@ -602,9 +660,20 @@ async function assignTeacherToRequest(req, res) {
         {
           relatedRequestId: requestId,
           relatedClassId: createdClassId,
-          details: scheduleDetails,
+          details: {
+            ...scheduleDetails,
+            remindersScheduled: ['24h', '1h'],
+          },
         },
       );
+
+      scheduleStudentReminders(
+        request.student_id,
+        requestId,
+        createdClassId,
+        scheduleDetails,
+      );
+
       notifyUser(
         teacherId,
         'schedule_confirmed',

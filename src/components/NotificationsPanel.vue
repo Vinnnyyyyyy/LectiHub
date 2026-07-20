@@ -17,39 +17,58 @@
 
     <p class="subtitle">{{ subtitle }}</p>
 
+    <div v-if="showPendingReminders && pendingReminders.length" class="pending">
+      <p class="field-label">Upcoming reminders</p>
+      <ul class="pending-list">
+        <li v-for="item in pendingReminders" :key="item.id">
+          <strong>{{ item.title }}</strong>
+          <p>
+            Delivers
+            {{ formatDateTime(item.deliverAt) }}
+            <span v-if="item.details?.teacherName">
+              · {{ item.details.teacherName }}
+            </span>
+          </p>
+        </li>
+      </ul>
+    </div>
+
     <p v-if="loading" class="empty">Loading notifications...</p>
     <p v-else-if="!notifications.length" class="empty">{{ emptyText }}</p>
     <ul v-else class="notice-list">
       <li
         v-for="item in notifications"
         :key="item.id"
-        :class="{ unread: !item.isRead }"
+        :class="{ unread: !item.isRead, reminder: item.type === 'class_reminder' }"
       >
         <button type="button" class="notice-btn" @click="handleSelect(item)">
-          <strong>{{ item.title }}</strong>
+          <div class="title-row">
+            <strong>{{ item.title }}</strong>
+            <span v-if="item.type === 'class_reminder'" class="chip">Reminder</span>
+          </div>
           <pre class="message">{{ item.message }}</pre>
 
           <div v-if="item.details" class="details">
-            <p v-if="item.details.studentName">
-              Student: {{ item.details.studentName }}
-            </p>
             <p v-if="item.details.teacherName">
-              Teacher: {{ item.details.teacherName }}
+              Assigned teacher: {{ item.details.teacherName }}
+            </p>
+            <p v-if="item.details.studentName">
+              Assigned student: {{ item.details.studentName }}
             </p>
             <p v-if="item.details.classDate">
-              Date & time:
+              Schedule:
               {{ item.details.classDate }}
               {{
                 item.details.startTime && item.details.endTime
                   ? `${item.details.startTime} – ${item.details.endTime}`
                   : item.details.timeSlot || ''
               }}
-            </p>
-            <p v-if="item.details.durationMinutes">
-              Duration: {{ item.details.durationMinutes }} minutes
+              <span v-if="item.details.durationMinutes">
+                ({{ item.details.durationMinutes }} minutes)
+              </span>
             </p>
             <p v-if="item.details.meetingInfo">
-              {{ item.details.meetingInfo }}
+              Meeting information: {{ item.details.meetingInfo }}
             </p>
             <a
               v-if="item.details.meetingLink"
@@ -81,10 +100,12 @@ withDefaults(
   defineProps<{
     subtitle?: string
     emptyText?: string
+    showPendingReminders?: boolean
   }>(),
   {
     subtitle: 'Updates about schedule confirmations and assignments.',
     emptyText: 'You’re all caught up.',
+    showPendingReminders: false,
   },
 )
 
@@ -93,7 +114,8 @@ const emit = defineEmits<{
 }>()
 
 const notificationsStore = useNotificationsStore()
-const { notifications, unreadCount, loading } = storeToRefs(notificationsStore)
+const { notifications, pendingReminders, unreadCount, loading } =
+  storeToRefs(notificationsStore)
 
 function formatDateTime(value: string) {
   const date = new Date(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`)
@@ -178,6 +200,52 @@ strong {
   color: var(--lh-muted);
   font-size: 0.9rem;
   margin-bottom: 0.75rem;
+}
+
+.pending {
+  margin-bottom: 0.85rem;
+  padding: 0.7rem 0.75rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.75rem;
+  background: rgba(20, 25, 31, 0.55);
+}
+
+.field-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--lh-warm);
+  margin-bottom: 0.4rem;
+}
+
+.pending-list {
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.pending-list p {
+  font-size: 0.84rem;
+  color: var(--lh-muted);
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.chip {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--lh-warm);
+  background: var(--lh-warm-soft);
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+}
+
+.notice-list li.reminder .notice-btn {
+  border-color: rgba(196, 165, 116, 0.35);
 }
 
 .text-btn {
