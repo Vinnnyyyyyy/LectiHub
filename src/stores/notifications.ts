@@ -12,6 +12,9 @@ export interface NotificationDetails {
   subject?: string
   meetingInfo?: string
   meetingLink?: string
+  reminderWindow?: string
+  reminderLabel?: string
+  remindersScheduled?: string[]
   [key: string]: unknown
 }
 
@@ -23,12 +26,24 @@ export interface AppNotification {
   relatedRequestId: number | null
   relatedClassId: number | null
   details: NotificationDetails | null
+  deliverAt: string | null
   isRead: boolean
   createdAt: string
 }
 
+export interface PendingReminder {
+  id: number
+  type: string
+  title: string
+  deliverAt: string
+  relatedClassId: number | null
+  relatedRequestId: number | null
+  details: NotificationDetails | null
+}
+
 interface NotificationsState {
   notifications: AppNotification[]
+  pendingReminders: PendingReminder[]
   unreadCount: number
   loading: boolean
   error: string | null
@@ -37,6 +52,7 @@ interface NotificationsState {
 export const useNotificationsStore = defineStore('notifications', {
   state: (): NotificationsState => ({
     notifications: [],
+    pendingReminders: [],
     unreadCount: 0,
     loading: false,
     error: null,
@@ -50,9 +66,11 @@ export const useNotificationsStore = defineStore('notifications', {
         const res = await api.get<{
           unreadCount: number
           notifications: AppNotification[]
+          pendingReminders?: PendingReminder[]
         }>('/notifications')
         this.unreadCount = res.data.unreadCount
         this.notifications = res.data.notifications
+        this.pendingReminders = res.data.pendingReminders || []
       } catch (err) {
         this.error = 'Could not load notifications'
         throw err

@@ -88,5 +88,6 @@ ensureColumn('classes', 'status', "TEXT DEFAULT 'confirmed'");
 ensureColumn('classes', 'subject', 'TEXT');
 ensureColumn('notifications', 'related_class_id', 'INTEGER');
 ensureColumn('notifications', 'details', 'TEXT');
+ensureColumn('notifications', 'deliver_at', 'DATETIME');
 
 module.exports = db;

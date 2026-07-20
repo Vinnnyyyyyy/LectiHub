@@ -18,10 +18,13 @@ function mapNotification(row) {
     relatedRequestId: row.related_request_id,
     relatedClassId: row.related_class_id ?? null,
     details: parseDetails(row.details),
+    deliverAt: row.deliver_at || null,
     isRead: !!row.is_read,
     createdAt: row.created_at,
   };
 }
+
+const DELIVERED_FILTER = `(deliver_at IS NULL OR deliver_at <= datetime('now'))`;
 
 async function listMyNotifications(req, res) {
   try {
@@ -30,6 +33,7 @@ async function listMyNotifications(req, res) {
         `SELECT *
          FROM notifications
          WHERE user_id = ?
+           AND ${DELIVERED_FILTER}
          ORDER BY created_at DESC
          LIMIT 50`,
       )
@@ -39,13 +43,39 @@ async function listMyNotifications(req, res) {
       .prepare(
         `SELECT COUNT(*) AS count
          FROM notifications
-         WHERE user_id = ? AND is_read = 0`,
+         WHERE user_id = ?
+           AND is_read = 0
+           AND ${DELIVERED_FILTER}`,
       )
       .get(req.user.id).count;
+
+    // Upcoming scheduled reminders (not delivered yet) so the student can see what's queued
+    const pendingReminders = db
+      .prepare(
+        `SELECT id, title, deliver_at, details, related_class_id, related_request_id, type
+         FROM notifications
+         WHERE user_id = ?
+           AND type = 'class_reminder'
+           AND deliver_at IS NOT NULL
+           AND deliver_at > datetime('now')
+         ORDER BY deliver_at ASC
+         LIMIT 10`,
+      )
+      .all(req.user.id)
+      .map((row) => ({
+        id: row.id,
+        type: row.type,
+        title: row.title,
+        deliverAt: row.deliver_at,
+        relatedClassId: row.related_class_id,
+        relatedRequestId: row.related_request_id,
+        details: parseDetails(row.details),
+      }));
 
     res.json({
       unreadCount,
       notifications: rows.map(mapNotification),
+      pendingReminders,
     });
   } catch (err) {
     res.status(500).json({ message: 'Error loading notifications', error: err.message });
@@ -82,7 +112,9 @@ async function markAllNotificationsRead(req, res) {
     db.prepare(
       `UPDATE notifications
        SET is_read = 1
-       WHERE user_id = ? AND is_read = 0`,
+       WHERE user_id = ?
+         AND is_read = 0
+         AND ${DELIVERED_FILTER}`,
     ).run(req.user.id);
 
     res.json({ message: 'All notifications marked as read' });
