@@ -14,10 +14,17 @@
       <section class="intro">
         <h1>Admin Dashboard</h1>
         <p>
-          Review preferred schedules, compare teacher availability/workload/expertise, then assign
-          the best fit to approve the request.
+          Monitor completed classes, teacher reports, student feedback, attendance, and scheduling
+          statistics, then review and assign preferred schedules.
         </p>
       </section>
+
+      <AdminMonitoringPanel
+        :overview="monitoringOverview"
+        :loading="loadingMonitoring"
+        :error="monitoringError"
+        @refresh="refreshMonitoring"
+      />
 
       <NotificationsPanel
         subtitle="New student scheduling requests appear here for review."
@@ -274,15 +281,18 @@ import {
 } from '../stores/notifications'
 import { useLessonReportsStore } from '../stores/lessonReports'
 import { useStudentFeedbackStore } from '../stores/studentFeedback'
+import { useAdminMonitoringStore } from '../stores/adminMonitoring'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import LessonReportsPanel from '../components/LessonReportsPanel.vue'
 import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
+import AdminMonitoringPanel from '../components/AdminMonitoringPanel.vue'
 
 const authStore = useAuthStore()
 const adminStore = useAdminScheduleStore()
 const notificationsStore = useNotificationsStore()
 const lessonReportsStore = useLessonReportsStore()
 const studentFeedbackStore = useStudentFeedbackStore()
+const monitoringStore = useAdminMonitoringStore()
 const router = useRouter()
 
 const {
@@ -295,6 +305,11 @@ const {
 } = storeToRefs(adminStore)
 const { loading: loadingReports, reports: lessonReports } = storeToRefs(lessonReportsStore)
 const { loading: loadingFeedback, feedback: studentFeedback } = storeToRefs(studentFeedbackStore)
+const {
+  overview: monitoringOverview,
+  loading: loadingMonitoring,
+  error: monitoringError,
+} = storeToRefs(monitoringStore)
 
 const selectedSlotId = ref<number | null>(null)
 const successMessage = ref('')
@@ -395,8 +410,13 @@ async function handleLogout() {
   await router.push('/login')
 }
 
+async function refreshMonitoring() {
+  await monitoringStore.fetchOverview()
+}
+
 onMounted(async () => {
   await Promise.all([
+    monitoringStore.fetchOverview(),
     adminStore.fetchPendingRequests(),
     notificationsStore.fetchMine(),
     lessonReportsStore.fetchMine(),
