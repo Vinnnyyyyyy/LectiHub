@@ -7,6 +7,7 @@ const userRoutes = require('./routes/userRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const classRoutes = require('./routes/classRoutes');
+const calendarRoutes = require('./routes/calendarRoutes');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/schedule-requests', scheduleRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/classes', classRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

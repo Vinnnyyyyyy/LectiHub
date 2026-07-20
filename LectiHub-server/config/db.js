@@ -71,6 +71,42 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (related_request_id) REFERENCES schedule_requests(id) ON DELETE SET NULL
   );
+
+  CREATE TABLE IF NOT EXISTS calendar_connections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    provider TEXT CHECK(provider IN ('google', 'calendly')) NOT NULL,
+    access_token TEXT,
+    refresh_token TEXT,
+    external_account TEXT,
+    calendar_id TEXT,
+    scheduling_url TEXT,
+    is_active INTEGER DEFAULT 1,
+    connected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, provider),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS calendar_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    class_id INTEGER,
+    title TEXT NOT NULL,
+    description TEXT,
+    event_date TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    duration_minutes INTEGER,
+    meeting_info TEXT,
+    meeting_link TEXT,
+    provider TEXT CHECK(provider IN ('lectihub', 'google', 'calendly')) NOT NULL DEFAULT 'lectihub',
+    external_event_id TEXT,
+    sync_status TEXT CHECK(sync_status IN ('pending', 'synced', 'failed', 'local_only')) NOT NULL DEFAULT 'local_only',
+    synced_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+  );
 `);
 
 ensureColumn('users', 'subject_expertise', 'TEXT');

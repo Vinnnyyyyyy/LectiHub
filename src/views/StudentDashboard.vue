@@ -18,6 +18,14 @@
 
       <ScheduleBookingSection />
 
+      <CalendarPanel
+        title="My calendar"
+        subtitle="Approved classes are added here automatically."
+        empty-text="No calendar events yet."
+        :events="calendarUpcoming"
+        :loading="loadingCalendar"
+      />
+
       <div class="panels">
         <UpcomingClassesPanel
           title="Upcoming classes"
@@ -54,18 +62,23 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useClassesStore } from '../stores/classes'
 import { useNotificationsStore } from '../stores/notifications'
+import { useCalendarStore } from '../stores/calendar'
 import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
+import CalendarPanel from '../components/CalendarPanel.vue'
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
 const notificationsStore = useNotificationsStore()
+const calendarStore = useCalendarStore()
 const router = useRouter()
 
 const { loading: loadingClasses } = storeToRefs(classesStore)
+const { loading: loadingCalendar } = storeToRefs(calendarStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
+const calendarUpcoming = computed(() => calendarStore.upcoming)
 
 const displayName = computed(
   () => authStore.fullName || authStore.username || 'student',
@@ -77,7 +90,11 @@ async function handleLogout() {
 }
 
 onMounted(async () => {
-  await Promise.allSettled([classesStore.fetchMine(), notificationsStore.fetchMine()])
+  await Promise.allSettled([
+    classesStore.fetchMine(),
+    notificationsStore.fetchMine(),
+    calendarStore.fetchMine(),
+  ])
 })
 </script>
 
