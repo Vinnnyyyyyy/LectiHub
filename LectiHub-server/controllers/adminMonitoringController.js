@@ -148,12 +148,6 @@ function buildTeacherPerformance() {
     .all();
 
   return teachers.map((teacher) => {
-    const completedClasses = countBy(
-      `SELECT COUNT(*) AS count FROM classes
-       WHERE teacher_id = ? AND LOWER(COALESCE(status, '')) IN ('completed', 'confirmed')`,
-      [teacher.id],
-    );
-    // confirmed normalizes to scheduled in helpers, but completed is what we want
     const completedExact = countBy(
       `SELECT COUNT(*) AS count FROM classes WHERE teacher_id = ? AND status = 'completed'`,
       [teacher.id],
@@ -184,7 +178,7 @@ function buildTeacherPerformance() {
       fullName: teacher.full_name || teacher.username,
       email: teacher.email || '',
       subjectExpertise: teacher.subject_expertise || '',
-      completedClasses: completedExact || completedClasses,
+      completedClasses: completedExact,
       reportsSubmitted,
       feedbackCount: ratings.length,
       averageRating: average(ratings),
