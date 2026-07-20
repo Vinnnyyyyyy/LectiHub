@@ -19,38 +19,11 @@
         </p>
       </section>
 
-      <section class="notifications panel">
-        <div class="section-head">
-          <h2>
-            Notifications
-            <span v-if="unreadCount" class="badge">{{ unreadCount }}</span>
-          </h2>
-          <button
-            v-if="notifications.length"
-            type="button"
-            class="text-btn"
-            @click="markAllRead"
-          >
-            Mark all read
-          </button>
-        </div>
-
-        <p v-if="loadingNotifications" class="hint">Loading notifications...</p>
-        <p v-else-if="!notifications.length" class="hint">No notifications yet.</p>
-        <ul v-else class="notice-list">
-          <li
-            v-for="item in notifications"
-            :key="item.id"
-            :class="{ unread: !item.isRead }"
-          >
-            <button type="button" class="notice-btn" @click="openFromNotification(item)">
-              <strong>{{ item.title }}</strong>
-              <span>{{ item.message }}</span>
-              <time>{{ formatDateTime(item.createdAt) }}</time>
-            </button>
-          </li>
-        </ul>
-      </section>
+      <NotificationsPanel
+        subtitle="New student scheduling requests appear here for review."
+        empty-text="No notifications yet."
+        @select="openFromNotification"
+      />
 
       <div class="layout">
         <section class="panel requests-panel">
@@ -273,22 +246,24 @@ import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
 import {
   useAdminScheduleStore,
-  type AdminNotification,
   type TeacherCandidate,
 } from '../stores/adminSchedule'
+import {
+  useNotificationsStore,
+  type AppNotification,
+} from '../stores/notifications'
+import NotificationsPanel from '../components/NotificationsPanel.vue'
 
 const authStore = useAuthStore()
 const adminStore = useAdminScheduleStore()
+const notificationsStore = useNotificationsStore()
 const router = useRouter()
 
 const {
   requests,
   selected,
-  notifications,
-  unreadCount,
   loadingRequests,
   loadingReview,
-  loadingNotifications,
   assigning,
   error,
 } = storeToRefs(adminStore)
@@ -351,21 +326,10 @@ async function openRequest(id: number) {
   await adminStore.fetchRequestReview(id)
 }
 
-async function openFromNotification(item: AdminNotification) {
-  if (!item.isRead) {
-    try {
-      await adminStore.markNotificationRead(item.id)
-    } catch {
-      // still try to open the related request
-    }
-  }
+async function openFromNotification(item: AppNotification) {
   if (item.relatedRequestId) {
     await openRequest(item.relatedRequestId)
   }
-}
-
-async function markAllRead() {
-  await adminStore.markAllNotificationsRead()
 }
 
 async function assign(teacherId: number) {
@@ -396,7 +360,7 @@ async function handleLogout() {
 }
 
 onMounted(async () => {
-  await Promise.all([adminStore.fetchPendingRequests(), adminStore.fetchNotifications()])
+  await Promise.all([adminStore.fetchPendingRequests(), notificationsStore.fetchMine()])
 })
 </script>
 

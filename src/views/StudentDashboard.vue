@@ -28,11 +28,10 @@
           show-teacher
         />
 
-        <section class="panel" style="--delay: 160ms">
-          <h2>Notifications</h2>
-          <p>Stay current on schedule changes and reminders.</p>
-          <p class="empty">You’re all caught up.</p>
-        </section>
+        <NotificationsPanel
+          subtitle="You’ll be notified as soon as a class schedule is confirmed."
+          empty-text="You’re all caught up."
+        />
 
         <UpcomingClassesPanel
           title="Lesson history"
@@ -53,11 +52,14 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useClassesStore } from '../stores/classes'
+import { useNotificationsStore } from '../stores/notifications'
 import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
+import NotificationsPanel from '../components/NotificationsPanel.vue'
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
+const notificationsStore = useNotificationsStore()
 const router = useRouter()
 
 const { loading: loadingClasses } = storeToRefs(classesStore)
@@ -74,11 +76,7 @@ async function handleLogout() {
 }
 
 onMounted(async () => {
-  try {
-    await classesStore.fetchMine()
-  } catch {
-    // store keeps the error state
-  }
+  await Promise.allSettled([classesStore.fetchMine(), notificationsStore.fetchMine()])
 })
 </script>
 

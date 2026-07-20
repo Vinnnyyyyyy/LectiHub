@@ -86,5 +86,7 @@ ensureColumn('classes', 'meeting_info', 'TEXT');
 ensureColumn('classes', 'meeting_link', 'TEXT');
 ensureColumn('classes', 'status', "TEXT DEFAULT 'confirmed'");
 ensureColumn('classes', 'subject', 'TEXT');
+ensureColumn('notifications', 'related_class_id', 'INTEGER');
+ensureColumn('notifications', 'details', 'TEXT');
 
 module.exports = db;

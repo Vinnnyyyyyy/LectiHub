@@ -16,6 +16,11 @@
         <p>Your confirmed class schedules with students, times, and meeting details.</p>
       </section>
 
+      <NotificationsPanel
+        subtitle="New assignments include student, date/time, duration, and meeting details."
+        empty-text="No class assignment notifications yet."
+      />
+
       <UpcomingClassesPanel
         title="Upcoming classes"
         subtitle="Schedules created after admin approval and teacher assignment."
@@ -43,10 +48,13 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useClassesStore } from '../stores/classes'
+import { useNotificationsStore } from '../stores/notifications'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
+import NotificationsPanel from '../components/NotificationsPanel.vue'
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
+const notificationsStore = useNotificationsStore()
 const router = useRouter()
 
 const { loading } = storeToRefs(classesStore)
@@ -60,11 +68,7 @@ async function handleLogout() {
 }
 
 onMounted(async () => {
-  try {
-    await classesStore.fetchMine()
-  } catch {
-    // keep empty state
-  }
+  await Promise.allSettled([classesStore.fetchMine(), notificationsStore.fetchMine()])
 })
 </script>
 
