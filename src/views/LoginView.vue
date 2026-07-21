@@ -60,7 +60,12 @@ async function handleLogin() {
     await redirectForRole(authStore.role)
   } catch (err) {
     if (axios.isAxiosError(err)) {
-      error.value = err.response?.data?.message || 'Login failed'
+      if (!err.response) {
+        error.value =
+          'Cannot reach the LectiHub API. Make sure the server is running on port 3000.'
+      } else {
+        error.value = err.response.data?.message || 'Login failed'
+      }
     } else {
       error.value = 'Login failed'
     }
