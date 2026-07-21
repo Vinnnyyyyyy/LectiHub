@@ -208,7 +208,7 @@ p {
   font-size: 0.75rem;
   font-weight: 800;
   padding: 0.15rem 0.45rem;
-  border-radius: 999px;
+  border-radius: 0.4rem;
   color: #fcd34d;
   background: rgba(251, 191, 36, 0.14);
   white-space: nowrap;
@@ -263,7 +263,7 @@ label {
 }
 
 .rating-option input {
-  accent-color: #2dd4bf;
+  accent-color: var(--lh-accent);
 }
 
 textarea {
@@ -283,7 +283,7 @@ textarea {
   border: 0;
   border-radius: 0.55rem;
   padding: 0.55rem 0.95rem;
-  background: linear-gradient(135deg, #2dd4bf, #0ea5e9);
+  background: linear-gradient(135deg, var(--lh-accent), var(--lh-accent-deep));
   color: #041018;
   font-size: 0.86rem;
   font-weight: 800;

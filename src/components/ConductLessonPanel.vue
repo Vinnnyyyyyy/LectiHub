@@ -260,7 +260,7 @@ p {
   font-size: 0.75rem;
   font-weight: 800;
   padding: 0.15rem 0.45rem;
-  border-radius: 999px;
+  border-radius: 0.4rem;
   white-space: nowrap;
   color: #86efac;
   background: rgba(34, 197, 94, 0.14);
@@ -335,7 +335,7 @@ button:disabled {
 }
 
 .primary {
-  background: linear-gradient(135deg, #2dd4bf, #0ea5e9);
+  background: linear-gradient(135deg, var(--lh-accent), var(--lh-accent-deep));
   color: #041018;
 }
 

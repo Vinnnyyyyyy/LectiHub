@@ -12,86 +12,122 @@
 
     <main class="content">
       <section class="intro">
-        <h1>Teacher Dashboard</h1>
+        <p class="eyebrow">Teacher</p>
+        <h1>Hi, {{ displayName }}</h1>
         <p>
-          Confirmed classes sync to your LectiHub calendar, and to Google Calendar or Calendly when
-          connected.
+          Run today’s sessions, take notes during class, then file the lesson report so students can
+          follow up.
         </p>
       </section>
 
-      <CalendarConnectionsPanel />
+      <section class="dash-section" aria-labelledby="teacher-today">
+        <div class="dash-section-label">
+          <div>
+            <h2 id="teacher-today">Today</h2>
+            <p>Upcoming classes and assignment alerts.</p>
+          </div>
+        </div>
+        <p v-if="joinMessage" class="join-feedback" role="status">{{ joinMessage }}</p>
+        <p v-if="joinError" class="join-feedback error" role="alert">{{ joinError }}</p>
+        <div class="dash-grid-2">
+          <UpcomingClassesPanel
+            title="Upcoming classes"
+            subtitle="At the scheduled time, join the online meeting with your student."
+            empty-text="No upcoming classes assigned yet."
+            :items="upcoming"
+            :loading="loading"
+            :allow-join="true"
+            :joining-id="joiningId"
+            show-student
+            @join="handleJoinClass"
+          />
+          <NotificationsPanel
+            subtitle="New assignments include student, date/time, duration, and meeting details."
+            empty-text="No class assignment notifications yet."
+          />
+        </div>
+      </section>
 
-      <CalendarPanel
-        title="My calendar"
-        subtitle="Approved class schedules appear here automatically."
-        empty-text="No calendar events yet."
-        :events="calendarUpcoming"
-        :loading="loadingCalendar"
-      />
+      <section class="dash-section" aria-labelledby="teacher-conduct">
+        <div class="dash-section-label">
+          <div>
+            <h2 id="teacher-conduct">Conduct &amp; report</h2>
+            <p>Attendance, curriculum coverage, recording link, then the post-lesson report.</p>
+          </div>
+        </div>
+        <div class="dash-stack">
+          <ConductLessonPanel
+            :items="inProgress"
+            :loading="loading"
+            :saving-id="savingId"
+            @save="handleSaveConduct"
+            @complete="handleCompleteLesson"
+          />
+          <p v-if="conductMessage" class="join-feedback" role="status">{{ conductMessage }}</p>
+          <LessonReportFormPanel
+            :completed-classes="past"
+            :loading="loading"
+            :submitting-id="reportSubmittingId"
+            @submit="handleSubmitReport"
+          />
+          <p v-if="reportMessage" class="join-feedback" role="status">{{ reportMessage }}</p>
+          <p v-if="reportError" class="join-feedback error" role="alert">{{ reportError }}</p>
+        </div>
+      </section>
 
-      <NotificationsPanel
-        subtitle="New assignments include student, date/time, duration, and meeting details."
-        empty-text="No class assignment notifications yet."
-      />
+      <section class="dash-section" aria-labelledby="teacher-records">
+        <div class="dash-section-label">
+          <div>
+            <h2 id="teacher-records">Records</h2>
+            <p>Submitted reports, past classes, and archived teaching history.</p>
+          </div>
+        </div>
+        <div class="dash-grid-2">
+          <LessonReportsPanel
+            title="Submitted lesson reports"
+            subtitle="Reports you have filed for completed classes."
+            empty-text="No lesson reports submitted yet."
+            :items="lessonReports"
+            :loading="loadingReports"
+            show-student
+          />
+          <UpcomingClassesPanel
+            title="Past classes"
+            subtitle="Completed lessons with attendance, participation, and recordings."
+            empty-text="No past classes yet."
+            :items="past"
+            :loading="loading"
+            show-student
+          />
+        </div>
+        <ClassHistoryPanel
+          title="Teaching history"
+          subtitle="Classes archived after both the lesson report and student feedback are submitted."
+          empty-text="No archived teaching history yet."
+          :items="archivedHistory"
+          :loading="loadingHistory"
+          show-student
+        />
+      </section>
 
-      <UpcomingClassesPanel
-        title="Upcoming classes"
-        subtitle="At the scheduled time, join the online meeting with your student."
-        empty-text="No upcoming classes assigned yet."
-        :items="upcoming"
-        :loading="loading"
-        :allow-join="true"
-        :joining-id="joiningId"
-        show-student
-        @join="handleJoinClass"
-      />
-      <p v-if="joinMessage" class="join-feedback" role="status">{{ joinMessage }}</p>
-      <p v-if="joinError" class="join-feedback error" role="alert">{{ joinError }}</p>
-
-      <ConductLessonPanel
-        :items="inProgress"
-        :loading="loading"
-        :saving-id="savingId"
-        @save="handleSaveConduct"
-        @complete="handleCompleteLesson"
-      />
-      <p v-if="conductMessage" class="join-feedback" role="status">{{ conductMessage }}</p>
-
-      <LessonReportFormPanel
-        :completed-classes="past"
-        :loading="loading"
-        :submitting-id="reportSubmittingId"
-        @submit="handleSubmitReport"
-      />
-      <p v-if="reportMessage" class="join-feedback" role="status">{{ reportMessage }}</p>
-      <p v-if="reportError" class="join-feedback error" role="alert">{{ reportError }}</p>
-
-      <LessonReportsPanel
-        title="Submitted lesson reports"
-        subtitle="Reports you have filed for completed classes."
-        empty-text="No lesson reports submitted yet."
-        :items="lessonReports"
-        :loading="loadingReports"
-        show-student
-      />
-
-      <UpcomingClassesPanel
-        title="Past classes"
-        subtitle="Completed lessons with attendance, participation, and recordings."
-        empty-text="No past classes yet."
-        :items="past"
-        :loading="loading"
-        show-student
-      />
-
-      <ClassHistoryPanel
-        title="Teaching history"
-        subtitle="Classes archived after both the lesson report and student feedback are submitted."
-        empty-text="No archived teaching history yet."
-        :items="archivedHistory"
-        :loading="loadingHistory"
-        show-student
-      />
+      <section class="dash-section" aria-labelledby="teacher-calendar">
+        <div class="dash-section-label">
+          <div>
+            <h2 id="teacher-calendar">Calendar</h2>
+            <p>LectiHub calendar plus optional Google Calendar or Calendly sync.</p>
+          </div>
+        </div>
+        <div class="dash-stack">
+          <CalendarConnectionsPanel />
+          <CalendarPanel
+            title="My calendar"
+            subtitle="Approved class schedules appear here automatically."
+            empty-text="No calendar events yet."
+            :events="calendarUpcoming"
+            :loading="loadingCalendar"
+          />
+        </div>
+      </section>
     </main>
   </div>
 </template>
@@ -202,91 +238,5 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.dashboard {
-  position: relative;
-  min-height: 100vh;
-  color: var(--lh-ink);
-}
-
-.atmosphere {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--lh-atmosphere);
-}
-
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1.4rem 1.5rem 0.5rem;
-}
-
-.brand {
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.45rem;
-  font-weight: 600;
-  color: var(--lh-accent);
-}
-
-.greeting,
-.logout,
-.intro p {
-  font-family: 'Manrope', sans-serif;
-}
-
-.greeting {
-  font-size: 0.92rem;
-  color: var(--lh-muted);
-  margin-top: 0.15rem;
-}
-
-.logout {
-  font-size: 0.88rem;
-  font-weight: 700;
-  padding: 0.55rem 0.9rem;
-  border-radius: 0.65rem;
-  border: 1px solid var(--lh-line);
-  background: var(--lh-panel-solid);
-  color: var(--lh-ink);
-  cursor: pointer;
-}
-
-.content {
-  max-width: 48rem;
-  margin: 0 auto;
-  padding: 1rem 1.5rem 2.5rem;
-  display: grid;
-  gap: 1rem;
-}
-
-.intro h1 {
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: clamp(1.7rem, 3vw, 2.2rem);
-  font-weight: 550;
-}
-
-.intro p {
-  margin-top: 0.4rem;
-  color: var(--lh-muted);
-  max-width: 36rem;
-}
-
-.join-feedback {
-  font-family: 'Manrope', sans-serif;
-  margin: 0;
-  padding: 0.7rem 0.9rem;
-  border-radius: 0.7rem;
-  border: 1px solid rgba(45, 212, 191, 0.35);
-  background: rgba(45, 212, 191, 0.1);
-  color: #99f6e4;
-  font-size: 0.9rem;
-}
-
-.join-feedback.error {
-  border-color: rgba(248, 113, 113, 0.4);
-  background: rgba(248, 113, 113, 0.1);
-  color: #fecaca;
-}
+/* Shell styles live in assets/dashboard.css */
 </style>

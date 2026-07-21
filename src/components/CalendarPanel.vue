@@ -117,7 +117,7 @@ strong,
   font-weight: 800;
   text-transform: uppercase;
   padding: 0.15rem 0.4rem;
-  border-radius: 999px;
+  border-radius: 0.4rem;
   background: var(--lh-accent-soft);
   color: var(--lh-accent);
 }
