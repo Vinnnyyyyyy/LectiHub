@@ -218,33 +218,34 @@ p {
 }
 
 .chip {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
+  letter-spacing: 0.02em;
   color: var(--lh-warm);
   background: var(--lh-warm-soft);
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
+  padding: 0.18rem 0.45rem;
+  border-radius: 0.4rem;
   white-space: nowrap;
 }
 
 .chip.status[data-status='scheduled'] {
   color: var(--lh-accent);
-  background: rgba(125, 211, 252, 0.12);
+  background: var(--lh-accent-soft);
 }
 
 .chip.status[data-status='in_progress'] {
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.14);
+  color: #9fd4c0;
+  background: rgba(79, 143, 123, 0.18);
 }
 
 .chip.status[data-status='completed'] {
   color: var(--lh-faint);
-  background: rgba(148, 163, 184, 0.12);
+  background: rgba(148, 163, 184, 0.1);
 }
 
 .chip.archived {
-  color: #99f6e4;
-  background: rgba(45, 212, 191, 0.14);
+  color: var(--lh-accent);
+  background: var(--lh-accent-soft);
 }
 
 .meta {
@@ -267,8 +268,8 @@ p {
   border: 0;
   border-radius: 0.55rem;
   padding: 0.45rem 0.85rem;
-  background: linear-gradient(135deg, #2dd4bf, #0ea5e9);
-  color: #041018;
+  background: linear-gradient(135deg, var(--lh-accent), var(--lh-accent-deep));
+  color: #0c1210;
   font-size: 0.86rem;
   font-weight: 800;
   cursor: pointer;

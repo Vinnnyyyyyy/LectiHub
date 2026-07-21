@@ -146,7 +146,7 @@ p {
   font-size: 0.75rem;
   font-weight: 800;
   padding: 0.15rem 0.45rem;
-  border-radius: 999px;
+  border-radius: 0.4rem;
   color: #86efac;
   background: rgba(34, 197, 94, 0.14);
   white-space: nowrap;
@@ -158,8 +158,8 @@ p {
 }
 
 .chip.done {
-  color: #99f6e4;
-  background: rgba(45, 212, 191, 0.14);
+  color: var(--lh-accent);
+  background: var(--lh-accent-soft);
 }
 
 .meta {

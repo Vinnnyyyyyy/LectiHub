@@ -177,7 +177,7 @@ h2 {
   min-width: 1.35rem;
   height: 1.35rem;
   padding: 0 0.35rem;
-  border-radius: 999px;
+  border-radius: 0.4rem;
   background: var(--lh-warm-soft);
   color: var(--lh-warm);
   font-family: 'Manrope', sans-serif;
@@ -241,7 +241,7 @@ strong {
   color: var(--lh-warm);
   background: var(--lh-warm-soft);
   padding: 0.15rem 0.4rem;
-  border-radius: 999px;
+  border-radius: 0.4rem;
 }
 
 .notice-list li.reminder .notice-btn {
