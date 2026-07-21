@@ -6,8 +6,10 @@
  * Modes:
  * - log  (default when enabled without SMTP): print emails to the server console
  * - smtp : send through SMTP using EMAIL_HOST / EMAIL_PORT / EMAIL_USER / EMAIL_PASS
+ *
+ * nodemailer is loaded lazily so the API can start even if `npm install`
+ * has not installed optional mail dependencies yet.
  */
-const nodemailer = require('nodemailer');
 
 function isEmailEnabled() {
   return String(process.env.EMAIL_ENABLED || '').toLowerCase() === 'true';
@@ -24,6 +26,21 @@ function getFromAddress() {
   return process.env.EMAIL_FROM || 'LectiHub <noreply@lectihub.local>';
 }
 
+function loadNodemailer() {
+  try {
+    // Lazy require: avoid crashing server boot when node_modules is incomplete.
+    // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+    return require('nodemailer');
+  } catch (err) {
+    if (err && err.code === 'MODULE_NOT_FOUND') {
+      throw new Error(
+        'nodemailer is not installed. Run `npm install` inside LectiHub-server to enable SMTP email.',
+      );
+    }
+    throw err;
+  }
+}
+
 let smtpTransporter = null;
 
 function getSmtpTransporter() {
@@ -38,6 +55,7 @@ function getSmtpTransporter() {
     throw new Error('EMAIL_HOST is required when EMAIL_MODE=smtp');
   }
 
+  const nodemailer = loadNodemailer();
   smtpTransporter = nodemailer.createTransport({
     host,
     port,
