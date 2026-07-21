@@ -2,7 +2,6 @@
 import { onMounted, onUnmounted } from 'vue'
 import { RouterView, useRouter } from 'vue-router'
 import Lenis from 'lenis'
-import 'lenis/dist/lenis.css'
 
 const router = useRouter()
 
