@@ -2,23 +2,11 @@
   <div class="dashboard">
     <div class="atmosphere" aria-hidden="true" />
 
-    <header class="topbar">
-      <div>
+    <header class="topbar student-topbar">
+      <div class="topbar-brand">
         <p class="brand">LectiHub</p>
         <p class="greeting">Welcome back, {{ displayName }}</p>
       </div>
-      <button type="button" class="logout" @click="handleLogout">Log out</button>
-    </header>
-
-    <main class="content">
-      <section class="intro">
-        <p class="eyebrow">Student</p>
-        <h1>Hi, {{ displayName }}</h1>
-        <p>
-          Request a schedule, join upcoming sessions, then review reports and leave feedback when
-          they are ready.
-        </p>
-      </section>
 
       <nav class="dash-nav" aria-label="Student dashboard sections">
         <div class="dash-nav-track" role="tablist">
@@ -33,12 +21,22 @@
             :aria-selected="activeSection === item.id"
             :aria-controls="`panel-${item.id}`"
             :tabindex="activeSection === item.id ? 0 : -1"
-            @click="activeSection = item.id"
+            @click="setSection(item.id)"
           >
             {{ item.label }}
           </button>
         </div>
       </nav>
+
+      <button type="button" class="logout" @click="handleLogout">Log out</button>
+    </header>
+
+    <main class="content">
+      <section class="intro">
+        <p class="eyebrow">Student</p>
+        <h1>Hi, {{ displayName }}</h1>
+        <p>{{ activeIntro }}</p>
+      </section>
 
       <section
         v-show="activeSection === 'schedule'"
@@ -197,14 +195,39 @@ import CalendarPanel from '../components/CalendarPanel.vue'
 
 type StudentSection = 'schedule' | 'now' | 'calendar' | 'history'
 
-const navItems: { id: StudentSection; label: string }[] = [
-  { id: 'schedule', label: 'Schedule' },
-  { id: 'now', label: 'Now' },
-  { id: 'calendar', label: 'Calendar' },
-  { id: 'history', label: 'History & feedback' },
+const navItems: { id: StudentSection; label: string; intro: string }[] = [
+  {
+    id: 'schedule',
+    label: 'Schedule',
+    intro: 'Pick preferred times and track confirmation from the center.',
+  },
+  {
+    id: 'now',
+    label: 'Now',
+    intro: 'Join upcoming sessions and check alerts that need a look.',
+  },
+  {
+    id: 'calendar',
+    label: 'Calendar',
+    intro: 'Approved classes appear here automatically.',
+  },
+  {
+    id: 'history',
+    label: 'History & feedback',
+    intro: 'Past lessons, teacher reports, and feedback after each report.',
+  },
 ]
 
 const activeSection = ref<StudentSection>('now')
+
+const activeIntro = computed(
+  () => navItems.find((item) => item.id === activeSection.value)?.intro ?? '',
+)
+
+function setSection(section: StudentSection) {
+  activeSection.value = section
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
