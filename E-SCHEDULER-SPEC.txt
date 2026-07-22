@@ -1,0 +1,607 @@
+E-SCHEDULER
+Product specification and design brief
+================================================================================
+
+E-Scheduler is a learning-center platform for scheduling classes, running
+sessions, tracking attendance and progress, and keeping students, teachers,
+parents, and admins aligned in one place.
+
+This document describes the product from scratch: who uses it, what they see,
+what they can do, and how it should feel. It is intentionally not a technical
+implementation plan. There is no tech stack or coding guidance here.
+
+
+--------------------------------------------------------------------------------
+1. PRODUCT VISION
+--------------------------------------------------------------------------------
+
+PROBLEM
+Learning centers juggle spreadsheets, chat apps, calendars, and paper for
+schedules, attendance, homework, and parent updates. Information is scattered.
+Confirmations get lost. Teachers and admins spend time coordinating instead of
+teaching.
+
+SOLUTION
+One calm workspace where:
+- Students request and attend classes
+- Teachers run lessons and record outcomes
+- Parents stay informed without chasing updates
+- Admins confirm schedules, assign teachers, and monitor the center
+
+PRODUCT DESIGN PRINCIPLES
+1. One primary job per screen. Do not bury the next action.
+2. Role-aware, not role-identical. Same brand language, different priorities.
+3. Schedule is the spine. Calendar and class status should always be easy to find.
+4. Confirmations over chaos. Every booking, change, or cancellation leaves a
+   clear trail.
+5. Quiet by default. Notify when it matters. Do not spam.
+6. Works on phone first. Admins and teachers will open this between classes.
+
+
+--------------------------------------------------------------------------------
+2. USER ROLES
+--------------------------------------------------------------------------------
+
+ADMIN / CENTER MANAGER
+Who: Front desk, academic lead, owner
+Primary goal: Confirm requests, assign teachers, oversee operations
+
+TEACHER
+Who: Instructors
+Primary goal: See today's classes, conduct lessons, report and grade
+
+STUDENT
+Who: Learners
+Primary goal: Request schedule, join class, submit work and feedback
+
+PARENT / GUARDIAN
+Who: Linked to one or more students
+Primary goal: Follow schedule, attendance, progress, and messages
+
+STAFF / COORDINATOR (optional)
+Who: Non-teaching operations people
+Primary goal: Help with scheduling without full admin powers
+
+SUPER-ADMIN (optional, multi-center)
+Who: Platform operator
+Primary goal: Manage centers, branding, global settings
+
+ROLE RELATIONSHIPS
+- A parent can be linked to multiple students.
+- A student may have zero, one, or two parents on the account.
+- A teacher owns a subject profile, availability, and workload.
+- An admin can act across all students and teachers in their center.
+- Staff can review requests and send reminders, but cannot change center-wide
+  settings.
+
+ACCOUNT STATES
+Invited -> Active -> Suspended -> Archived
+
+Students can self-register or be invited by admin or parent.
+Parents join via invite link tied to a student profile.
+
+
+--------------------------------------------------------------------------------
+3. PAGES AND SCREENS
+--------------------------------------------------------------------------------
+
+PUBLIC / AUTH
+- Landing (optional): Short explanation of the center, plus login / register
+- Login: Email or username and password (SSO optional later)
+- Register (student): Create student account
+- Invite accept: Parent, teacher, or staff completes invite
+- Forgot / reset password: Recovery flow
+- Verify email: Optional confirmation step
+
+SHARED (ALL SIGNED-IN ROLES)
+- Home / Dashboard: Role-specific "what needs attention"
+- Notifications center: Alerts, reminders, and system messages
+- Messages / Inbox: Conversations (1:1 and small groups)
+- Profile: Personal details, avatar, contact info
+- Settings: Preferences, password, notification toggles, calendar sync
+- Help / Support: FAQs, contact center
+
+ADMIN
+- Operations dashboard: Queue counts, today's classes, alerts
+- Schedule requests: Pending, approved, and rejected requests
+- Request review and assign: Slot picker and teacher matching
+- Master calendar: Center-wide calendar of all classes
+- People - Students: Directory, status, linked parents
+- People - Teachers: Directory, subjects, availability, workload
+- People - Parents: Directory and linked students
+- Courses and subjects: Catalog of offerings
+- Class sessions: List and detail of scheduled sessions
+- Attendance overview: Center attendance trends
+- Assignments overview: Cross-class homework status
+- Grades overview: Progress snapshots
+- Reports library: Lesson reports, feedback, ops reports
+- Monitoring / analytics: Scheduling health, completion rates
+- Center settings: Hours, rooms or meeting defaults, policies
+- Integrations: Calendar, video, email providers
+
+TEACHER
+- Teaching dashboard: Today / upcoming, prep cues
+- My calendar: Personal teaching schedule
+- Class detail: One session - join, conduct, notes
+- Conduct lesson: Attendance, participation, curriculum, recording
+- Lesson report form: Post-class report
+- My courses / classes: Ongoing groups or recurring series
+- Assignments: Create, collect, review submissions
+- Grades: Enter and update scores and comments
+- Students (roster): Learners assigned to this teacher
+- Availability: Weekly hours and blocked times
+- Teaching history / archive: Completed and archived sessions
+
+STUDENT
+- Learning dashboard: Next class, tasks due, alerts
+- Request schedule: Preferred slots and remarks
+- My requests: Status of booking requests
+- My calendar: Upcoming approved classes
+- Join class: Meeting entry for live session
+- Courses: Enrolled subjects / series
+- Assignments and homework: To-do, submit, feedback received
+- Grades / progress: Scores and teacher comments
+- Lesson reports (read): What was covered after class
+- Feedback: Rate and comment after a report
+- Learning history: Archived completed classes
+
+PARENT
+- Family dashboard: Child switcher and what is next
+- Children's schedules: Calendars per linked student
+- Attendance: Present / late / absent history
+- Progress: Grades, reports, teacher remarks
+- Messages: Contact teacher or center
+- Billing summary (optional): Upcoming fees / receipts if enabled
+- Permissions and preferences: Which alerts they want
+
+
+--------------------------------------------------------------------------------
+4. DASHBOARDS BY ROLE
+--------------------------------------------------------------------------------
+
+ADMIN - CENTER OPERATIONS
+Above the fold:
+- Pending schedule requests (count and list entry)
+- Today's classes (in progress / starting soon)
+- Urgent alerts (unassigned confirmed slots, missing reports)
+
+Secondary:
+- This week's booking volume
+- Attendance snapshot
+- Recent lesson reports and student feedback
+
+UX note: Monitoring and deep analytics stay one click away. Do not dump them
+into the first screen.
+
+TEACHER - TODAY
+- Next class card (time, student, join / conduct CTA)
+- Upcoming list for the day
+- Incomplete lesson reports
+- Assignments waiting for review
+
+STUDENT - UP NEXT
+- Next session with join state
+- Open schedule request status
+- Homework due soon
+- New lesson report / feedback prompt
+
+PARENT - FAMILY TODAY
+- Child selector
+- Each child's next class
+- Attendance flags (absences this week)
+- New messages or progress notes
+
+
+--------------------------------------------------------------------------------
+5. FEATURE AREAS
+--------------------------------------------------------------------------------
+
+5.1 SCHEDULING AND CALENDAR
+
+Core flows:
+1. Student (or parent on behalf of student) submits preferred slots and remarks.
+2. Admin reviews availability and assigns a teacher.
+3. System confirms class: date, time, duration, subject, meeting link or info.
+4. Student and teacher calendars update. Notifications go out.
+5. Reminders fire before class (for example 24 hours and 1 hour).
+6. Reschedule or cancel with reason and re-notification.
+
+Calendar views:
+- Day / week / month
+- Role filters (my classes vs center-wide for admin)
+- Color by status: requested, scheduled, in progress, completed, cancelled,
+  archived
+- List view for mobile-friendly scanning
+
+Availability:
+- Teachers set weekly recurring availability and exceptions
+- Admins see conflicts before assigning
+- Optional room / resource booking (physical classroom or online only)
+
+Recurring classes:
+- Weekly series with exceptions (holiday skip, single-date move)
+- Series-level vs single-session edits
+
+
+5.2 COURSES AND CLASSES
+
+Course / subject:
+- Name, description, level, default duration
+- Materials outline (optional)
+- Assigned default teachers
+
+Class session:
+- Linked course or subject
+- Teacher and student(s)
+- Schedule window and meeting provider or link
+- Status lifecycle: scheduled -> in progress -> completed -> archived
+  (after report and feedback when required)
+- Curriculum plan field for the session
+
+Group classes (optional phase):
+- Multiple students, shared time, shared attendance roster
+
+
+5.3 CONDUCTING A LESSON (LIVE CLASS)
+
+Teacher tools during or around class:
+- Join online meeting (Meet / Zoom / Jitsi, etc.)
+- Mark attendance (present, late, absent, excused)
+- Note participation level and short comment
+- Track curriculum coverage / pages
+- Attach recording link
+- Mark lesson complete
+
+Student tools:
+- Join when the window opens
+- See meeting info and reminders
+
+
+5.4 ATTENDANCE
+
+- Per-session attendance status
+- Teacher enters during or after class; admin can override with an audit note
+- Parent and student visibility into history
+- Admin reports: present rate, chronic lateness, absences by student or teacher
+- Optional attendance reminders to parents when marked absent
+
+
+5.5 ASSIGNMENTS, HOMEWORK, AND GRADES
+
+Assignments:
+- Teacher creates assignment linked to course or session
+- Due date, instructions, attachments
+- Student submits text, file, or link
+- Teacher reviews: complete, incomplete, or needs revision, plus comment
+- Parent can view status (not necessarily edit)
+
+Homework from lesson reports:
+- Homework field on a lesson report can auto-create a lightweight task for the
+  student
+
+Grades:
+- Numeric or scale-based scores (configurable per center)
+- Rubric optional
+- Gradebook per course: assignments and assessments
+- Progress comments visible to student and parent
+- Admin export for reporting periods
+
+
+5.6 MESSAGING AND NOTIFICATIONS
+
+Notifications (system-generated):
+- Schedule submitted, approved, or rejected
+- Teacher assigned
+- Class reminders
+- Lesson report published
+- Feedback requested
+- Assignment due or graded
+- Attendance marked absent
+- Message received
+
+Channels:
+- In-app notification center (required)
+- Email (required for confirmations)
+- Optional push or SMS later
+
+Messaging:
+- Student and teacher (about a class or course)
+- Parent and teacher or admin
+- Admin announcements to a role or course cohort
+- Attach context: link to a class, assignment, or request
+- Mute and notification preferences per conversation type
+
+Rules of thumb:
+- Transactional events always notify
+- Marketing-style noise never appears in the core product
+
+
+5.7 REPORTS AND FEEDBACK
+
+Lesson report (teacher to student, parent, admin):
+- Date and time, topic, pages, attendance, homework, remarks, progress notes
+
+Student feedback (student to teacher and admin):
+- After report: rating, comments, suggestions, learning experience
+
+Ops reports (admin):
+- Scheduling funnel (requests to approvals to completed classes)
+- Teacher workload
+- Attendance summary
+- Assignment completion rates
+- Feedback scores
+
+Archive rule:
+When both the lesson report and required feedback exist, the session can move
+to completed or archived history so active dashboards stay clean.
+
+
+5.8 PROFILES AND PEOPLE
+
+- Avatar, name, contact, timezone
+- Teacher: subjects, bio, workload indicators
+- Student: level, enrolled courses, linked parents
+- Parent: linked children, preferred contact method
+- Emergency contact fields (optional)
+
+
+5.9 SETTINGS
+
+User settings:
+- Password and security
+- Language and timezone
+- Notification preferences (per event type and channel)
+- Calendar sync connections
+- Appearance: light / dark / system
+
+Center settings (admin):
+- Center name, logo, contact
+- Working hours and blackout dates
+- Default class duration and meeting provider
+- Policies: cancellation window, feedback required yes or no
+- Grade scale
+- Role permissions for staff
+
+
+5.10 INTEGRATIONS
+
+Google Calendar / Outlook
+  Why: Two-way or export of confirmed classes
+
+Google Meet / Zoom / Jitsi
+  Why: Online classroom links
+
+Email provider
+  Why: Confirmations and reminders
+
+File storage
+  Why: Assignment attachments and materials
+
+SMS gateway (later)
+  Why: High-priority reminders
+
+Payment (optional later)
+  Why: Tuition invoices for parents
+
+The integrations screen should show connection status, last sync, and
+disconnect. Not a wall of developer jargon.
+
+
+5.11 OTHER VALUABLE FEATURES
+
+- Waitlist when preferred slots are full
+- Substitute teacher flow when assignee is unavailable
+- Holiday calendar that blocks booking
+- Materials library per course
+- Certificates or completion badges for finished courses
+- Audit log for admin (who approved, reassigned, edited grades)
+- Multi-child parent switcher without re-login
+- Offline-friendly day sheet (printable today's roster for teachers)
+- Accessibility: keyboardable controls, readable contrast, reduced-motion
+  respect
+
+
+--------------------------------------------------------------------------------
+6. KEY END-TO-END JOURNEYS
+--------------------------------------------------------------------------------
+
+A. BOOK A CLASS
+Student requests slots -> Admin assigns teacher -> Calendars and emails update
+-> Reminders send -> Class runs
+
+B. RUN A CLASS
+Teacher opens session -> Joins meeting -> Takes attendance and notes ->
+Completes lesson -> Files report -> Student feedback -> Session archives
+
+C. HOMEWORK LOOP
+Teacher assigns work (or via report) -> Student submits -> Teacher grades and
+comments -> Parent sees status on family dashboard
+
+D. PARENT STAYS INFORMED
+Parent receives confirmation of schedule -> Sees attendance after class ->
+Reads lesson report -> Messages teacher if needed
+
+E. RESCHEDULE
+Requester asks to move -> Admin approves new slot or teacher -> Old session
+cancelled with note -> Everyone notified
+
+
+--------------------------------------------------------------------------------
+7. DESIGN SYSTEM AND UX
+--------------------------------------------------------------------------------
+
+INTENT
+Clean, modern, calm. Good for daily work, not a marketing spectacle.
+Responsive from phone to desktop. No visual noise.
+
+BRAND FEEL
+- Quiet confidence: a learning center tool people trust
+- Warm-neutral surfaces with one clear accent (sage / soft green works well;
+  avoid generic purple gradients and glow trends)
+- Typography: one readable UI sans, plus an optional restrained display face
+  for titles only
+- Plenty of whitespace, clear hierarchy, few borders
+
+LAYOUT PATTERNS
+- Top bar: brand, role context, notifications, profile
+- Primary navigation: left rail on desktop; bottom tabs or drawer on mobile
+  (role-specific items)
+- Content: single column on mobile; two-column only when comparing list and
+  detail (for example request queue)
+- Dashboards: one hero "next action" zone, then short sections. Not a widget
+  collage.
+
+COMPONENTS (KEEP A SMALL SET)
+- Page header (title, one supporting line, primary CTA)
+- Panels / sections (light surface, soft radius - not heavy card stacks)
+- Lists with clear row actions
+- Status chips (scheduled, in progress, done) - short, not candy-like pills
+- Forms with labeled fields and inline validation
+- Empty states that explain the next step
+- Toasts for success or error after actions
+- Confirm dialogs for destructive or irreversible actions
+
+SCHEDULER UX SPECIFICS
+- Prefer list + calendar toggle over calendar-only on mobile
+- Drag-and-drop optional on desktop; always offer precise date and time fields
+- Conflicts shown before confirm, in plain language
+- "Starting soon" and "Join" states must be unmistakable
+
+ATTENDANCE UX
+- Large tap targets for Present / Late / Absent / Excused
+- Default to Present for online join when appropriate, still editable
+- Summary strip: for example "3 present, 1 late, 0 absent"
+
+MESSAGING UX
+- Threads sorted by recent activity
+- Unread badges only where useful
+- Class context chip at top of thread (for example "Algebra, Thu 4:00")
+
+ACCESSIBILITY AND RESPONSIVENESS
+- Breakpoints: phone, tablet, desktop
+- Touch-friendly controls (about 44px minimum targets)
+- Respect prefers-reduced-motion
+- Dark mode supported as a first-class preference, not an afterthought
+- Clear focus states; do not rely on color alone for status
+
+UX IMPROVEMENTS WORTH BAKING IN
+1. Sticky "Next class" bar on student and teacher mobile dashboards
+2. Smart defaults when assigning teachers (availability, subject, workload)
+3. Bulk remind for admins (tomorrow's classes)
+4. Undo on common mistakes (wrong attendance mark) within a short window
+5. Progressive disclosure on review screens - summary first, conflict details
+   expandable
+6. Child switcher always visible for parents
+7. Done-for-today checklist for teachers (reports left, assignments to review)
+
+WHAT TO AVOID
+- Dense newspaper layouts and hairline-grid overload
+- Decorative hero imagery on authenticated app screens
+- Dashboard stat-card spam above the real work
+- Fancy motion that delays interaction
+- Hidden critical actions behind overflow menus on mobile
+
+
+--------------------------------------------------------------------------------
+8. SCREEN-BY-SCREEN DESIGN NOTES (PRIORITY SURFACES)
+--------------------------------------------------------------------------------
+
+LOGIN / REGISTER
+- Centered, short form; brand name prominent
+- No cluttered side marketing panels in the app shell
+- Clear error text ("Wrong password"), not generic failure only
+
+DASHBOARDS
+- Greeting and role
+- One primary CTA (for example "Review 4 requests", "Join Algebra",
+  "Submit report")
+- Secondary lists below
+
+SCHEDULER / REQUEST REVIEW (ADMIN)
+- Left: request queue
+- Right: student context, slot select, ranked teachers
+- Sticky assign button
+- Success banner with what happens next (emails, calendar)
+
+CALENDAR
+- Week default for teachers; agenda or list default on mobile
+- Filters: course, status, person
+
+CONDUCT LESSON
+- Single scrolling form grouped as:
+  Attendance -> Participation -> Curriculum -> Recording -> Complete
+- Autosave draft where possible
+
+ASSIGNMENTS
+- Kanban optional; simple Due / Submitted / Graded tabs are enough for v1
+
+MESSAGES
+- Two-pane on desktop; full-screen thread on mobile with back button
+
+SETTINGS
+- Grouped list (Account, Notifications, Calendar, Appearance)
+- Dangerous actions separated
+
+
+--------------------------------------------------------------------------------
+9. SUGGESTED DELIVERY PHASES (PRODUCT, NOT ENGINEERING)
+--------------------------------------------------------------------------------
+
+PHASE 1 - SCHEDULING SPINE
+Auth (admin, teacher, student), schedule requests, assign teacher, calendars,
+notifications, join online class, basic profiles
+
+PHASE 2 - LESSON QUALITY LOOP
+Conduct lesson, attendance, lesson reports, student feedback, archive and
+history, admin monitoring
+
+PHASE 3 - LEARNING LOOP
+Courses catalog, assignments and homework, grades, parent accounts and family
+dashboard
+
+PHASE 4 - COMMUNICATION AND POLISH
+Full messaging, announcements, richer integrations, substitutes, waitlists,
+audit log
+
+
+--------------------------------------------------------------------------------
+10. SUCCESS METRICS (PRODUCT)
+--------------------------------------------------------------------------------
+
+- Time for admin to approve and assign a request
+- Percent of classes with attendance recorded same day
+- Percent of completed classes with lesson report within 24 hours
+- Student and parent notification open rate for reminders
+- Reduction in no-shows after reminder launch
+- Teacher weekly active use of dashboard "today" view
+
+
+--------------------------------------------------------------------------------
+11. OPEN PRODUCT DECISIONS
+--------------------------------------------------------------------------------
+
+Document these as the center defines policy:
+
+1. Can parents book on behalf of students from day one?
+2. Is student feedback required before archive?
+3. Are classes 1:1 only in v1, or groups too?
+4. Who may message whom by default?
+5. Are grades visible to parents immediately or after publish?
+6. Single center first, or multi-center ready?
+
+
+--------------------------------------------------------------------------------
+12. DOCUMENT STATUS
+--------------------------------------------------------------------------------
+
+Type: Product specification and design brief
+Scope: E-Scheduler platform (all roles)
+Out of scope here: Tech stack, APIs, database, coding tasks
+Next artifacts: User flows (wireframes), content guidelines, phase-1
+acceptance criteria
+
+
+================================================================================
+E-Scheduler should feel like a well-run front desk: clear, calm, and always
+sure what happens next.
+================================================================================
