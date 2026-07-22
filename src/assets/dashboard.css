@@ -34,7 +34,7 @@
   animation: lh-fade-down 0.45s ease both;
 }
 
-.dashboard .topbar.student-topbar {
+.dashboard .topbar.dash-topbar {
   position: sticky;
   top: 0;
   z-index: 20;
@@ -296,11 +296,11 @@
     padding-right: 1.1rem;
   }
 
-  .dashboard .topbar.student-topbar {
+  .dashboard .topbar.dash-topbar {
     align-items: stretch;
   }
 
-  .dashboard .topbar.student-topbar .logout {
+  .dashboard .topbar.dash-topbar .logout {
     margin-left: auto;
   }
 

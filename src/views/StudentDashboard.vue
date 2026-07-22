@@ -2,7 +2,7 @@
   <div class="dashboard">
     <div class="atmosphere" aria-hidden="true" />
 
-    <header class="topbar student-topbar">
+    <header class="topbar dash-topbar">
       <div class="topbar-brand">
         <p class="brand">LectiHub</p>
         <p class="greeting">Welcome back, {{ displayName }}</p>
