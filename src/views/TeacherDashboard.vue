@@ -2,11 +2,32 @@
   <div class="dashboard">
     <div class="atmosphere" aria-hidden="true" />
 
-    <header class="topbar">
-      <div>
+    <header class="topbar dash-topbar">
+      <div class="topbar-brand">
         <p class="brand">LectiHub</p>
         <p class="greeting">Welcome, {{ displayName }}</p>
       </div>
+
+      <nav class="dash-nav" aria-label="Teacher dashboard sections">
+        <div class="dash-nav-track" role="tablist">
+          <button
+            v-for="item in navItems"
+            :id="`tab-${item.id}`"
+            :key="item.id"
+            type="button"
+            role="tab"
+            class="dash-nav-item"
+            :class="{ active: activeSection === item.id }"
+            :aria-selected="activeSection === item.id"
+            :aria-controls="`panel-${item.id}`"
+            :tabindex="activeSection === item.id ? 0 : -1"
+            @click="setSection(item.id)"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+      </nav>
+
       <button type="button" class="logout" @click="handleLogout">Log out</button>
     </header>
 
@@ -14,13 +35,16 @@
       <section class="intro">
         <p class="eyebrow">Teacher</p>
         <h1>Hi, {{ displayName }}</h1>
-        <p>
-          Run today’s sessions, take notes during class, then file the lesson report so students can
-          follow up.
-        </p>
+        <p>{{ activeIntro }}</p>
       </section>
 
-      <section class="dash-section" aria-labelledby="teacher-today">
+      <section
+        v-show="activeSection === 'today'"
+        id="panel-today"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-today"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="teacher-today">Today</h2>
@@ -48,7 +72,13 @@
         </div>
       </section>
 
-      <section class="dash-section" aria-labelledby="teacher-conduct">
+      <section
+        v-show="activeSection === 'conduct'"
+        id="panel-conduct"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-conduct"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="teacher-conduct">Conduct &amp; report</h2>
@@ -75,7 +105,13 @@
         </div>
       </section>
 
-      <section class="dash-section" aria-labelledby="teacher-records">
+      <section
+        v-show="activeSection === 'records'"
+        id="panel-records"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-records"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="teacher-records">Records</h2>
@@ -110,7 +146,13 @@
         />
       </section>
 
-      <section class="dash-section" aria-labelledby="teacher-calendar">
+      <section
+        v-show="activeSection === 'calendar'"
+        id="panel-calendar"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-calendar"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="teacher-calendar">Calendar</h2>
@@ -133,7 +175,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -156,6 +198,42 @@ import ClassHistoryPanel from '../components/ClassHistoryPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue'
+
+type TeacherSection = 'today' | 'conduct' | 'records' | 'calendar'
+
+const navItems: { id: TeacherSection; label: string; intro: string }[] = [
+  {
+    id: 'today',
+    label: 'Today',
+    intro: 'Upcoming classes and assignment alerts.',
+  },
+  {
+    id: 'conduct',
+    label: 'Conduct & report',
+    intro: 'Take attendance, note progress, then file the lesson report.',
+  },
+  {
+    id: 'records',
+    label: 'Records',
+    intro: 'Submitted reports, past classes, and archived teaching history.',
+  },
+  {
+    id: 'calendar',
+    label: 'Calendar',
+    intro: 'LectiHub calendar plus optional Google Calendar or Calendly sync.',
+  },
+]
+
+const activeSection = ref<TeacherSection>('today')
+
+const activeIntro = computed(
+  () => navItems.find((item) => item.id === activeSection.value)?.intro ?? '',
+)
+
+function setSection(section: TeacherSection) {
+  activeSection.value = section
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
