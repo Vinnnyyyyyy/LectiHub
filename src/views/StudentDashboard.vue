@@ -2,11 +2,32 @@
   <div class="dashboard">
     <div class="atmosphere" aria-hidden="true" />
 
-    <header class="topbar">
-      <div>
+    <header class="topbar dash-topbar">
+      <div class="topbar-brand">
         <p class="brand">LectiHub</p>
         <p class="greeting">Welcome back, {{ displayName }}</p>
       </div>
+
+      <nav class="dash-nav" aria-label="Student dashboard sections">
+        <div class="dash-nav-track" role="tablist">
+          <button
+            v-for="item in navItems"
+            :id="`tab-${item.id}`"
+            :key="item.id"
+            type="button"
+            role="tab"
+            class="dash-nav-item"
+            :class="{ active: activeSection === item.id }"
+            :aria-selected="activeSection === item.id"
+            :aria-controls="`panel-${item.id}`"
+            :tabindex="activeSection === item.id ? 0 : -1"
+            @click="setSection(item.id)"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+      </nav>
+
       <button type="button" class="logout" @click="handleLogout">Log out</button>
     </header>
 
@@ -14,13 +35,16 @@
       <section class="intro">
         <p class="eyebrow">Student</p>
         <h1>Hi, {{ displayName }}</h1>
-        <p>
-          Request a schedule, join upcoming sessions, then review reports and leave feedback when
-          they are ready.
-        </p>
+        <p>{{ activeIntro }}</p>
       </section>
 
-      <section class="dash-section" aria-labelledby="student-schedule">
+      <section
+        v-show="activeSection === 'schedule'"
+        id="panel-schedule"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-schedule"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="student-schedule">Schedule</h2>
@@ -30,7 +54,13 @@
         <ScheduleBookingSection />
       </section>
 
-      <section class="dash-section" aria-labelledby="student-now">
+      <section
+        v-show="activeSection === 'now'"
+        id="panel-now"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-now"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="student-now">Now</h2>
@@ -59,7 +89,13 @@
         </div>
       </section>
 
-      <section class="dash-section" aria-labelledby="student-calendar">
+      <section
+        v-show="activeSection === 'calendar'"
+        id="panel-calendar"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-calendar"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="student-calendar">Calendar</h2>
@@ -75,7 +111,13 @@
         />
       </section>
 
-      <section class="dash-section" aria-labelledby="student-history">
+      <section
+        v-show="activeSection === 'history'"
+        id="panel-history"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-history"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="student-history">History &amp; feedback</h2>
@@ -130,7 +172,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -150,6 +192,42 @@ import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
 import ClassHistoryPanel from '../components/ClassHistoryPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
+
+type StudentSection = 'schedule' | 'now' | 'calendar' | 'history'
+
+const navItems: { id: StudentSection; label: string; intro: string }[] = [
+  {
+    id: 'schedule',
+    label: 'Schedule',
+    intro: 'Pick preferred times and track confirmation from the center.',
+  },
+  {
+    id: 'now',
+    label: 'Now',
+    intro: 'Join upcoming sessions and check alerts that need a look.',
+  },
+  {
+    id: 'calendar',
+    label: 'Calendar',
+    intro: 'Approved classes appear here automatically.',
+  },
+  {
+    id: 'history',
+    label: 'History & feedback',
+    intro: 'Past lessons, teacher reports, and feedback after each report.',
+  },
+]
+
+const activeSection = ref<StudentSection>('now')
+
+const activeIntro = computed(
+  () => navItems.find((item) => item.id === activeSection.value)?.intro ?? '',
+)
+
+function setSection(section: StudentSection) {
+  activeSection.value = section
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()

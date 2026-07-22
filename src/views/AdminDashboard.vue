@@ -2,11 +2,32 @@
   <div class="dashboard">
     <div class="atmosphere" aria-hidden="true" />
 
-    <header class="topbar">
-      <div>
+    <header class="topbar dash-topbar">
+      <div class="topbar-brand">
         <p class="brand">LectiHub</p>
         <p class="greeting">Admin review workspace</p>
       </div>
+
+      <nav class="dash-nav" aria-label="Admin dashboard sections">
+        <div class="dash-nav-track" role="tablist">
+          <button
+            v-for="item in navItems"
+            :id="`tab-${item.id}`"
+            :key="item.id"
+            type="button"
+            role="tab"
+            class="dash-nav-item"
+            :class="{ active: activeSection === item.id }"
+            :aria-selected="activeSection === item.id"
+            :aria-controls="`panel-${item.id}`"
+            :tabindex="activeSection === item.id ? 0 : -1"
+            @click="setSection(item.id)"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+      </nav>
+
       <button type="button" class="logout" @click="handleLogout">Log out</button>
     </header>
 
@@ -14,13 +35,16 @@
       <section class="intro">
         <p class="eyebrow">Admin</p>
         <h1>Center operations</h1>
-        <p>
-          Confirm schedule requests, assign teachers, then review reports, feedback, and live
-          monitoring.
-        </p>
+        <p>{{ activeIntro }}</p>
       </section>
 
-      <section class="dash-section" aria-labelledby="admin-review">
+      <section
+        v-show="activeSection === 'review'"
+        id="panel-review"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-review"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="admin-review">Review &amp; assign</h2>
@@ -238,7 +262,13 @@
         </div>
       </section>
 
-      <section class="dash-section" aria-labelledby="admin-inbox">
+      <section
+        v-show="activeSection === 'inbox'"
+        id="panel-inbox"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-inbox"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="admin-inbox">Inbox</h2>
@@ -252,7 +282,13 @@
         />
       </section>
 
-      <section class="dash-section" aria-labelledby="admin-records">
+      <section
+        v-show="activeSection === 'records'"
+        id="panel-records"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-records"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="admin-records">Reports &amp; feedback</h2>
@@ -281,37 +317,32 @@
         </div>
       </section>
 
-      <section class="dash-section" aria-labelledby="admin-monitor">
+      <section
+        v-show="activeSection === 'monitoring'"
+        id="panel-monitoring"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-monitoring"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="admin-monitor">Monitoring</h2>
             <p>Live overview of schedules, attendance, reports, and feedback.</p>
           </div>
-          <button
-            type="button"
-            class="collapse-btn"
-            :aria-expanded="monitoringOpen"
-            aria-controls="admin-monitoring-panel"
-            @click="monitoringOpen = !monitoringOpen"
-          >
-            {{ monitoringOpen ? 'Hide' : 'Show' }}
-          </button>
         </div>
-        <div v-show="monitoringOpen" id="admin-monitoring-panel">
-          <AdminMonitoringPanel
-            :overview="monitoringOverview"
-            :loading="loadingMonitoring"
-            :error="monitoringError"
-            @refresh="refreshMonitoring"
-          />
-        </div>
+        <AdminMonitoringPanel
+          :overview="monitoringOverview"
+          :loading="loadingMonitoring"
+          :error="monitoringError"
+          @refresh="refreshMonitoring"
+        />
       </section>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
@@ -359,7 +390,42 @@ const {
 const selectedSlotId = ref<number | null>(null)
 const successMessage = ref('')
 const errorMessage = ref('')
-const monitoringOpen = ref(true)
+
+type AdminSection = 'review' | 'inbox' | 'records' | 'monitoring'
+
+const navItems: { id: AdminSection; label: string; intro: string }[] = [
+  {
+    id: 'review',
+    label: 'Review & assign',
+    intro: 'Confirm schedule requests and match sessions to the right teacher.',
+  },
+  {
+    id: 'inbox',
+    label: 'Inbox',
+    intro: 'New scheduling requests and system alerts.',
+  },
+  {
+    id: 'records',
+    label: 'Reports & feedback',
+    intro: 'Teacher reports and student feedback after each class.',
+  },
+  {
+    id: 'monitoring',
+    label: 'Monitoring',
+    intro: 'Live overview of schedules, attendance, reports, and feedback.',
+  },
+]
+
+const activeSection = ref<AdminSection>('review')
+
+const activeIntro = computed(
+  () => navItems.find((item) => item.id === activeSection.value)?.intro ?? '',
+)
+
+function setSection(section: AdminSection) {
+  activeSection.value = section
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 watch(
   () => selected.value?.request.id,
@@ -417,6 +483,7 @@ async function openRequest(id: number) {
 
 async function openFromNotification(item: AppNotification) {
   if (item.relatedRequestId) {
+    activeSection.value = 'review'
     await openRequest(item.relatedRequestId)
   }
 }

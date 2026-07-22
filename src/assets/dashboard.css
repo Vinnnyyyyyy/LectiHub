@@ -26,12 +26,27 @@
 .dashboard .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 1rem;
   max-width: var(--lh-dash-max);
   margin: 0 auto;
-  padding: 1.35rem 1.5rem 0.35rem;
+  padding: 1.1rem 1.5rem 0.85rem;
   animation: lh-fade-down 0.45s ease both;
+}
+
+.dashboard .topbar.dash-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex-wrap: wrap;
+  row-gap: 0.75rem;
+  border-bottom: 1px solid var(--lh-line);
+  background: color-mix(in srgb, var(--lh-bg) 88%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.dashboard .topbar-brand {
+  min-width: 9rem;
 }
 
 .dashboard .brand {
@@ -108,6 +123,62 @@
   max-width: 40rem;
   font-size: 0.95rem;
   line-height: 1.5;
+}
+
+.dash-nav {
+  flex: 1 1 18rem;
+  min-width: 0;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.dash-nav-track {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0.28rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.7rem;
+  background: var(--lh-panel-solid);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dash-nav-track::-webkit-scrollbar {
+  display: none;
+}
+
+.dash-nav-item {
+  flex: 1 0 auto;
+  min-width: max-content;
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  background: transparent;
+  color: var(--lh-muted);
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition:
+    color 0.16s ease,
+    background 0.16s ease;
+}
+
+.dash-nav-item:hover {
+  color: var(--lh-ink);
+  background: rgba(231, 236, 239, 0.05);
+}
+
+.dash-nav-item.active {
+  color: #0c1210;
+  background: linear-gradient(135deg, var(--lh-accent), var(--lh-accent-deep));
+}
+
+.dash-nav-item:focus-visible {
+  outline: 2px solid var(--lh-accent);
+  outline-offset: 2px;
 }
 
 .dash-section {
@@ -225,7 +296,24 @@
     padding-right: 1.1rem;
   }
 
-  .dashboard .topbar {
-    align-items: center;
+  .dashboard .topbar.dash-topbar {
+    align-items: stretch;
+  }
+
+  .dashboard .topbar.dash-topbar .logout {
+    margin-left: auto;
+  }
+
+  .dash-nav {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .dash-nav-item {
+    flex: 0 0 auto;
+    padding: 0.55rem 0.8rem;
+    font-size: 0.84rem;
   }
 }
