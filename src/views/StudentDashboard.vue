@@ -20,7 +20,33 @@
         </p>
       </section>
 
-      <section class="dash-section" aria-labelledby="student-schedule">
+      <nav class="dash-nav" aria-label="Student dashboard sections">
+        <div class="dash-nav-track" role="tablist">
+          <button
+            v-for="item in navItems"
+            :id="`tab-${item.id}`"
+            :key="item.id"
+            type="button"
+            role="tab"
+            class="dash-nav-item"
+            :class="{ active: activeSection === item.id }"
+            :aria-selected="activeSection === item.id"
+            :aria-controls="`panel-${item.id}`"
+            :tabindex="activeSection === item.id ? 0 : -1"
+            @click="activeSection = item.id"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+      </nav>
+
+      <section
+        v-show="activeSection === 'schedule'"
+        id="panel-schedule"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-schedule"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="student-schedule">Schedule</h2>
@@ -30,7 +56,13 @@
         <ScheduleBookingSection />
       </section>
 
-      <section class="dash-section" aria-labelledby="student-now">
+      <section
+        v-show="activeSection === 'now'"
+        id="panel-now"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-now"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="student-now">Now</h2>
@@ -59,7 +91,13 @@
         </div>
       </section>
 
-      <section class="dash-section" aria-labelledby="student-calendar">
+      <section
+        v-show="activeSection === 'calendar'"
+        id="panel-calendar"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-calendar"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="student-calendar">Calendar</h2>
@@ -75,7 +113,13 @@
         />
       </section>
 
-      <section class="dash-section" aria-labelledby="student-history">
+      <section
+        v-show="activeSection === 'history'"
+        id="panel-history"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-history"
+      >
         <div class="dash-section-label">
           <div>
             <h2 id="student-history">History &amp; feedback</h2>
@@ -130,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -150,6 +194,17 @@ import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
 import ClassHistoryPanel from '../components/ClassHistoryPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
+
+type StudentSection = 'schedule' | 'now' | 'calendar' | 'history'
+
+const navItems: { id: StudentSection; label: string }[] = [
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'now', label: 'Now' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'history', label: 'History & feedback' },
+]
+
+const activeSection = ref<StudentSection>('now')
 
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
