@@ -86,6 +86,8 @@
           </div>
         </div>
         <div class="dash-stack">
+          <p v-if="conductMessage" class="join-feedback" role="status">{{ conductMessage }}</p>
+          <p v-if="joinError" class="join-feedback error" role="alert">{{ joinError }}</p>
           <ConductLessonPanel
             :items="inProgress"
             :loading="loading"
@@ -93,7 +95,6 @@
             @save="handleSaveConduct"
             @complete="handleCompleteLesson"
           />
-          <p v-if="conductMessage" class="join-feedback" role="status">{{ conductMessage }}</p>
           <LessonReportFormPanel
             :completed-classes="past"
             :loading="loading"
@@ -285,8 +286,10 @@ async function handleSaveConduct(classId: number, payload: LessonConductPayload)
 async function handleCompleteLesson(classId: number, payload: LessonConductPayload) {
   try {
     await classesStore.completeClass(classId, payload)
+    // Refresh so Records / report form stay in sync after completion.
+    await Promise.allSettled([classesStore.fetchMine(), classesStore.fetchHistory()])
   } catch {
-    // store sets error message
+    // store sets error message (shown above the conduct panel)
   }
 }
 
