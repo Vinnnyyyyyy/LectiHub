@@ -8,7 +8,8 @@
 
     <p v-if="loading" class="empty">Loading active lessons...</p>
     <p v-else-if="!items.length" class="empty">
-      No lessons in progress. Join a scheduled class to begin conducting it.
+      No lessons in progress. Join a class from Today, or complete one there first. After you
+      complete a lesson, file the report in the form below.
     </p>
 
     <ul v-else class="lesson-list">
@@ -74,7 +75,8 @@
             Recording link (optional)
             <input
               v-model="drafts[item.id].recordingUrl"
-              type="url"
+              type="text"
+              inputmode="url"
               placeholder="https://…"
               autocomplete="off"
             />
@@ -156,13 +158,20 @@ watch(
 
 function payloadFor(classId: number): LessonConductPayload {
   const draft = drafts[classId]
-  return {
-    curriculumPlan: draft.curriculumPlan.trim(),
+  if (!draft) {
+    return {}
+  }
+  const payload: LessonConductPayload = {
+    curriculumPlan: String(draft.curriculumPlan || '').trim(),
     attendanceStatus: draft.attendanceStatus,
     participationLevel: draft.participationLevel,
-    participationNotes: draft.participationNotes.trim(),
-    recordingUrl: draft.recordingUrl.trim(),
+    participationNotes: String(draft.participationNotes || '').trim(),
   }
+  const recordingUrl = String(draft.recordingUrl || '').trim()
+  if (recordingUrl) {
+    payload.recordingUrl = recordingUrl
+  }
+  return payload
 }
 
 function save(classId: number, complete: boolean) {

@@ -120,7 +120,10 @@ function parseConductBody(body = {}) {
 
   if (Object.prototype.hasOwnProperty.call(body, 'recordingUrl')) {
     const recordingUrl = String(body.recordingUrl || '').trim();
-    if (!isValidHttpUrl(recordingUrl)) {
+    // Empty means "no recording" — only validate when a value is provided.
+    if (!recordingUrl) {
+      updates.recording_url = '';
+    } else if (!isValidHttpUrl(recordingUrl)) {
       errors.push('recordingUrl must be a valid http(s) URL.');
     } else {
       updates.recording_url = recordingUrl;
@@ -379,12 +382,6 @@ async function completeClass(req, res) {
         class: hydrateClass(classRow),
       });
     }
-    if (status === 'scheduled') {
-      return res.status(400).json({
-        message: 'Start the class (join) before marking it completed.',
-        class: hydrateClass(classRow),
-      });
-    }
 
     const { updates, errors } = parseConductBody(req.body || {});
     if (errors.length) {
@@ -394,8 +391,12 @@ async function completeClass(req, res) {
     const nowIso = new Date().toISOString();
     updates.status = 'completed';
     updates.completed_at = nowIso;
+    // Allow completing from scheduled (e.g. teacher finished without a separate join).
+    if (status === 'scheduled' && !classRow.started_at) {
+      updates.started_at = nowIso;
+    }
 
-    // Default attendance to present when completing an in-progress lesson without an explicit mark.
+    // Default attendance to present when completing without an explicit mark.
     const nextAttendance =
       updates.attendance_status ||
       normalizeAttendanceStatus(classRow.attendance_status);
