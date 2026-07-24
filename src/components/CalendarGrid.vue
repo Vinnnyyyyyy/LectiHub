@@ -193,8 +193,10 @@ const monthCells = computed(() => {
     }
 
     const iso = toIso(cellYear, cellMonth, day)
-    const hasEvent = eventSet.value.has(iso)
-    const hasHighlight = highlightSet.value.has(iso)
+    // Only mark gold highlights/events for days in the viewed month
+    // so adjacent-month spillover cells stay visually separate.
+    const hasEvent = inMonth && eventSet.value.has(iso)
+    const hasHighlight = inMonth && highlightSet.value.has(iso)
     cells.push({
       key: `${iso}-${i}`,
       iso,
@@ -203,8 +205,8 @@ const monthCells = computed(() => {
       isToday: iso === todayIso,
       hasEvent,
       hasHighlight,
-      disabled: isDisabled(iso, hasHighlight),
-      labels: props.eventLabelsByDate[iso] || [],
+      disabled: !inMonth || isDisabled(iso, hasHighlight),
+      labels: inMonth ? props.eventLabelsByDate[iso] || [] : [],
     })
   }
 
