@@ -21,8 +21,8 @@
           @select-date="onSelectDate"
         />
         <div class="legend" aria-label="Calendar legend">
-          <span class="legend-item">Scheduled</span>
-          <span class="legend-item">Teachers available</span>
+          <span class="legend-item available">Available</span>
+          <span class="legend-item unavailable">Not Available</span>
         </div>
 
         <p class="field-label">Time slots</p>
