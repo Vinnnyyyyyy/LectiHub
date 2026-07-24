@@ -323,20 +323,41 @@ function listEventsForUser(userId) {
 
 function teacherHasCalendarConflict(teacherId, eventDate, timeSlot) {
   const [startTime, endTime] = String(timeSlot).split('-');
-  const row = db
+  const toMinutes = (value) => {
+    const [hours, minutes] = String(value || '')
+      .split(':')
+      .map(Number);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+    return hours * 60 + minutes;
+  };
+  const start = toMinutes(startTime);
+  const end = toMinutes(endTime);
+  if (start == null || end == null) return null;
+
+  const rows = db
     .prepare(
-      `SELECT id, title, provider
+      `SELECT id, title, provider, start_time, end_time
        FROM calendar_events
        WHERE user_id = ?
          AND event_date = ?
-         AND start_time = ?
-         AND end_time = ?
-         AND sync_status IN ('synced', 'local_only', 'pending')
-       LIMIT 1`,
+         AND sync_status IN ('synced', 'local_only', 'pending')`,
     )
-    .get(teacherId, eventDate, startTime, endTime);
+    .all(teacherId, eventDate);
 
-  return row || null;
+  for (const row of rows) {
+    const existingStart = toMinutes(row.start_time);
+    const existingEnd = toMinutes(row.end_time);
+    if (
+      existingStart != null &&
+      existingEnd != null &&
+      start < existingEnd &&
+      existingStart < end
+    ) {
+      return row;
+    }
+  }
+
+  return null;
 }
 
 module.exports = {
