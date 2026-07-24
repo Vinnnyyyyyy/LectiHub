@@ -18,6 +18,7 @@
           :highlight-dates="openDates"
           :min-date="minDate"
           :only-highlight-selectable="true"
+          :mark-unavailable-days="true"
           @select-date="onSelectDate"
         />
         <div class="legend" aria-label="Calendar legend">
