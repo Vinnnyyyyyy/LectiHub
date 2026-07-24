@@ -12,16 +12,14 @@
         :event-dates="eventDates"
         :highlight-dates="highlightDates"
         :event-labels-by-date="eventLabelsByDate"
-        :mark-unavailable-days="markUnavailableDays"
         @select-date="selectedDate = $event"
       />
 
-      <div class="legend" v-if="showLegend">
-        <span v-if="eventDates.length" class="legend-item available">Scheduled</span>
-        <span v-if="highlightDates.length" class="legend-item available">{{
+      <div class="legend" v-if="highlightDates.length || eventDates.length">
+        <span v-if="eventDates.length" class="legend-item event">Scheduled</span>
+        <span v-if="highlightDates.length" class="legend-item open">{{
           highlightLabel
         }}</span>
-        <span v-if="markUnavailableDays" class="legend-item unavailable">Not Available</span>
       </div>
 
       <div class="day-detail">
@@ -67,7 +65,6 @@ const props = withDefaults(
     loading?: boolean
     highlightDates?: string[]
     highlightLabel?: string
-    markUnavailableDays?: boolean
   }>(),
   {
     title: 'Calendar',
@@ -75,8 +72,7 @@ const props = withDefaults(
     emptyText: 'No events on this day.',
     loading: false,
     highlightDates: () => [],
-    highlightLabel: 'Teachers available',
-    markUnavailableDays: false,
+    highlightLabel: 'Teacher availability',
   },
 )
 
@@ -84,10 +80,6 @@ const todayIso = new Date().toISOString().slice(0, 10)
 const selectedDate = ref(todayIso)
 
 const eventDates = computed(() => [...new Set(props.events.map((item) => item.eventDate))])
-
-const showLegend = computed(
-  () => eventDates.value.length > 0 || props.highlightDates.length > 0 || props.markUnavailableDays,
-)
 
 const eventLabelsByDate = computed(() => {
   const map: Record<string, string[]> = {}
@@ -211,16 +203,8 @@ strong,
   height: 0.55rem;
   border-radius: 0.15rem;
   margin-right: 0.35rem;
-  vertical-align: middle;
-}
-
-.legend-item.available::before {
   background: var(--lh-warm);
-}
-
-.legend-item.unavailable::before {
-  background: #7a828c;
-  border: none;
+  vertical-align: middle;
 }
 
 .day-detail {

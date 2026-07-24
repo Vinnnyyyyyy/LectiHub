@@ -106,13 +106,12 @@
         </div>
         <CalendarPanel
           title="My calendar"
-          subtitle="Gold days mark scheduled classes or open teacher availability. Grey days are not available."
+          subtitle="Gold days mark scheduled classes or open teacher availability."
           empty-text="Nothing on this day yet."
           :events="calendarUpcoming"
           :loading="loadingCalendar"
           :highlight-dates="openHighlightDates"
           highlight-label="Teachers available"
-          :mark-unavailable-days="true"
         />
       </section>
 
