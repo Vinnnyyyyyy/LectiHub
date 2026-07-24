@@ -1,12 +1,24 @@
+function buildHalfHourSlots(startHour, startMinute, endHour, endMinute) {
+  const slots = [];
+  let minutes = startHour * 60 + startMinute;
+  const end = endHour * 60 + endMinute;
+  const format = (value) => {
+    const h = String(Math.floor(value / 60)).padStart(2, '0');
+    const m = String(value % 60).padStart(2, '0');
+    return `${h}:${m}`;
+  };
+  while (minutes + 30 <= end) {
+    const next = minutes + 30;
+    slots.push(`${format(minutes)}-${format(next)}`);
+    minutes = next;
+  }
+  return slots;
+}
+
+/** 30-minute reservation slots (lunch gap 12:00–13:00). */
 const STANDARD_TIME_SLOTS = [
-  '09:00-10:00',
-  '10:00-11:00',
-  '11:00-12:00',
-  '13:00-14:00',
-  '14:00-15:00',
-  '15:00-16:00',
-  '16:00-17:00',
-  '17:00-18:00',
+  ...buildHalfHourSlots(9, 0, 12, 0),
+  ...buildHalfHourSlots(13, 0, 18, 0),
 ];
 
 /** Students may only book on/after today + this many calendar days. */
@@ -64,10 +76,7 @@ function ensureDefaultTeacherAvailability(db) {
   `);
 
   const seedOne = db.transaction((teacherId) => {
-    const count = db
-      .prepare(`SELECT COUNT(*) AS count FROM teacher_availability WHERE teacher_id = ?`)
-      .get(teacherId).count;
-    if (count > 0) return;
+    // Always ensure every current standard slot exists (supports slot-length upgrades).
     for (const weekday of DEFAULT_WEEKDAYS) {
       for (const slot of STANDARD_TIME_SLOTS) {
         insert.run(teacherId, weekday, slot);

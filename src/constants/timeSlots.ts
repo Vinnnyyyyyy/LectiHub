@@ -1,12 +1,29 @@
+function buildHalfHourSlots(
+  startHour: number,
+  startMinute: number,
+  endHour: number,
+  endMinute: number,
+): string[] {
+  const slots: string[] = []
+  let minutes = startHour * 60 + startMinute
+  const end = endHour * 60 + endMinute
+  while (minutes + 30 <= end) {
+    const next = minutes + 30
+    const format = (value: number) => {
+      const h = String(Math.floor(value / 60)).padStart(2, '0')
+      const m = String(value % 60).padStart(2, '0')
+      return `${h}:${m}`
+    }
+    slots.push(`${format(minutes)}-${format(next)}`)
+    minutes = next
+  }
+  return slots
+}
+
+/** 30-minute reservation slots (lunch gap 12:00–13:00). */
 export const TIME_SLOTS = [
-  '09:00-10:00',
-  '10:00-11:00',
-  '11:00-12:00',
-  '13:00-14:00',
-  '14:00-15:00',
-  '15:00-16:00',
-  '16:00-17:00',
-  '17:00-18:00',
+  ...buildHalfHourSlots(9, 0, 12, 0),
+  ...buildHalfHourSlots(13, 0, 18, 0),
 ] as const
 
 export type TimeSlot = (typeof TIME_SLOTS)[number]

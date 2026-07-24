@@ -68,14 +68,14 @@ async function seed() {
 
   // Ava: one conflict + higher workload
   if (ava) {
-    insertClass.run(ava.id, '2026-07-25', '10:00-11:00', 'Existing math class');
-    insertClass.run(ava.id, '2026-07-27', '09:00-10:00', 'Math tutoring');
-    insertClass.run(ava.id, '2026-07-28', '11:00-12:00', 'Algebra review');
+    insertClass.run(ava.id, '2026-07-25', '10:00-10:30', 'Existing math class');
+    insertClass.run(ava.id, '2026-07-27', '09:00-09:30', 'Math tutoring');
+    insertClass.run(ava.id, '2026-07-28', '11:00-11:30', 'Algebra review');
   }
   // Ben: one conflict, medium workload
   if (ben) {
-    insertClass.run(ben.id, '2026-07-26', '14:00-15:00', 'Existing writing class');
-    insertClass.run(ben.id, '2026-07-29', '13:00-14:00', 'Essay coaching');
+    insertClass.run(ben.id, '2026-07-26', '14:00-14:30', 'Existing writing class');
+    insertClass.run(ben.id, '2026-07-29', '13:00-13:30', 'Essay coaching');
   }
   // Cara: fully free in demo (lowest workload)
 
