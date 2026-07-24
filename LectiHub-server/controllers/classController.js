@@ -9,7 +9,9 @@ const {
   mapClassRow,
   normalizeAttendanceStatus,
   normalizeClassStatus,
+  normalizeMeetingProvider,
   normalizeParticipationLevel,
+  VIDEO_PROVIDERS,
 } = require('../utils/scheduleHelpers');
 
 function getUserSummary(id) {
@@ -257,11 +259,32 @@ async function joinClass(req, res) {
     let meetingProvider =
       String(classRow.meeting_provider || '').trim() || getMeetingProvider();
 
-    if (!meetingLink) {
+    // Optional: student/teacher can switch platform when joining.
+    const requestedProvider =
+      req.body?.meetingProvider != null && String(req.body.meetingProvider).trim() !== ''
+        ? String(req.body.meetingProvider).toLowerCase().trim()
+        : null;
+    if (requestedProvider) {
+      if (!VIDEO_PROVIDERS.has(requestedProvider)) {
+        return res.status(400).json({
+          message: 'meetingProvider must be jitsi, google_meet, or zoom.',
+        });
+      }
       const meeting = buildMeetingDetails(
         classRow.schedule_request_id || classId,
         classRow.class_date,
         classRow.start_time || String(classRow.time_slot || '').split('-')[0] || '09:00',
+        requestedProvider,
+      );
+      meetingLink = meeting.meetingLink;
+      meetingInfo = meeting.meetingInfo;
+      meetingProvider = meeting.meetingProvider;
+    } else if (!meetingLink) {
+      const meeting = buildMeetingDetails(
+        classRow.schedule_request_id || classId,
+        classRow.class_date,
+        classRow.start_time || String(classRow.time_slot || '').split('-')[0] || '09:00',
+        meetingProvider,
       );
       meetingLink = meeting.meetingLink;
       meetingInfo = meeting.meetingInfo;
@@ -497,10 +520,72 @@ async function listClassHistory(req, res) {
   }
 }
 
+async function updateMeetingProvider(req, res) {
+  try {
+    const found = getClassOrError(req, res);
+    if (!found) return;
+    const { classId, classRow } = found;
+
+    const isParticipant =
+      Number(classRow.student_id) === Number(req.user.id) ||
+      Number(classRow.teacher_id) === Number(req.user.id);
+
+    if (!isParticipant && req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: 'Only the assigned student or teacher can change the video platform.',
+      });
+    }
+
+    const status = normalizeClassStatus(classRow.status);
+    if (status === 'cancelled' || status === 'completed') {
+      return res.status(400).json({
+        message: `This class is ${status.replace('_', ' ')} and cannot change platform.`,
+        class: hydrateClass(classRow),
+      });
+    }
+
+    const raw = String(req.body?.meetingProvider || '').toLowerCase().trim();
+    if (!VIDEO_PROVIDERS.has(raw)) {
+      return res.status(400).json({
+        message: 'meetingProvider must be jitsi, google_meet, or zoom.',
+      });
+    }
+
+    const provider = normalizeMeetingProvider(raw);
+    const meeting = buildMeetingDetails(
+      classRow.schedule_request_id || classId,
+      classRow.class_date,
+      classRow.start_time || String(classRow.time_slot || '').split('-')[0] || '09:00',
+      provider,
+    );
+
+    db.prepare(
+      `UPDATE classes
+       SET meeting_provider = ?,
+           meeting_link = ?,
+           meeting_info = ?
+       WHERE id = ?`,
+    ).run(meeting.meetingProvider, meeting.meetingLink, meeting.meetingInfo, classId);
+
+    const updated = db.prepare('SELECT * FROM classes WHERE id = ?').get(classId);
+    return res.json({
+      message: `Video platform updated to ${meeting.meetingProvider === 'google_meet' ? 'Google Meet' : meeting.meetingProvider === 'zoom' ? 'Zoom' : 'Jitsi Meet'}.`,
+      class: hydrateClass(updated),
+    });
+  } catch (err) {
+    console.error('Update meeting provider error:', err);
+    return res.status(500).json({
+      message: 'Unable to update the video platform right now.',
+      error: err.message,
+    });
+  }
+}
+
 module.exports = {
   listMyClasses,
   getClassByRequest,
   joinClass,
+  updateMeetingProvider,
   updateLessonConduct,
   completeClass,
   listClassHistory,

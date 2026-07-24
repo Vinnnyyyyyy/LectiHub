@@ -78,8 +78,10 @@
             :loading="loadingClasses"
             :allow-join="true"
             :joining-id="joiningId"
+            :updating-provider-id="updatingProviderId"
             show-teacher
             @join="handleJoinClass"
+            @update-provider="handleUpdateProvider"
           />
           <NotificationsPanel
             subtitle="Confirmations include your teacher, schedule, meeting info, plus reminders before class."
@@ -244,6 +246,7 @@ const {
   joinMessage,
   error: joinError,
 } = storeToRefs(classesStore)
+const updatingProviderId = ref<number | null>(null)
 const { loading: loadingReports, reports: lessonReports } = storeToRefs(lessonReportsStore)
 const {
   loading: loadingFeedback,
@@ -262,11 +265,22 @@ const displayName = computed(
   () => authStore.fullName || authStore.username || 'student',
 )
 
-async function handleJoinClass(item: ConfirmedSchedule) {
+async function handleJoinClass(item: ConfirmedSchedule, meetingProvider?: string) {
   try {
-    await classesStore.joinClass(item.id)
+    await classesStore.joinClass(item.id, meetingProvider)
   } catch {
     // store sets error message
+  }
+}
+
+async function handleUpdateProvider(item: ConfirmedSchedule, meetingProvider: string) {
+  updatingProviderId.value = item.id
+  try {
+    await classesStore.updateMeetingProvider(item.id, meetingProvider)
+  } catch {
+    // store sets error message
+  } finally {
+    updatingProviderId.value = null
   }
 }
 
