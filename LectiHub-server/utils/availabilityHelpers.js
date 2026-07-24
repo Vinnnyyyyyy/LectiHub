@@ -9,6 +9,9 @@ const STANDARD_TIME_SLOTS = [
   '17:00-18:00',
 ];
 
+/** Students may only book on/after today + this many calendar days. */
+const BOOKING_LEAD_DAYS = 2;
+
 const DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5]; // Mon–Fri
 
 function parseIsoDate(value) {
@@ -24,6 +27,12 @@ function toIsoDate(date) {
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
+}
+
+function earliestBookableDate(fromDate = new Date()) {
+  const date = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate());
+  date.setDate(date.getDate() + BOOKING_LEAD_DAYS);
+  return toIsoDate(date);
 }
 
 function weekdayOf(isoDate) {
@@ -171,6 +180,7 @@ function buildOpenInventory(db, fromIso, toIso, teachers, hasConflict) {
 
 module.exports = {
   STANDARD_TIME_SLOTS,
+  BOOKING_LEAD_DAYS,
   DEFAULT_WEEKDAYS,
   ensureDefaultTeacherAvailability,
   getTeacherWeeklyAvailability,
@@ -179,4 +189,5 @@ module.exports = {
   buildOpenInventory,
   parseIsoDate,
   toIsoDate,
+  earliestBookableDate,
 };

@@ -7,6 +7,8 @@ const {
   ensureDefaultTeacherAvailability,
   parseIsoDate,
   toIsoDate,
+  earliestBookableDate,
+  BOOKING_LEAD_DAYS,
 } = require('../utils/availabilityHelpers');
 const { teacherHasConflict } = require('../utils/conflictHelpers');
 
@@ -22,11 +24,10 @@ function listTeachers() {
 }
 
 function defaultRange() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const end = new Date(today);
-  end.setDate(end.getDate() + 60);
-  return { from: toIsoDate(today), to: toIsoDate(end) };
+  const start = earliestBookableDate();
+  const endDate = parseIsoDate(start);
+  endDate.setDate(endDate.getDate() + 60);
+  return { from: start, to: toIsoDate(endDate) };
 }
 
 async function getOpenAvailability(req, res) {
@@ -34,18 +35,24 @@ async function getOpenAvailability(req, res) {
     ensureDefaultTeacherAvailability(db);
 
     const defaults = defaultRange();
-    const from = String(req.query.from || defaults.from).slice(0, 10);
+    const earliest = earliestBookableDate();
+    let from = String(req.query.from || defaults.from).slice(0, 10);
     const to = String(req.query.to || defaults.to).slice(0, 10);
 
     if (!parseIsoDate(from) || !parseIsoDate(to)) {
       return res.status(400).json({ message: 'from and to must be YYYY-MM-DD dates.' });
     }
+    if (from < earliest) from = earliest;
     if (from > to) {
       return res.status(400).json({ message: 'from must be on or before to.' });
     }
 
     const inventory = buildOpenInventory(db, from, to, listTeachers(), teacherHasConflict);
-    return res.json(inventory);
+    return res.json({
+      ...inventory,
+      earliestBookableDate: earliest,
+      bookingLeadDays: BOOKING_LEAD_DAYS,
+    });
   } catch (err) {
     console.error('Open availability error:', err);
     return res.status(500).json({

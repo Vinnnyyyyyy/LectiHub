@@ -3,8 +3,9 @@
     <div class="booking-intro">
       <h2>Booking</h2>
       <p>
-        Pick from dates and times teachers currently have open. Highlighted days have at least one
-        available teacher. An administrator will review your request before assigning someone.
+        Pick from dates and times teachers currently have open. You can book starting
+        <strong>2 days from today</strong>. Highlighted days have at least one available teacher.
+        An administrator will review your request before assigning someone.
       </p>
     </div>
 
@@ -15,7 +16,7 @@
         <CalendarGrid
           v-else
           :selected-date="selectedDate"
-          :highlight-dates="openDates"
+          :highlight-dates="bookableOpenDates"
           :min-date="minDate"
           :only-highlight-selectable="true"
           @select-date="onSelectDate"
@@ -126,7 +127,19 @@ const remarks = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 
-const minDate = computed(() => new Date().toISOString().slice(0, 10))
+const minDate = computed(() => {
+  const date = new Date()
+  date.setHours(0, 0, 0, 0)
+  date.setDate(date.getDate() + 2)
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+})
+
+const bookableOpenDates = computed(() =>
+  openDates.value.filter((date) => date >= minDate.value),
+)
 
 const openSlotsForDay = computed(() =>
   selectedDate.value ? availabilityStore.slotsForDate(selectedDate.value) : [],
@@ -231,9 +244,13 @@ async function handleSubmit() {
 
 onMounted(async () => {
   try {
-    await Promise.all([scheduleStore.fetchMine(), availabilityStore.fetchOpen()])
-    if (!selectedDate.value && availabilityStore.openDates.length) {
-      selectedDate.value = availabilityStore.openDates[0]
+    await Promise.all([
+      scheduleStore.fetchMine(),
+      availabilityStore.fetchOpen(minDate.value),
+    ])
+    const firstOpen = availabilityStore.openDates.find((date) => date >= minDate.value)
+    if (!selectedDate.value && firstOpen) {
+      selectedDate.value = firstOpen
     }
   } catch {
     // errors stored on stores
@@ -282,6 +299,11 @@ small {
   color: var(--lh-muted);
   line-height: 1.45;
   max-width: 42rem;
+}
+
+.booking-intro strong {
+  color: var(--lh-warm);
+  font-weight: 700;
 }
 
 .booking-form {
