@@ -44,6 +44,37 @@ export const useUsersStore = defineStore('users', {
       }
     },
 
+    async createTeacher(payload: {
+      username: string
+      email?: string
+      password: string
+      fullName?: string
+      subjectExpertise?: string
+    }) {
+      this.error = null
+      this.message = null
+      try {
+        const res = await api.post<{ message: string; username: string; tempPassword: string }>(
+          '/users/create',
+          {
+            username: payload.username,
+            email: payload.email,
+            password: payload.password,
+            full_name: payload.fullName,
+            subject_expertise: payload.subjectExpertise,
+            role: 'teacher',
+          },
+        )
+        this.message = `${res.data.message}. Temporary password: ${res.data.tempPassword}`
+        await this.fetchAll()
+        return res.data
+      } catch (err: unknown) {
+        const axiosErr = err as { response?: { data?: { message?: string } } }
+        this.error = axiosErr.response?.data?.message || 'Could not create teacher'
+        throw err
+      }
+    },
+
     async deleteUser(userId: number) {
       this.deletingId = userId
       this.error = null

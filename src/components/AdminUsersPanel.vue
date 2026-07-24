@@ -4,9 +4,43 @@
       <h2>Users</h2>
     </div>
     <p class="subtitle">
-      Delete student or teacher accounts you no longer need. You cannot delete your own login or the
-      last admin.
+      Admins can create <strong>teacher</strong> accounts only. Students register themselves. You can
+      delete accounts you no longer need (not your own login or the last admin).
     </p>
+
+    <form class="create-form" @submit.prevent="handleCreateTeacher">
+      <h3>Create teacher</h3>
+      <div class="form-grid">
+        <label>
+          Full name
+          <input v-model="form.fullName" type="text" required maxlength="120" />
+        </label>
+        <label>
+          Username
+          <input v-model="form.username" type="text" required maxlength="60" autocomplete="off" />
+        </label>
+        <label>
+          Email
+          <input v-model="form.email" type="email" maxlength="120" />
+        </label>
+        <label>
+          Subject expertise
+          <input
+            v-model="form.subjectExpertise"
+            type="text"
+            maxlength="120"
+            placeholder="Math, Science..."
+          />
+        </label>
+        <label>
+          Temporary password
+          <input v-model="form.password" type="text" required minlength="6" maxlength="80" />
+        </label>
+      </div>
+      <button type="submit" class="create" :disabled="creating">
+        {{ creating ? 'Creating...' : 'Create teacher account' }}
+      </button>
+    </form>
 
     <div class="filters" role="group" aria-label="Filter by role">
       <button
@@ -49,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../stores/auth'
 import { useUsersStore, type ManagedUser } from '../stores/users'
@@ -68,7 +102,16 @@ const authStore = useAuthStore()
 const { users, loading, deletingId, error, message } = storeToRefs(usersStore)
 
 const roleFilter = ref<FilterValue>('all')
+const creating = ref(false)
 const currentUsername = computed(() => authStore.username || '')
+
+const form = reactive({
+  fullName: '',
+  username: '',
+  email: '',
+  subjectExpertise: '',
+  password: '',
+})
 
 const filteredUsers = computed(() => {
   if (roleFilter.value === 'all') return users.value
@@ -77,6 +120,29 @@ const filteredUsers = computed(() => {
 
 function setFilter(value: FilterValue) {
   roleFilter.value = value
+}
+
+async function handleCreateTeacher() {
+  creating.value = true
+  try {
+    await usersStore.createTeacher({
+      fullName: form.fullName.trim(),
+      username: form.username.trim(),
+      email: form.email.trim() || undefined,
+      subjectExpertise: form.subjectExpertise.trim() || undefined,
+      password: form.password,
+    })
+    form.fullName = ''
+    form.username = ''
+    form.email = ''
+    form.subjectExpertise = ''
+    form.password = ''
+    roleFilter.value = 'teacher'
+  } catch {
+    // store error
+  } finally {
+    creating.value = false
+  }
 }
 
 async function confirmDelete(user: ManagedUser) {
@@ -112,11 +178,20 @@ onMounted(async () => {
   background: var(--lh-panel);
 }
 
-.section-head h2 {
+.section-head h2,
+.create-form h3 {
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.2rem;
   font-weight: 550;
   color: var(--lh-accent);
+}
+
+.section-head h2 {
+  font-size: 1.2rem;
+}
+
+.create-form h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.65rem;
 }
 
 .subtitle,
@@ -126,7 +201,9 @@ onMounted(async () => {
 button,
 p,
 strong,
-.role {
+.role,
+label,
+input {
   font-family: 'Manrope', sans-serif;
 }
 
@@ -136,11 +213,65 @@ strong,
   font-size: 0.9rem;
 }
 
+.create-form {
+  margin-top: 1rem;
+  padding: 0.95rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.85rem;
+  background: rgba(20, 25, 31, 0.55);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.65rem;
+}
+
+label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--lh-muted);
+}
+
+input {
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 500;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--lh-line-strong);
+  border-radius: 0.55rem;
+  background: var(--lh-input);
+  color: var(--lh-ink);
+}
+
+input:focus {
+  outline: none;
+  border-color: rgba(126, 184, 164, 0.55);
+}
+
+.create {
+  margin-top: 0.75rem;
+  border: none;
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
+  color: #0d1512;
+}
+
+.create:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;
-  margin-top: 0.9rem;
+  margin-top: 1.1rem;
 }
 
 .filter,

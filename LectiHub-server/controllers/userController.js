@@ -13,24 +13,45 @@ function mapUser(row) {
 }
 
 async function createUser(req, res) {
-  const { username, email, password, role, full_name } = req.body;
+  const { username, email, password, full_name, subject_expertise } = req.body;
+  // Admins may only create teacher accounts (students self-register).
+  const role = 'teacher';
 
-  if (!['teacher', 'student'].includes(role)) {
-    return res.status(400).json({ message: 'Invalid role' });
+  if (!username || !password) {
+    return res.status(400).json({ message: 'username and password are required.' });
+  }
+
+  if (req.body?.role && String(req.body.role).toLowerCase() !== 'teacher') {
+    return res.status(400).json({
+      message: 'Admins can only create teacher accounts. Students register themselves.',
+    });
   }
 
   const password_hash = await bcrypt.hash(password, 10);
 
   try {
     const stmt = db.prepare(`
-      INSERT INTO users (username, email, password_hash, role, full_name, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO users (username, email, password_hash, role, full_name, created_by, subject_expertise, must_change_password)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1)
     `);
-    stmt.run(username, email, password_hash, role, full_name, req.user.id);
+    stmt.run(
+      username,
+      email || null,
+      password_hash,
+      role,
+      full_name || username,
+      req.user.id,
+      subject_expertise || null,
+    );
 
-    res.status(201).json({ message: 'User created', username, tempPassword: password });
+    res.status(201).json({
+      message: 'Teacher account created',
+      username,
+      role,
+      tempPassword: password,
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Error creating user', error: err.message });
+    res.status(500).json({ message: 'Error creating teacher', error: err.message });
   }
 }
 
