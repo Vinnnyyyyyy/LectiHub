@@ -31,26 +31,15 @@ function normalizeClassStatus(status) {
   return 'scheduled';
 }
 
-const VIDEO_PROVIDERS = new Set(['jitsi', 'google_meet', 'zoom']);
-
 function getMeetingProvider() {
   const provider = String(process.env.MEETING_PROVIDER || 'jitsi').toLowerCase();
-  if (VIDEO_PROVIDERS.has(provider)) return provider;
+  if (['jitsi', 'google_meet', 'zoom'].includes(provider)) return provider;
   return 'jitsi';
 }
 
-// Normalize a requested provider; falls back to the configured default.
-function normalizeMeetingProvider(value) {
-  const provider = String(value || '').toLowerCase().trim();
-  if (VIDEO_PROVIDERS.has(provider)) return provider;
-  return getMeetingProvider();
-}
-
-function buildMeetingDetails(requestId, classDate, startTime, preferredProvider) {
+function buildMeetingDetails(requestId, classDate, startTime) {
   const roomCode = `LH-${requestId}-${String(classDate).replace(/-/g, '')}-${String(startTime).replace(':', '')}`;
-  const provider = preferredProvider
-    ? normalizeMeetingProvider(preferredProvider)
-    : getMeetingProvider();
+  const provider = getMeetingProvider();
 
   if (provider === 'google_meet') {
     const base =
@@ -342,8 +331,6 @@ module.exports = {
   normalizeClassStatus,
   getJoinAvailability,
   getMeetingProvider,
-  normalizeMeetingProvider,
-  VIDEO_PROVIDERS,
   canJoin,
   normalizeAttendanceStatus,
   normalizeParticipationLevel,
