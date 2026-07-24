@@ -5,7 +5,9 @@ const {
   mapClassRow,
 } = require('../utils/scheduleHelpers');
 const { sendScheduleConfirmationEmails } = require('../utils/emailService');
-const { syncClassToCalendars, teacherHasCalendarConflict } = require('../utils/calendarService');
+const { syncClassToCalendars } = require('../utils/calendarService');
+const { teacherHasConflict } = require('../utils/conflictHelpers');
+const { teacherOffersSlot } = require('../utils/availabilityHelpers');
 const { hydrateClass } = require('./classController');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -186,31 +188,6 @@ function scheduleStudentReminders(studentId, requestId, classId, scheduleDetails
   }
 }
 
-function teacherHasConflict(teacherId, preferredDate, timeSlot) {
-  const classConflict = db
-    .prepare(
-      `SELECT id, title, class_date, time_slot
-       FROM classes
-       WHERE teacher_id = ? AND class_date = ? AND time_slot = ?
-       LIMIT 1`,
-    )
-    .get(teacherId, preferredDate, timeSlot);
-
-  if (classConflict) return classConflict;
-
-  const calendarConflict = teacherHasCalendarConflict(teacherId, preferredDate, timeSlot);
-  if (calendarConflict) {
-    return {
-      id: calendarConflict.id,
-      title: calendarConflict.title || `Calendar (${calendarConflict.provider})`,
-      class_date: preferredDate,
-      time_slot: timeSlot,
-    };
-  }
-
-  return null;
-}
-
 function getTeacherWorkload(teacherId) {
   return db
     .prepare(`SELECT COUNT(*) AS count FROM classes WHERE teacher_id = ?`)
@@ -239,7 +216,9 @@ function buildTeacherCandidates(slots, remarks) {
 
   const candidates = teachers.map((teacher) => {
     const freeSlots = slots.filter(
-      (slot) => !teacherHasConflict(teacher.id, slot.preferred_date, slot.time_slot),
+      (slot) =>
+        teacherOffersSlot(db, teacher.id, slot.preferred_date, slot.time_slot) &&
+        !teacherHasConflict(teacher.id, slot.preferred_date, slot.time_slot),
     );
     const workload = getTeacherWorkload(teacher.id);
     const expertise = (teacher.subject_expertise || '').trim();
@@ -318,7 +297,10 @@ function buildAvailability(slots, remarks = '') {
     const unavailableTeachers = [];
 
     for (const teacher of teachers) {
-      const conflict = teacherHasConflict(teacher.id, slot.preferred_date, slot.time_slot);
+      const offers = teacherOffersSlot(db, teacher.id, slot.preferred_date, slot.time_slot);
+      const conflict = offers
+        ? teacherHasConflict(teacher.id, slot.preferred_date, slot.time_slot)
+        : { id: null, title: 'Outside teacher availability', class_date: slot.preferred_date, time_slot: slot.time_slot };
       const summary = {
         id: teacher.id,
         username: teacher.username,
@@ -328,7 +310,7 @@ function buildAvailability(slots, remarks = '') {
         workload: getTeacherWorkload(teacher.id),
       };
 
-      if (conflict) {
+      if (!offers || conflict) {
         unavailableTeachers.push({
           ...summary,
           conflict: {
@@ -355,7 +337,9 @@ function buildAvailability(slots, remarks = '') {
   const fullyAvailableTeachers = teachers
     .filter((teacher) =>
       slots.every(
-        (slot) => !teacherHasConflict(teacher.id, slot.preferred_date, slot.time_slot),
+        (slot) =>
+          teacherOffersSlot(db, teacher.id, slot.preferred_date, slot.time_slot) &&
+          !teacherHasConflict(teacher.id, slot.preferred_date, slot.time_slot),
       ),
     )
     .map((teacher) => ({
@@ -573,7 +557,9 @@ async function assignTeacherToRequest(req, res) {
       }
     } else {
       selectedSlot = slots.find(
-        (slot) => !teacherHasConflict(teacherId, slot.preferred_date, slot.time_slot),
+        (slot) =>
+          teacherOffersSlot(db, teacherId, slot.preferred_date, slot.time_slot) &&
+          !teacherHasConflict(teacherId, slot.preferred_date, slot.time_slot),
       );
       if (!selectedSlot) {
         return res.status(400).json({
@@ -581,6 +567,12 @@ async function assignTeacherToRequest(req, res) {
         });
       }
       slotId = selectedSlot.id;
+    }
+
+    if (!teacherOffersSlot(db, teacherId, selectedSlot.preferred_date, selectedSlot.time_slot)) {
+      return res.status(409).json({
+        message: 'Teacher does not offer availability for the selected slot',
+      });
     }
 
     if (teacherHasConflict(teacherId, selectedSlot.preferred_date, selectedSlot.time_slot)) {
