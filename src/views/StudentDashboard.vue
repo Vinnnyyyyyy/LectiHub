@@ -101,15 +101,17 @@
         <div class="dash-section-label">
           <div>
             <h2 id="student-calendar">Calendar</h2>
-            <p>Approved classes appear here automatically.</p>
+            <p>Month and year view of your classes, plus days teachers still have open.</p>
           </div>
         </div>
         <CalendarPanel
           title="My calendar"
-          subtitle="Approved classes are added here automatically."
-          empty-text="No calendar events yet."
+          subtitle="Gold days mark scheduled classes or open teacher availability."
+          empty-text="Nothing on this day yet."
           :events="calendarUpcoming"
           :loading="loadingCalendar"
+          :highlight-dates="openHighlightDates"
+          highlight-label="Teachers available"
         />
       </section>
 
@@ -186,6 +188,7 @@ import {
 } from '../stores/studentFeedback'
 import { useNotificationsStore } from '../stores/notifications'
 import { useCalendarStore } from '../stores/calendar'
+import { useAvailabilityStore } from '../stores/availability'
 import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 import LessonReportsPanel from '../components/LessonReportsPanel.vue'
@@ -211,7 +214,7 @@ const navItems: { id: StudentSection; label: string; intro: string }[] = [
   {
     id: 'calendar',
     label: 'Calendar',
-    intro: 'Approved classes appear here automatically.',
+    intro: 'Month and year view of your classes, plus days teachers still have open.',
   },
   {
     id: 'history',
@@ -237,6 +240,7 @@ const lessonReportsStore = useLessonReportsStore()
 const studentFeedbackStore = useStudentFeedbackStore()
 const notificationsStore = useNotificationsStore()
 const calendarStore = useCalendarStore()
+const availabilityStore = useAvailabilityStore()
 const router = useRouter()
 
 const {
@@ -256,10 +260,12 @@ const {
   feedback: myFeedback,
 } = storeToRefs(studentFeedbackStore)
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
+const { openDates } = storeToRefs(availabilityStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
 const archivedHistory = computed(() => classesStore.archived)
 const calendarUpcoming = computed(() => calendarStore.upcoming)
+const openHighlightDates = computed(() => openDates.value)
 
 const displayName = computed(
   () => authStore.fullName || authStore.username || 'student',
@@ -310,6 +316,7 @@ onMounted(async () => {
     studentFeedbackStore.fetchMine(),
     notificationsStore.fetchMine(),
     calendarStore.fetchMine(),
+    availabilityStore.fetchOpen(),
   ])
 })
 </script>

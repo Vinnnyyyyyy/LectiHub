@@ -6,49 +6,127 @@
     <p class="subtitle">{{ subtitle }}</p>
 
     <p v-if="loading" class="empty">Loading calendar...</p>
-    <p v-else-if="!events.length" class="empty">{{ emptyText }}</p>
-    <ul v-else class="event-list">
-      <li v-for="item in events" :key="item.id">
-        <div class="event-top">
-          <strong>{{ item.title }}</strong>
-          <span class="chip" :data-provider="item.provider">{{ item.provider }}</span>
-        </div>
-        <p>
-          {{ formatDate(item.eventDate) }}
-          · {{ item.startTime }} – {{ item.endTime }}
-          · {{ item.durationMinutes }} min
+    <template v-else>
+      <CalendarGrid
+        :selected-date="selectedDate"
+        :event-dates="eventDates"
+        :highlight-dates="highlightDates"
+        :event-labels-by-date="eventLabelsByDate"
+        @select-date="selectedDate = $event"
+      />
+
+      <div class="legend" v-if="highlightDates.length || eventDates.length">
+        <span v-if="eventDates.length" class="legend-item event">Scheduled</span>
+        <span v-if="highlightDates.length" class="legend-item open">{{
+          highlightLabel
+        }}</span>
+      </div>
+
+      <div class="day-detail">
+        <h3>{{ detailHeading }}</h3>
+        <p v-if="!selectedDayEvents.length && !selectedDayHighlights" class="empty detail-empty">
+          {{ emptyText }}
         </p>
-        <p v-if="item.meetingInfo" class="meta">{{ item.meetingInfo }}</p>
-        <p class="meta">
-          Sync:
-          <span :data-status="item.syncStatus">{{ item.syncStatus.replace('_', ' ') }}</span>
-          <span v-if="item.externalEventId"> · {{ item.externalEventId }}</span>
-        </p>
-      </li>
-    </ul>
+        <ul v-if="selectedDayEvents.length" class="event-list">
+          <li v-for="item in selectedDayEvents" :key="item.id">
+            <div class="event-top">
+              <strong>{{ item.title }}</strong>
+              <span class="chip" :data-provider="item.provider">{{ item.provider }}</span>
+            </div>
+            <p>
+              {{ item.startTime }} – {{ item.endTime }}
+              · {{ item.durationMinutes }} min
+            </p>
+            <p v-if="item.meetingInfo" class="meta">{{ item.meetingInfo }}</p>
+            <p class="meta">
+              Sync:
+              <span :data-status="item.syncStatus">{{ item.syncStatus.replace('_', ' ') }}</span>
+              <span v-if="item.externalEventId"> · {{ item.externalEventId }}</span>
+            </p>
+          </li>
+        </ul>
+        <p v-else-if="selectedDayHighlights" class="hint">{{ selectedDayHighlights }}</p>
+      </div>
+    </template>
   </section>
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import type { CalendarEvent } from '../stores/calendar'
+import CalendarGrid from './CalendarGrid.vue'
 
-defineProps<{
-  title?: string
-  subtitle?: string
-  emptyText?: string
-  events: CalendarEvent[]
-  loading?: boolean
-}>()
+const props = withDefaults(
+  defineProps<{
+    title?: string
+    subtitle?: string
+    emptyText?: string
+    events: CalendarEvent[]
+    loading?: boolean
+    highlightDates?: string[]
+    highlightLabel?: string
+  }>(),
+  {
+    title: 'Calendar',
+    subtitle: '',
+    emptyText: 'No events on this day.',
+    loading: false,
+    highlightDates: () => [],
+    highlightLabel: 'Teacher availability',
+  },
+)
 
-function formatDate(value: string) {
-  const date = new Date(`${value}T00:00:00`)
+const todayIso = new Date().toISOString().slice(0, 10)
+const selectedDate = ref(todayIso)
+
+const eventDates = computed(() => [...new Set(props.events.map((item) => item.eventDate))])
+
+const eventLabelsByDate = computed(() => {
+  const map: Record<string, string[]> = {}
+  for (const item of props.events) {
+    if (!map[item.eventDate]) map[item.eventDate] = []
+    if (map[item.eventDate].length < 2) {
+      map[item.eventDate].push(item.title)
+    }
+  }
+  return map
+})
+
+const selectedDayEvents = computed(() =>
+  props.events
+    .filter((item) => item.eventDate === selectedDate.value)
+    .sort((a, b) => a.startTime.localeCompare(b.startTime)),
+)
+
+const selectedDayHighlights = computed(() => {
+  if (!props.highlightDates.includes(selectedDate.value)) return ''
+  if (selectedDayEvents.value.length) return ''
+  return `${props.highlightLabel} on this day.`
+})
+
+const detailHeading = computed(() => {
+  const date = new Date(`${selectedDate.value}T00:00:00`)
   return date.toLocaleDateString(undefined, {
-    weekday: 'short',
+    weekday: 'long',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
-}
+})
+
+watch(
+  () => props.events,
+  (events) => {
+    if (!events.length) return
+    if (events.some((item) => item.eventDate === selectedDate.value)) return
+    const upcoming = events
+      .map((item) => item.eventDate)
+      .filter((date) => date >= todayIso)
+      .sort()[0]
+    if (upcoming) selectedDate.value = upcoming
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>
@@ -60,11 +138,20 @@ function formatDate(value: string) {
   backdrop-filter: blur(10px);
 }
 
-.section-head h2 {
+.section-head h2,
+.day-detail h3 {
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.2rem;
   font-weight: 550;
   color: var(--lh-accent);
+}
+
+.section-head h2 {
+  font-size: 1.2rem;
+}
+
+.day-detail h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.55rem;
 }
 
 .subtitle,
@@ -72,12 +159,15 @@ function formatDate(value: string) {
 p,
 strong,
 .chip,
-.meta {
+.meta,
+.hint,
+.legend {
   font-family: 'Manrope', sans-serif;
 }
 
 .subtitle {
   margin-top: 0.35rem;
+  margin-bottom: 0.9rem;
   color: var(--lh-muted);
   font-size: 0.9rem;
 }
@@ -91,11 +181,42 @@ strong,
   font-size: 0.9rem;
 }
 
+.detail-empty {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  font-size: 0.78rem;
+  color: var(--lh-muted);
+}
+
+.legend-item::before {
+  content: '';
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 0.15rem;
+  margin-right: 0.35rem;
+  background: var(--lh-warm);
+  vertical-align: middle;
+}
+
+.day-detail {
+  margin-top: 1rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid var(--lh-line);
+}
+
 .event-list {
   list-style: none;
   display: grid;
   gap: 0.55rem;
-  margin-top: 0.85rem;
 }
 
 .event-list li {
@@ -150,5 +271,10 @@ p {
 .meta span[data-status='failed'] {
   color: var(--lh-danger);
   font-weight: 700;
+}
+
+.hint {
+  color: var(--lh-warm);
+  font-size: 0.9rem;
 }
 </style>

@@ -159,18 +159,19 @@
         <div class="dash-section-label">
           <div>
             <h2 id="teacher-calendar">Calendar</h2>
-            <p>LectiHub calendar plus optional Google Calendar or Calendly sync.</p>
+            <p>Month and year view of your classes. Set weekly open hours for student booking.</p>
           </div>
         </div>
         <div class="dash-stack">
           <CalendarConnectionsPanel />
           <CalendarPanel
             title="My calendar"
-            subtitle="Approved class schedules appear here automatically."
-            empty-text="No calendar events yet."
+            subtitle="Gold days mark your scheduled classes."
+            empty-text="Nothing on this day yet."
             :events="calendarUpcoming"
             :loading="loadingCalendar"
           />
+          <TeacherAvailabilityPanel />
         </div>
       </section>
     </main>
@@ -201,6 +202,7 @@ import ClassHistoryPanel from '../components/ClassHistoryPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue'
+import TeacherAvailabilityPanel from '../components/TeacherAvailabilityPanel.vue'
 
 type TeacherSection = 'today' | 'conduct' | 'records' | 'calendar'
 
@@ -223,7 +225,7 @@ const navItems: { id: TeacherSection; label: string; intro: string }[] = [
   {
     id: 'calendar',
     label: 'Calendar',
-    intro: 'LectiHub calendar plus optional Google Calendar or Calendly sync.',
+    intro: 'Month and year view of your classes, plus weekly open hours for booking.',
   },
 ]
 

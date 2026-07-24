@@ -79,6 +79,9 @@ async function seed() {
   }
   // Cara: fully free in demo (lowest workload)
 
+  const { ensureDefaultTeacherAvailability } = require('./utils/availabilityHelpers');
+  ensureDefaultTeacherAvailability(db);
+
   console.log('Demo teachers ready (password: teacher123):');
   console.log('- teacher_ava / Ava Chen · Math (busy 2026-07-25 10:00-11:00, higher workload)');
   console.log('- teacher_ben / Ben Ortiz · Writing (busy 2026-07-26 14:00-15:00)');

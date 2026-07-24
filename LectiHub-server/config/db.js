@@ -202,4 +202,9 @@ db.exec(`CREATE INDEX IF NOT EXISTS idx_student_feedback_student ON student_feed
 db.exec(`CREATE INDEX IF NOT EXISTS idx_student_feedback_teacher ON student_feedback(teacher_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_student_feedback_submitted ON student_feedback(submitted_at)`);
 
+const {
+  ensureDefaultTeacherAvailability,
+} = require('../utils/availabilityHelpers');
+ensureDefaultTeacherAvailability(db);
+
 module.exports = db;

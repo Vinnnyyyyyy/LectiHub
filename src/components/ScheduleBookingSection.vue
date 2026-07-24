@@ -3,33 +3,41 @@
     <div class="booking-intro">
       <h2>Booking</h2>
       <p>
-        Choose one or more preferred dates and time slots, add any remarks, then submit a request.
-        An administrator will review it before a teacher is assigned.
+        Pick from dates and times teachers currently have open. Highlighted days have at least one
+        available teacher. An administrator will review your request before assigning someone.
       </p>
     </div>
 
     <form class="booking-form" @submit.prevent="handleSubmit">
       <div class="picker">
-        <label for="preferred-date">Preferred date</label>
-        <input
-          id="preferred-date"
-          v-model="selectedDate"
-          type="date"
-          :min="minDate"
-          required
+        <p class="field-label">Preferred date</p>
+        <p v-if="loadingOpen" class="hint">Loading teacher availability...</p>
+        <CalendarGrid
+          v-else
+          :selected-date="selectedDate"
+          :highlight-dates="openDates"
+          :min-date="minDate"
+          :only-highlight-selectable="true"
+          @select-date="onSelectDate"
         />
+        <p class="legend-note">Gold days = teachers available · grey days = no open slots</p>
 
         <p class="field-label">Time slots</p>
-        <div class="slot-grid" role="group" aria-label="Time slots">
+        <p v-if="!selectedDate" class="hint">Select an available date first.</p>
+        <p v-else-if="!openSlotsForDay.length" class="hint">
+          No open teacher slots on this date. Choose another highlighted day.
+        </p>
+        <div v-else class="slot-grid" role="group" aria-label="Time slots">
           <button
-            v-for="slot in TIME_SLOTS"
-            :key="slot"
+            v-for="slot in openSlotsForDay"
+            :key="slot.timeSlot"
             type="button"
             class="slot"
-            :class="{ active: selectedTimeSlots.includes(slot) }"
-            @click="toggleTimeSlot(slot)"
+            :class="{ active: selectedTimeSlots.includes(slot.timeSlot) }"
+            @click="toggleTimeSlot(slot.timeSlot)"
           >
-            {{ formatSlot(slot) }}
+            <span>{{ formatSlot(slot.timeSlot) }}</span>
+            <small>{{ slot.availableTeacherCount }} teacher{{ slot.availableTeacherCount === 1 ? '' : 's' }}</small>
           </button>
         </div>
 
@@ -100,20 +108,13 @@ import { computed, onMounted, ref } from 'vue'
 import axios from 'axios'
 import { storeToRefs } from 'pinia'
 import { useScheduleStore, type ScheduleSlot } from '../stores/schedule'
-
-const TIME_SLOTS = [
-  '09:00-10:00',
-  '10:00-11:00',
-  '11:00-12:00',
-  '13:00-14:00',
-  '14:00-15:00',
-  '15:00-16:00',
-  '16:00-17:00',
-  '17:00-18:00',
-] as const
+import { useAvailabilityStore } from '../stores/availability'
+import CalendarGrid from './CalendarGrid.vue'
 
 const scheduleStore = useScheduleStore()
+const availabilityStore = useAvailabilityStore()
 const { requests, loading, submitting } = storeToRefs(scheduleStore)
+const { openDates, loadingOpen } = storeToRefs(availabilityStore)
 
 const selectedDate = ref('')
 const selectedTimeSlots = ref<string[]>([])
@@ -124,9 +125,18 @@ const successMessage = ref('')
 
 const minDate = computed(() => new Date().toISOString().slice(0, 10))
 
+const openSlotsForDay = computed(() =>
+  selectedDate.value ? availabilityStore.slotsForDate(selectedDate.value) : [],
+)
+
 const canAddPreference = computed(
   () => Boolean(selectedDate.value) && selectedTimeSlots.value.length > 0,
 )
+
+function onSelectDate(date: string) {
+  selectedDate.value = date
+  selectedTimeSlots.value = []
+}
 
 function toggleTimeSlot(slot: string) {
   if (selectedTimeSlots.value.includes(slot)) {
@@ -218,9 +228,12 @@ async function handleSubmit() {
 
 onMounted(async () => {
   try {
-    await scheduleStore.fetchMine()
+    await Promise.all([scheduleStore.fetchMine(), availabilityStore.fetchOpen()])
+    if (!selectedDate.value && availabilityStore.openDates.length) {
+      selectedDate.value = availabilityStore.openDates[0]
+    }
   } catch {
-    // error already stored on the schedule store
+    // errors stored on stores
   }
 })
 </script>
@@ -254,7 +267,9 @@ textarea,
 button,
 .success,
 .error,
-time {
+time,
+.legend-note,
+small {
   font-family: 'Manrope', sans-serif;
 }
 
@@ -286,10 +301,14 @@ label,
   color: var(--lh-muted);
 }
 
-input[type='date'],
+.legend-note {
+  margin: 0.55rem 0 0.85rem;
+  color: var(--lh-faint);
+  font-size: 0.82rem;
+}
+
 textarea {
   width: 100%;
-  max-width: 22rem;
   font: inherit;
   font-size: 0.95rem;
   padding: 0.7rem 0.8rem;
@@ -298,10 +317,6 @@ textarea {
   background: var(--lh-input);
   color: var(--lh-ink);
   color-scheme: dark;
-}
-
-textarea {
-  max-width: none;
   resize: vertical;
   min-height: 5.5rem;
 }
@@ -310,7 +325,6 @@ textarea::placeholder {
   color: var(--lh-faint);
 }
 
-input:focus,
 textarea:focus {
   outline: none;
   border-color: rgba(126, 184, 164, 0.55);
@@ -340,15 +354,28 @@ textarea:focus {
 }
 
 .slot {
+  display: grid;
+  gap: 0.15rem;
   padding: 0.55rem 0.65rem;
   font-size: 0.88rem;
   font-weight: 600;
+  text-align: left;
+}
+
+.slot small {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--lh-faint);
 }
 
 .slot.active {
   background: var(--lh-accent-soft);
   border-color: rgba(126, 184, 164, 0.45);
   color: var(--lh-accent);
+}
+
+.slot.active small {
+  color: rgba(126, 184, 164, 0.85);
 }
 
 .add-slot,
