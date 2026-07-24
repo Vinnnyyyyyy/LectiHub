@@ -17,8 +17,8 @@
       />
 
       <div class="legend" v-if="showLegend">
-        <span v-if="eventDates.length" class="legend-item event">Scheduled</span>
-        <span v-if="highlightDates.length" class="legend-item open">{{
+        <span v-if="eventDates.length" class="legend-item available">Scheduled</span>
+        <span v-if="highlightDates.length" class="legend-item available">{{
           highlightLabel
         }}</span>
         <span v-if="markUnavailableDays" class="legend-item unavailable">Not Available</span>
@@ -211,14 +211,16 @@ strong,
   height: 0.55rem;
   border-radius: 0.15rem;
   margin-right: 0.35rem;
-  background: var(--lh-warm);
   vertical-align: middle;
 }
 
+.legend-item.available::before {
+  background: var(--lh-warm);
+}
+
 .legend-item.unavailable::before {
-  background: rgba(231, 236, 239, 0.28);
-  border: 1px solid rgba(231, 236, 239, 0.22);
-  box-sizing: border-box;
+  background: #7a828c;
+  border: none;
 }
 
 .day-detail {

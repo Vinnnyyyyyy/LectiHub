@@ -331,9 +331,8 @@ label,
 }
 
 .legend-item.unavailable::before {
-  background: rgba(231, 236, 239, 0.28);
-  border: 1px solid rgba(231, 236, 239, 0.22);
-  box-sizing: border-box;
+  background: #7a828c;
+  border: none;
 }
 
 textarea {

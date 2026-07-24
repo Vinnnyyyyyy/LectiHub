@@ -382,12 +382,12 @@ function onSelect(cell: { iso: string; disabled: boolean }) {
 }
 
 .day-cell.unavailable {
-  background: rgba(231, 236, 239, 0.1);
-  color: rgba(231, 236, 239, 0.55);
+  background: #3a4048;
+  color: #9aa3ad;
 }
 
 .day-cell.unavailable .day-num {
-  color: rgba(231, 236, 239, 0.55);
+  color: #9aa3ad;
 }
 
 .day-cell.today .day-num {
