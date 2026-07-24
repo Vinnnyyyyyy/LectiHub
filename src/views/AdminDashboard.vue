@@ -292,23 +292,23 @@
         <div class="dash-section-label">
           <div>
             <h2 id="admin-records">Reports &amp; feedback</h2>
-            <p>Teacher reports and student feedback after each class.</p>
+            <p>Teacher reports on the left. Student feedback on the right — reviewed side by side.</p>
           </div>
         </div>
-        <div class="dash-grid-2">
+        <div class="records-workspace">
           <LessonReportsPanel
-            title="Submitted lesson reports"
-            subtitle="Teachers’ reports become available here after each class concludes."
-            empty-text="No lesson reports submitted yet."
+            title="Lesson reports"
+            subtitle="What teachers submitted after each class."
+            empty-text="Reports appear here once a teacher completes a lesson write-up."
             :items="lessonReports"
             :loading="loadingReports"
             show-teacher
             show-student
           />
           <StudentFeedbackPanel
-            title="Student feedback review"
-            subtitle="Feedback submitted after lesson reports, available for administrative review."
-            empty-text="No student feedback submitted yet."
+            title="Student feedback"
+            subtitle="How students rated the lesson and learning experience."
+            empty-text="Feedback appears here after a student responds to a lesson report."
             :items="studentFeedback"
             :loading="loadingFeedback"
             show-teacher
@@ -424,7 +424,7 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
     id: 'records',
     label: 'Reports & feedback',
-    intro: 'Teacher reports and student feedback after each class.',
+    intro: 'Teacher reports on the left. Student feedback on the right — reviewed side by side.',
   },
   {
     id: 'monitoring',
@@ -947,8 +947,16 @@ time {
   font-size: 0.9rem;
 }
 
+.records-workspace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
+}
+
 @media (max-width: 900px) {
-  .layout {
+  .layout,
+  .records-workspace {
     grid-template-columns: 1fr;
   }
 }
