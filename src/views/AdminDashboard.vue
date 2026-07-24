@@ -348,7 +348,7 @@
         <div class="dash-section-label">
           <div>
             <h2 id="admin-users">Users</h2>
-            <p>Create teacher accounts and remove users you no longer need. Students self-register.</p>
+            <p>Provision teachers on the left. Browse and manage every account on the right.</p>
           </div>
         </div>
         <AdminUsersPanel />
@@ -434,7 +434,7 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
     id: 'users',
     label: 'Users',
-    intro: 'Create teacher accounts and delete users you no longer need. Students self-register.',
+    intro: 'Provision teachers on the left. Browse and manage every account on the right.',
   },
 ]
 
