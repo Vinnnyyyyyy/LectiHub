@@ -21,8 +21,8 @@
           @select-date="onSelectDate"
         />
         <div class="legend" aria-label="Calendar legend">
-          <span class="legend-item">Scheduled</span>
-          <span class="legend-item">Teachers available</span>
+          <span class="legend-item available">Available</span>
+          <span class="legend-item unavailable">Not Available</span>
         </div>
 
         <p class="field-label">Time slots</p>
@@ -322,8 +322,17 @@ label,
   height: 0.55rem;
   border-radius: 0.15rem;
   margin-right: 0.35rem;
-  background: var(--lh-warm);
   vertical-align: middle;
+}
+
+.legend-item.available::before {
+  background: var(--lh-warm);
+}
+
+.legend-item.unavailable::before {
+  background: rgba(231, 236, 239, 0.28);
+  border: 1px solid rgba(231, 236, 239, 0.22);
+  box-sizing: border-box;
 }
 
 textarea {
