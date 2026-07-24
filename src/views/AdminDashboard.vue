@@ -337,6 +337,22 @@
           @refresh="refreshMonitoring"
         />
       </section>
+
+      <section
+        v-show="activeSection === 'users'"
+        id="panel-users"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-users"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="admin-users">Users</h2>
+            <p>View accounts and delete students or teachers you no longer need.</p>
+          </div>
+        </div>
+        <AdminUsersPanel />
+      </section>
     </main>
   </div>
 </template>
@@ -362,6 +378,7 @@ import NotificationsPanel from '../components/NotificationsPanel.vue'
 import LessonReportsPanel from '../components/LessonReportsPanel.vue'
 import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
 import AdminMonitoringPanel from '../components/AdminMonitoringPanel.vue'
+import AdminUsersPanel from '../components/AdminUsersPanel.vue'
 
 const authStore = useAuthStore()
 const adminStore = useAdminScheduleStore()
@@ -391,7 +408,7 @@ const selectedSlotId = ref<number | null>(null)
 const successMessage = ref('')
 const errorMessage = ref('')
 
-type AdminSection = 'review' | 'inbox' | 'records' | 'monitoring'
+type AdminSection = 'review' | 'inbox' | 'records' | 'monitoring' | 'users'
 
 const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
@@ -413,6 +430,11 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
     id: 'monitoring',
     label: 'Monitoring',
     intro: 'Live overview of schedules, attendance, reports, and feedback.',
+  },
+  {
+    id: 'users',
+    label: 'Users',
+    intro: 'View accounts and delete students or teachers you no longer need.',
   },
 ]
 
