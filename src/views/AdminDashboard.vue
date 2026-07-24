@@ -170,6 +170,28 @@
                   </option>
                 </select>
 
+                <label for="assign-provider">Video platform</label>
+                <select id="assign-provider" v-model="selectedProvider">
+                  <option value="">
+                    {{
+                      selected.request.preferredProvider
+                        ? `Student preference · ${providerLabel(selected.request.preferredProvider)}`
+                        : 'Default (Jitsi Meet)'
+                    }}
+                  </option>
+                  <option
+                    v-for="option in VIDEO_PROVIDER_OPTIONS"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+                <p v-if="selected.request.preferredProvider" class="hint assign-hint">
+                  Student requested {{ providerLabel(selected.request.preferredProvider) }}. Leave on
+                  the first option to honor it, or override here.
+                </p>
+
                 <ul class="candidate-list">
                   <li
                     v-for="teacher in selected.teacherCandidates"
@@ -362,6 +384,7 @@ import NotificationsPanel from '../components/NotificationsPanel.vue'
 import LessonReportsPanel from '../components/LessonReportsPanel.vue'
 import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
 import AdminMonitoringPanel from '../components/AdminMonitoringPanel.vue'
+import { VIDEO_PROVIDER_OPTIONS, providerLabel } from '../constants/videoProviders'
 
 const authStore = useAuthStore()
 const adminStore = useAdminScheduleStore()
@@ -388,6 +411,7 @@ const {
 } = storeToRefs(monitoringStore)
 
 const selectedSlotId = ref<number | null>(null)
+const selectedProvider = ref('')
 const successMessage = ref('')
 const errorMessage = ref('')
 
@@ -433,6 +457,8 @@ watch(
     successMessage.value = ''
     errorMessage.value = ''
     selectedSlotId.value = selected.value?.request.slots[0]?.id ?? null
+    // Empty = honor the student's stored preference (or default) on the server.
+    selectedProvider.value = ''
   },
 )
 
@@ -497,6 +523,7 @@ async function assign(teacherId: number) {
       selected.value.request.id,
       teacherId,
       selectedSlotId.value,
+      selectedProvider.value || null,
     )
     const emailNote = result.emails?.enabled
       ? ' Confirmation emails were also sent (if recipients have email addresses).'

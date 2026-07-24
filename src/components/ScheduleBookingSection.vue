@@ -49,6 +49,30 @@
         <p v-else class="hint">Add at least one date and time slot to continue.</p>
       </div>
 
+      <p class="field-label">Preferred video platform</p>
+      <div class="provider-grid" role="group" aria-label="Preferred video platform">
+        <button
+          type="button"
+          class="provider"
+          :class="{ active: preferredProvider === '' }"
+          @click="preferredProvider = ''"
+        >
+          <span class="provider-name">No preference</span>
+          <span class="provider-hint">Let the center decide</span>
+        </button>
+        <button
+          v-for="option in VIDEO_PROVIDER_OPTIONS"
+          :key="option.value"
+          type="button"
+          class="provider"
+          :class="{ active: preferredProvider === option.value }"
+          @click="preferredProvider = option.value"
+        >
+          <span class="provider-name">{{ option.label }}</span>
+          <span class="provider-hint">{{ option.hint }}</span>
+        </button>
+      </div>
+
       <label for="remarks">Additional remarks</label>
       <textarea
         id="remarks"
@@ -88,6 +112,9 @@
               · {{ formatSlot(request.assignedSlot.timeSlot) }}
             </span>
           </p>
+          <p v-if="request.preferredProvider" class="request-remarks">
+            Preferred platform: {{ providerLabel(request.preferredProvider) }}
+          </p>
           <p v-if="request.remarks" class="request-remarks">{{ request.remarks }}</p>
         </li>
       </ul>
@@ -100,6 +127,7 @@ import { computed, onMounted, ref } from 'vue'
 import axios from 'axios'
 import { storeToRefs } from 'pinia'
 import { useScheduleStore, type ScheduleSlot } from '../stores/schedule'
+import { VIDEO_PROVIDER_OPTIONS, providerLabel } from '../constants/videoProviders'
 
 const TIME_SLOTS = [
   '09:00-10:00',
@@ -119,6 +147,7 @@ const selectedDate = ref('')
 const selectedTimeSlots = ref<string[]>([])
 const preferences = ref<ScheduleSlot[]>([])
 const remarks = ref('')
+const preferredProvider = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 
@@ -201,11 +230,13 @@ async function handleSubmit() {
     await scheduleStore.submitRequest({
       slots: preferences.value,
       remarks: remarks.value.trim(),
+      preferredProvider: preferredProvider.value || null,
     })
     preferences.value = []
     remarks.value = ''
     selectedDate.value = ''
     selectedTimeSlots.value = []
+    preferredProvider.value = ''
     successMessage.value = 'Request submitted with Pending status. An admin will review it soon.'
   } catch (err) {
     if (axios.isAxiosError(err)) {
@@ -349,6 +380,50 @@ textarea:focus {
   background: var(--lh-accent-soft);
   border-color: rgba(126, 184, 164, 0.45);
   color: var(--lh-accent);
+}
+
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.provider {
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.7rem;
+  background: rgba(20, 25, 31, 0.55);
+  color: var(--lh-ink);
+  cursor: pointer;
+  font-family: 'Manrope', sans-serif;
+}
+
+.provider:hover {
+  border-color: var(--lh-line-strong);
+}
+
+.provider.active {
+  background: var(--lh-accent-soft);
+  border-color: rgba(126, 184, 164, 0.45);
+}
+
+.provider-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.provider.active .provider-name {
+  color: var(--lh-accent);
+}
+
+.provider-hint {
+  font-size: 0.76rem;
+  color: var(--lh-faint);
+  line-height: 1.35;
 }
 
 .add-slot,

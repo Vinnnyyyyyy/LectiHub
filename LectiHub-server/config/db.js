@@ -147,6 +147,7 @@ db.exec(`
 `);
 
 ensureColumn('users', 'subject_expertise', 'TEXT');
+ensureColumn('schedule_requests', 'preferred_provider', 'TEXT');
 ensureColumn('schedule_requests', 'assigned_teacher_id', 'INTEGER');
 ensureColumn('schedule_requests', 'assigned_slot_id', 'INTEGER');
 ensureColumn('schedule_requests', 'assigned_by', 'INTEGER');

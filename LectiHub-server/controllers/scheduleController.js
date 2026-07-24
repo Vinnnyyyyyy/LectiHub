@@ -3,7 +3,19 @@ const {
   parseTimeSlot,
   buildMeetingDetails,
   mapClassRow,
+  normalizeMeetingProvider,
+  VIDEO_PROVIDERS,
 } = require('../utils/scheduleHelpers');
+
+const PROVIDER_LABELS = {
+  jitsi: 'Jitsi Meet',
+  google_meet: 'Google Meet',
+  zoom: 'Zoom',
+};
+
+function providerLabel(provider) {
+  return PROVIDER_LABELS[provider] || 'Jitsi Meet';
+}
 const { sendScheduleConfirmationEmails } = require('../utils/emailService');
 const { syncClassToCalendars, teacherHasCalendarConflict } = require('../utils/calendarService');
 const { hydrateClass } = require('./classController');
@@ -53,6 +65,10 @@ function mapRequest(row, slots, student = null, assignedTeacher = null) {
         }
       : undefined,
     remarks: row.remarks || '',
+    preferredProvider: row.preferred_provider || null,
+    preferredProviderLabel: row.preferred_provider
+      ? providerLabel(row.preferred_provider)
+      : null,
     status: row.status,
     createdAt: row.created_at,
     assignedTeacherId: row.assigned_teacher_id || null,
@@ -379,10 +395,22 @@ function buildAvailability(slots, remarks = '') {
 }
 
 async function createScheduleRequest(req, res) {
-  const { slots, remarks } = req.body || {};
+  const { slots, remarks, preferredProvider } = req.body || {};
 
   if (!Array.isArray(slots) || slots.length === 0) {
     return res.status(400).json({ message: 'Select at least one preferred date and time slot' });
+  }
+
+  // Optional: student can request a video platform. Empty = let admin decide.
+  let cleanProvider = null;
+  if (preferredProvider != null && String(preferredProvider).trim() !== '') {
+    const normalized = String(preferredProvider).toLowerCase().trim();
+    if (!VIDEO_PROVIDERS.has(normalized)) {
+      return res.status(400).json({
+        message: 'preferredProvider must be jitsi, google_meet, or zoom.',
+      });
+    }
+    cleanProvider = normalized;
   }
 
   const normalizedSlots = [];
@@ -414,8 +442,8 @@ async function createScheduleRequest(req, res) {
   const studentName = student?.full_name || student?.username || 'A student';
 
   const insertRequest = db.prepare(`
-    INSERT INTO schedule_requests (student_id, remarks, status)
-    VALUES (?, ?, 'pending')
+    INSERT INTO schedule_requests (student_id, remarks, preferred_provider, status)
+    VALUES (?, ?, ?, 'pending')
   `);
   const insertSlot = db.prepare(`
     INSERT INTO schedule_request_slots (request_id, preferred_date, time_slot)
@@ -423,7 +451,7 @@ async function createScheduleRequest(req, res) {
   `);
 
   const create = db.transaction(() => {
-    const result = insertRequest.run(req.user.id, cleanRemarks || null);
+    const result = insertRequest.run(req.user.id, cleanRemarks || null, cleanProvider);
     const requestId = result.lastInsertRowid;
 
     for (const slot of normalizedSlots) {
@@ -536,12 +564,21 @@ async function assignTeacherToRequest(req, res) {
     const requestId = Number(req.params.id);
     const teacherId = Number(req.body?.teacherId);
     let slotId = req.body?.slotId != null ? Number(req.body.slotId) : null;
+    const overrideProvider =
+      req.body?.meetingProvider != null && String(req.body.meetingProvider).trim() !== ''
+        ? String(req.body.meetingProvider).toLowerCase().trim()
+        : null;
 
     if (!Number.isInteger(requestId) || requestId < 1) {
       return res.status(400).json({ message: 'Invalid request id' });
     }
     if (!Number.isInteger(teacherId) || teacherId < 1) {
       return res.status(400).json({ message: 'teacherId is required' });
+    }
+    if (overrideProvider && !VIDEO_PROVIDERS.has(overrideProvider)) {
+      return res.status(400).json({
+        message: 'meetingProvider must be jitsi, google_meet, or zoom.',
+      });
     }
 
     const request = db.prepare('SELECT * FROM schedule_requests WHERE id = ?').get(requestId);
@@ -593,10 +630,15 @@ async function assignTeacherToRequest(req, res) {
     const studentName = student?.full_name || student?.username || 'Student';
     const teacherName = teacher.full_name || teacher.username;
     const { startTime, endTime, durationMinutes } = parseTimeSlot(selectedSlot.time_slot);
+    // Admin choice wins, then the student's requested platform, then the default.
+    const chosenProvider = normalizeMeetingProvider(
+      overrideProvider || request.preferred_provider,
+    );
     const { meetingInfo, meetingLink, meetingProvider } = buildMeetingDetails(
       requestId,
       selectedSlot.preferred_date,
       startTime,
+      chosenProvider,
     );
     const subject = teacher.subject_expertise || 'General';
     const title = `${subject} lesson · ${studentName} with ${teacherName}`;

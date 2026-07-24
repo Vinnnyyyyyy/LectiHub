@@ -17,6 +17,8 @@ export interface ScheduleRequest {
     email: string
   }
   remarks: string
+  preferredProvider?: string | null
+  preferredProviderLabel?: string | null
   status: 'pending' | 'approved' | 'rejected'
   createdAt: string
   assignedTeacherId?: number | null
@@ -63,7 +65,11 @@ export const useScheduleStore = defineStore('schedule', {
       }
     },
 
-    async submitRequest(payload: { slots: ScheduleSlot[]; remarks: string }) {
+    async submitRequest(payload: {
+      slots: ScheduleSlot[]
+      remarks: string
+      preferredProvider?: string | null
+    }) {
       this.submitting = true
       this.error = null
       try {
