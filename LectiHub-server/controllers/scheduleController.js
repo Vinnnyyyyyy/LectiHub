@@ -7,7 +7,11 @@ const {
 const { sendScheduleConfirmationEmails } = require('../utils/emailService');
 const { syncClassToCalendars } = require('../utils/calendarService');
 const { teacherHasConflict } = require('../utils/conflictHelpers');
-const { teacherOffersSlot } = require('../utils/availabilityHelpers');
+const {
+  teacherOffersSlot,
+  earliestBookableDate,
+  BOOKING_LEAD_DAYS,
+} = require('../utils/availabilityHelpers');
 const { hydrateClass } = require('./classController');
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -381,6 +385,13 @@ async function createScheduleRequest(req, res) {
     }
     if (!TIME_SLOT_RE.test(timeSlot)) {
       return res.status(400).json({ message: 'Each slot needs a valid time range (HH:MM-HH:MM)' });
+    }
+
+    const earliest = earliestBookableDate();
+    if (preferredDate < earliest) {
+      return res.status(400).json({
+        message: `Preferred dates must be at least ${BOOKING_LEAD_DAYS} days from today (earliest: ${earliest}).`,
+      });
     }
 
     const key = `${preferredDate}|${timeSlot}`;
