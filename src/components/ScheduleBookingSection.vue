@@ -20,7 +20,10 @@
           :only-highlight-selectable="true"
           @select-date="onSelectDate"
         />
-        <p class="legend-note">Gold days = teachers available · grey days = no open slots</p>
+        <div class="legend" aria-label="Calendar legend">
+          <span class="legend-item">Scheduled</span>
+          <span class="legend-item">Teachers available</span>
+        </div>
 
         <p class="field-label">Time slots</p>
         <p v-if="!selectedDate" class="hint">Select an available date first.</p>
@@ -268,7 +271,8 @@ button,
 .success,
 .error,
 time,
-.legend-note,
+.legend,
+.legend-item,
 small {
   font-family: 'Manrope', sans-serif;
 }
@@ -301,10 +305,25 @@ label,
   color: var(--lh-muted);
 }
 
-.legend-note {
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   margin: 0.55rem 0 0.85rem;
-  color: var(--lh-faint);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--lh-muted);
+}
+
+.legend-item::before {
+  content: '';
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 0.15rem;
+  margin-right: 0.35rem;
+  background: var(--lh-warm);
+  vertical-align: middle;
 }
 
 textarea {
