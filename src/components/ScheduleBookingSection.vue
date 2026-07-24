@@ -18,7 +18,6 @@
           :highlight-dates="openDates"
           :min-date="minDate"
           :only-highlight-selectable="true"
-          :mark-unavailable-days="true"
           @select-date="onSelectDate"
         />
         <div class="legend" aria-label="Calendar legend">
@@ -331,8 +330,9 @@ label,
 }
 
 .legend-item.unavailable::before {
-  background: #7a828c;
-  border: none;
+  background: rgba(231, 236, 239, 0.28);
+  border: 1px solid rgba(231, 236, 239, 0.22);
+  box-sizing: border-box;
 }
 
 textarea {

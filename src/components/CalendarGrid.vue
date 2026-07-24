@@ -35,7 +35,6 @@
           class="day-cell"
           :class="{
             muted: !cell.inMonth,
-            unavailable: cell.unavailable,
             today: cell.isToday,
             selected: cell.iso === selectedDate,
             'has-event': cell.hasEvent,
@@ -94,8 +93,6 @@ const props = withDefaults(
     eventLabelsByDate?: Record<string, string[]>
     minDate?: string | null
     onlyHighlightSelectable?: boolean
-    /** Grey-fill in-month days that are neither events nor availability highlights */
-    markUnavailableDays?: boolean
   }>(),
   {
     selectedDate: null,
@@ -104,7 +101,6 @@ const props = withDefaults(
     eventLabelsByDate: () => ({}),
     minDate: null,
     onlyHighlightSelectable: false,
-    markUnavailableDays: false,
   },
 )
 
@@ -166,7 +162,6 @@ const monthCells = computed(() => {
     isToday: boolean
     hasEvent: boolean
     hasHighlight: boolean
-    unavailable: boolean
     disabled: boolean
     labels: string[]
   }> = []
@@ -202,8 +197,6 @@ const monthCells = computed(() => {
     // so adjacent-month spillover cells stay visually separate.
     const hasEvent = inMonth && eventSet.value.has(iso)
     const hasHighlight = inMonth && highlightSet.value.has(iso)
-    const unavailable =
-      props.markUnavailableDays && inMonth && !hasEvent && !hasHighlight
     cells.push({
       key: `${iso}-${i}`,
       iso,
@@ -212,7 +205,6 @@ const monthCells = computed(() => {
       isToday: iso === todayIso,
       hasEvent,
       hasHighlight,
-      unavailable,
       disabled: !inMonth || isDisabled(iso, hasHighlight),
       labels: inMonth ? props.eventLabelsByDate[iso] || [] : [],
     })
@@ -379,15 +371,6 @@ function onSelect(cell: { iso: string; disabled: boolean }) {
 .day-cell.muted {
   color: var(--lh-faint);
   background: #14181e;
-}
-
-.day-cell.unavailable {
-  background: #3a4048;
-  color: #9aa3ad;
-}
-
-.day-cell.unavailable .day-num {
-  color: #9aa3ad;
 }
 
 .day-cell.today .day-num {
