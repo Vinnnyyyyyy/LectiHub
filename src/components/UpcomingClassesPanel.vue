@@ -31,7 +31,33 @@
           <span v-if="item.subject"> · {{ item.subject }}</span>
         </p>
         <p v-if="item.meetingInfo" class="meta">{{ item.meetingInfo }}</p>
-        <p v-if="item.meetingProvider" class="meta provider">
+        <div
+          v-if="
+            allowJoin &&
+            (item.status === 'scheduled' || item.status === 'in_progress')
+          "
+          class="provider-pick"
+        >
+          <label :for="`provider-${item.id}`">Video platform</label>
+          <div class="provider-row">
+            <select
+              :id="`provider-${item.id}`"
+              :value="draftProviders[item.id] ?? item.meetingProvider ?? 'jitsi'"
+              :disabled="updatingProviderId === item.id || joiningId === item.id"
+              @change="onProviderChange(item, ($event.target as HTMLSelectElement).value)"
+            >
+              <option
+                v-for="option in VIDEO_PROVIDER_OPTIONS"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+            <span v-if="updatingProviderId === item.id" class="provider-saving">Saving…</span>
+          </div>
+        </div>
+        <p v-else-if="item.meetingProvider" class="meta provider">
           Platform: {{ formatProvider(item.meetingProvider) }}
         </p>
         <p v-if="item.curriculumPlan" class="meta">Curriculum: {{ item.curriculumPlan }}</p>
@@ -64,7 +90,7 @@
             type="button"
             class="join-btn"
             :disabled="joiningId === item.id"
-            @click="emit('join', item)"
+            @click="emit('join', item, draftProviders[item.id] || item.meetingProvider || undefined)"
           >
             {{ joiningId === item.id ? 'Joining…' : item.status === 'in_progress' ? 'Rejoin class' : 'Join class' }}
           </button>
@@ -96,9 +122,11 @@
 </template>
 
 <script setup lang="ts">
+import { reactive, watch } from 'vue'
 import type { ConfirmedSchedule } from '../stores/classes'
+import { VIDEO_PROVIDER_OPTIONS } from '../constants/videoProviders'
 
-defineProps<{
+const props = defineProps<{
   title: string
   subtitle: string
   emptyText: string
@@ -108,11 +136,35 @@ defineProps<{
   showStudent?: boolean
   allowJoin?: boolean
   joiningId?: number | null
+  updatingProviderId?: number | null
 }>()
 
 const emit = defineEmits<{
-  join: [item: ConfirmedSchedule]
+  join: [item: ConfirmedSchedule, meetingProvider?: string]
+  'update-provider': [item: ConfirmedSchedule, meetingProvider: string]
 }>()
+
+const draftProviders = reactive<Record<number, string>>({})
+
+watch(
+  () => props.items,
+  (items) => {
+    for (const item of items) {
+      // Keep the draft in sync after a successful server update.
+      if (item.meetingProvider) {
+        draftProviders[item.id] = item.meetingProvider
+      }
+    }
+  },
+  { immediate: true, deep: true },
+)
+
+function onProviderChange(item: ConfirmedSchedule, value: string) {
+  draftProviders[item.id] = value
+  if (value && value !== item.meetingProvider) {
+    emit('update-provider', item, value)
+  }
+}
 
 function formatDate(value: string) {
   const date = new Date(`${value}T00:00:00`)
@@ -170,7 +222,10 @@ a,
 strong,
 .chip,
 .join-btn,
-.join-hint {
+.join-hint,
+.provider-pick,
+.provider-row,
+.provider-saving {
   font-family: 'Manrope', sans-serif;
 }
 
@@ -254,6 +309,40 @@ p {
 
 .provider {
   text-transform: none;
+}
+
+.provider-pick {
+  margin-top: 0.55rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.provider-pick label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--lh-muted);
+}
+
+.provider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.provider-pick select {
+  min-width: 11rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--lh-line);
+  background: var(--lh-input);
+  color: var(--lh-ink);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.provider-saving {
+  font-size: 0.8rem;
+  color: var(--lh-faint);
 }
 
 .join-row {

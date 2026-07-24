@@ -6,6 +6,7 @@ const {
   listMyClasses,
   getClassByRequest,
   joinClass,
+  updateMeetingProvider,
   updateLessonConduct,
   completeClass,
   listClassHistory,
@@ -19,6 +20,12 @@ router.get('/mine', auth, requireRole('student', 'teacher', 'admin'), listMyClas
 router.get('/history', auth, requireRole('student', 'teacher', 'admin'), listClassHistory);
 router.get('/by-request/:requestId', auth, getClassByRequest);
 router.post('/:id/join', auth, requireRole('student', 'teacher', 'admin'), joinClass);
+router.patch(
+  '/:id/meeting-provider',
+  auth,
+  requireRole('student', 'teacher', 'admin'),
+  updateMeetingProvider,
+);
 router.patch(
   '/:id/conduct',
   auth,

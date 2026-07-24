@@ -62,8 +62,10 @@
             :loading="loading"
             :allow-join="true"
             :joining-id="joiningId"
+            :updating-provider-id="updatingProviderId"
             show-student
             @join="handleJoinClass"
+            @update-provider="handleUpdateProvider"
           />
           <NotificationsPanel
             subtitle="New assignments include student, date/time, duration, and meeting details."
@@ -252,6 +254,7 @@ const {
   conductMessage,
   error: joinError,
 } = storeToRefs(classesStore)
+const updatingProviderId = ref<number | null>(null)
 const {
   loading: loadingReports,
   submittingId: reportSubmittingId,
@@ -267,11 +270,22 @@ const archivedHistory = computed(() => classesStore.archived)
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 const displayName = computed(() => authStore.fullName || authStore.username || 'teacher')
 
-async function handleJoinClass(item: ConfirmedSchedule) {
+async function handleJoinClass(item: ConfirmedSchedule, meetingProvider?: string) {
   try {
-    await classesStore.joinClass(item.id)
+    await classesStore.joinClass(item.id, meetingProvider)
   } catch {
     // store sets error message
+  }
+}
+
+async function handleUpdateProvider(item: ConfirmedSchedule, meetingProvider: string) {
+  updatingProviderId.value = item.id
+  try {
+    await classesStore.updateMeetingProvider(item.id, meetingProvider)
+  } catch {
+    // store sets error message
+  } finally {
+    updatingProviderId.value = null
   }
 }
 

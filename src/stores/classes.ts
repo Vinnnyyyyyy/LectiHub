@@ -160,12 +160,14 @@ export const useClassesStore = defineStore('classes', {
       }
     },
 
-    async joinClass(classId: number) {
+    async joinClass(classId: number, meetingProvider?: string | null) {
       this.joiningId = classId
       this.error = null
       this.joinMessage = null
       try {
-        const res = await api.post<JoinClassResponse>(`/classes/${classId}/join`)
+        const res = await api.post<JoinClassResponse>(`/classes/${classId}/join`, {
+          meetingProvider: meetingProvider || undefined,
+        })
         this.upsertSchedule(res.data.class)
         this.joinMessage = res.data.message
         const link = res.data.meeting?.link || res.data.class.meetingLink
@@ -181,6 +183,25 @@ export const useClassesStore = defineStore('classes', {
         throw err
       } finally {
         this.joiningId = null
+      }
+    },
+
+    async updateMeetingProvider(classId: number, meetingProvider: string) {
+      this.error = null
+      this.joinMessage = null
+      try {
+        const res = await api.patch<ConductResponse>(`/classes/${classId}/meeting-provider`, {
+          meetingProvider,
+        })
+        this.upsertSchedule(res.data.class)
+        this.joinMessage = res.data.message
+        return res.data
+      } catch (err: unknown) {
+        const message =
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          'Could not update the video platform'
+        this.error = message
+        throw err
       }
     },
 
