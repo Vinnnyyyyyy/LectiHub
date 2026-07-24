@@ -1,120 +1,159 @@
 <template>
-  <div class="users-workspace">
-    <aside class="create-pane">
-      <p class="pane-kicker">Provisioning</p>
-      <h3>New teacher</h3>
-      <p class="pane-copy">
-        Issue a temporary password. Teachers sign in and change it on first use. Students register on
-        their own.
-      </p>
-
-      <form class="create-form" @submit.prevent="handleCreateTeacher">
-        <label for="teacher-full-name">Full name</label>
-        <input id="teacher-full-name" v-model="form.fullName" type="text" required maxlength="120" />
-
-        <label for="teacher-username">Username</label>
-        <input
-          id="teacher-username"
-          v-model="form.username"
-          type="text"
-          required
-          maxlength="60"
-          autocomplete="off"
-        />
-
-        <label for="teacher-email">Email</label>
-        <input id="teacher-email" v-model="form.email" type="email" maxlength="120" />
-
-        <label for="teacher-subject">Subject expertise</label>
-        <input
-          id="teacher-subject"
-          v-model="form.subjectExpertise"
-          type="text"
-          maxlength="120"
-          placeholder="Math, Writing, Science…"
-        />
-
-        <label for="teacher-password">Temporary password</label>
-        <input
-          id="teacher-password"
-          v-model="form.password"
-          type="text"
-          required
-          minlength="6"
-          maxlength="80"
-          autocomplete="new-password"
-        />
-
-        <button type="submit" class="create" :disabled="creating">
-          {{ creating ? 'Creating…' : 'Create teacher' }}
-        </button>
-      </form>
-
-      <p v-if="message" class="success" role="status">{{ message }}</p>
-      <p v-if="error" class="error" role="alert">{{ error }}</p>
-    </aside>
-
-    <section class="directory-pane" aria-label="User directory">
-      <div class="directory-head">
-        <div>
-          <p class="pane-kicker">Directory</p>
-          <h3>All accounts</h3>
-        </div>
-        <p class="count">{{ filteredUsers.length }} shown</p>
+  <section class="users">
+    <aside class="sidebar" aria-label="Users sections">
+      <div class="brand-block">
+        <p class="kicker">Accounts</p>
+        <h2>Users</h2>
+        <p class="side-copy">Create teachers and manage every account from one place.</p>
       </div>
 
-      <div class="filters" role="group" aria-label="Filter by role">
+      <nav class="side-nav" role="tablist" aria-orientation="vertical">
+        <button
+          type="button"
+          role="tab"
+          class="side-link"
+          :class="{ active: activeView === 'create' }"
+          :aria-selected="activeView === 'create'"
+          @click="activeView = 'create'"
+        >
+          <span class="side-label">New teacher</span>
+        </button>
+
+        <p class="nav-group">Directory</p>
+
         <button
           v-for="option in filters"
           :key="option.value"
           type="button"
-          class="filter"
-          :class="{ active: roleFilter === option.value }"
-          @click="setFilter(option.value)"
+          role="tab"
+          class="side-link"
+          :class="{ active: activeView === 'directory' && roleFilter === option.value }"
+          :aria-selected="activeView === 'directory' && roleFilter === option.value"
+          @click="openDirectory(option.value)"
         >
-          {{ option.label }}
-          <span>{{ counts[option.value] }}</span>
+          <span class="side-label">{{ option.label }}</span>
+          <span class="side-badge">{{ counts[option.value] }}</span>
         </button>
-      </div>
+      </nav>
+    </aside>
 
-      <p v-if="loading" class="hint">Loading directory…</p>
-      <p v-else-if="!filteredUsers.length" class="hint">No accounts in this filter.</p>
-
-      <div v-else class="table-wrap">
-        <div class="table-head" aria-hidden="true">
-          <span>Person</span>
-          <span>Role</span>
-          <span>Action</span>
+    <div class="main">
+      <header class="main-head">
+        <div>
+          <p class="kicker">{{ activeMeta.kicker }}</p>
+          <h3>{{ activeMeta.title }}</h3>
+          <p class="main-copy">{{ activeMeta.copy }}</p>
         </div>
-        <ul class="user-list">
-          <li v-for="user in filteredUsers" :key="user.id">
-            <div class="person">
-              <span class="avatar" :data-role="user.role" aria-hidden="true">{{
-                initials(user.fullName)
-              }}</span>
-              <div class="person-text">
-                <strong>{{ user.fullName }}</strong>
-                <p>
-                  <span class="handle">@{{ user.username }}</span>
-                  <span v-if="user.email" class="dot">·</span>
-                  <span v-if="user.email">{{ user.email }}</span>
-                </p>
-              </div>
-            </div>
-            <span class="role" :data-role="user.role">{{ user.role }}</span>
-            <button
-              type="button"
-              class="delete"
-              :disabled="deletingId === user.id || user.username === currentUsername"
-              @click="confirmDelete(user)"
-            >
-              {{ deletingId === user.id ? 'Deleting…' : 'Delete' }}
-            </button>
-          </li>
-        </ul>
+        <p v-if="activeView === 'directory'" class="count">{{ filteredUsers.length }} shown</p>
+      </header>
+
+      <div v-show="activeView === 'create'" class="view">
+        <form class="create-card" @submit.prevent="handleCreateTeacher">
+          <div class="form-grid">
+            <label for="teacher-full-name">
+              Full name
+              <input
+                id="teacher-full-name"
+                v-model="form.fullName"
+                type="text"
+                required
+                maxlength="120"
+              />
+            </label>
+            <label for="teacher-username">
+              Username
+              <input
+                id="teacher-username"
+                v-model="form.username"
+                type="text"
+                required
+                maxlength="60"
+                autocomplete="off"
+              />
+            </label>
+            <label for="teacher-email">
+              Email
+              <input id="teacher-email" v-model="form.email" type="email" maxlength="120" />
+            </label>
+            <label for="teacher-subject">
+              Subject expertise
+              <input
+                id="teacher-subject"
+                v-model="form.subjectExpertise"
+                type="text"
+                maxlength="120"
+                placeholder="Math, Writing, Science…"
+              />
+            </label>
+            <label for="teacher-password" class="span-2">
+              Temporary password
+              <input
+                id="teacher-password"
+                v-model="form.password"
+                type="text"
+                required
+                minlength="6"
+                maxlength="80"
+                autocomplete="new-password"
+              />
+            </label>
+          </div>
+
+          <button type="submit" class="create" :disabled="creating">
+            {{ creating ? 'Creating…' : 'Create teacher' }}
+          </button>
+
+          <p v-if="message" class="success" role="status">{{ message }}</p>
+          <p v-if="error" class="error" role="alert">{{ error }}</p>
+        </form>
       </div>
-    </section>
-  </div>
+
+      <div v-show="activeView === 'directory'" class="view">
+        <p v-if="loading" class="hint">Loading directory…</p>
+        <div v-else-if="!filteredUsers.length" class="empty-state">
+          <p class="empty-title">No accounts here</p>
+          <p class="hint">Nothing matches this directory filter.</p>
+        </div>
+
+        <div v-else class="table-card">
+          <div class="table-head" aria-hidden="true">
+            <span>Person</span>
+            <span>Role</span>
+            <span>Action</span>
+          </div>
+          <ul class="user-list">
+            <li v-for="user in filteredUsers" :key="user.id">
+              <div class="person">
+                <span class="avatar" :data-role="user.role" aria-hidden="true">{{
+                  initials(user.fullName)
+                }}</span>
+                <div class="person-text">
+                  <strong>{{ user.fullName }}</strong>
+                  <p>
+                    <span class="handle">@{{ user.username }}</span>
+                    <span v-if="user.email" class="dot">·</span>
+                    <span v-if="user.email">{{ user.email }}</span>
+                  </p>
+                </div>
+              </div>
+              <span class="role" :data-role="user.role">{{ user.role }}</span>
+              <button
+                type="button"
+                class="delete"
+                :disabled="deletingId === user.id || user.username === currentUsername"
+                @click="confirmDelete(user)"
+              >
+                {{ deletingId === user.id ? 'Deleting…' : 'Delete' }}
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <p v-if="message && activeView === 'directory'" class="success" role="status">{{ message }}</p>
+        <p v-if="error && activeView === 'directory'" class="error" role="alert">{{ error }}</p>
+      </div>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -124,18 +163,20 @@ import { useAuthStore } from '../stores/auth'
 import { useUsersStore, type ManagedUser } from '../stores/users'
 
 const filters = [
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All accounts' },
   { value: 'student', label: 'Students' },
   { value: 'teacher', label: 'Teachers' },
   { value: 'admin', label: 'Admins' },
 ] as const
 
 type FilterValue = (typeof filters)[number]['value']
+type UsersView = 'create' | 'directory'
 
 const usersStore = useUsersStore()
 const authStore = useAuthStore()
 const { users, loading, deletingId, error, message } = storeToRefs(usersStore)
 
+const activeView = ref<UsersView>('directory')
 const roleFilter = ref<FilterValue>('all')
 const creating = ref(false)
 const currentUsername = computed(() => authStore.username || '')
@@ -160,7 +201,24 @@ const filteredUsers = computed(() => {
   return users.value.filter((user) => user.role === roleFilter.value)
 })
 
-function setFilter(value: FilterValue) {
+const activeMeta = computed(() => {
+  if (activeView.value === 'create') {
+    return {
+      kicker: 'Provisioning',
+      title: 'New teacher',
+      copy: 'Issue a temporary password. Teachers change it on first sign-in. Students self-register.',
+    }
+  }
+  const label = filters.find((item) => item.value === roleFilter.value)?.label || 'Directory'
+  return {
+    kicker: 'Directory',
+    title: label,
+    copy: 'Browse accounts, filter by role, and remove users you no longer need.',
+  }
+})
+
+function openDirectory(value: FilterValue) {
+  activeView.value = 'directory'
   roleFilter.value = value
 }
 
@@ -189,7 +247,7 @@ async function handleCreateTeacher() {
     form.email = ''
     form.subjectExpertise = ''
     form.password = ''
-    roleFilter.value = 'teacher'
+    openDirectory('teacher')
   } catch {
     // store error
   } finally {
@@ -223,36 +281,43 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.users-workspace {
+.users {
   display: grid;
-  grid-template-columns: minmax(16rem, 19.5rem) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
+  grid-template-columns: 15.5rem minmax(0, 1fr);
+  min-height: 34rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 1.1rem;
+  overflow: hidden;
+  background: var(--lh-panel);
+  backdrop-filter: blur(10px);
   animation: rise 0.45s ease both;
 }
 
-.create-pane,
-.directory-pane {
-  border: 1px solid var(--lh-line);
-  border-radius: 1.05rem;
-  background:
-    linear-gradient(165deg, rgba(36, 44, 54, 0.55), transparent 42%),
-    var(--lh-panel);
-  backdrop-filter: blur(10px);
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.15rem 0.9rem 1.1rem;
+  border-right: 1px solid var(--lh-line);
+  background: linear-gradient(180deg, rgba(36, 44, 54, 0.72), rgba(20, 25, 31, 0.35));
 }
 
-.create-pane {
-  padding: 1.15rem 1.1rem 1.2rem;
+.brand-block h2,
+.main-head h3 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 550;
+  color: var(--lh-ink);
+  margin: 0;
 }
 
-.directory-pane {
-  padding: 1.15rem 1.15rem 1.25rem;
-  min-width: 0;
+.brand-block h2 {
+  font-size: 1.35rem;
+  margin-top: 0.15rem;
 }
 
-.pane-kicker {
+.kicker {
   font-family: 'Manrope', sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -260,54 +325,165 @@ onMounted(async () => {
   margin: 0;
 }
 
-.create-pane h3,
-.directory-pane h3 {
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.35rem;
-  font-weight: 550;
-  color: var(--lh-ink);
-  margin: 0.2rem 0 0;
-}
-
-.pane-copy,
-.count,
+.side-copy,
+.main-copy,
 .hint,
 .success,
 .error,
-label,
+.label,
 input,
 button,
 strong,
 p,
-.role {
+.role,
+.count,
+.empty-title,
+.nav-group {
   font-family: 'Manrope', sans-serif;
 }
 
-.pane-copy {
-  margin-top: 0.45rem;
+.side-copy,
+.main-copy {
+  margin-top: 0.4rem;
   color: var(--lh-muted);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
   line-height: 1.45;
 }
 
-.create-form {
+.side-nav {
   display: grid;
-  gap: 0.35rem;
-  margin-top: 1rem;
+  gap: 0.3rem;
+}
+
+.nav-group {
+  margin: 0.65rem 0 0.15rem 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lh-faint);
+}
+
+.side-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--lh-muted);
+  padding: 0.65rem 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.side-link:hover {
+  background: rgba(231, 236, 239, 0.05);
+  color: var(--lh-ink);
+}
+
+.side-link.active {
+  background: var(--lh-accent-soft);
+  border-color: rgba(126, 184, 164, 0.35);
+  color: var(--lh-accent);
+}
+
+.side-label {
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.side-badge {
+  min-width: 1.35rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(231, 236, 239, 0.08);
+  color: var(--lh-faint);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.side-link.active .side-badge {
+  background: rgba(126, 184, 164, 0.18);
+  color: var(--lh-accent);
+}
+
+.main {
+  min-width: 0;
+  padding: 1.15rem 1.2rem 1.25rem;
+  background:
+    radial-gradient(ellipse 55% 40% at 100% 0%, rgba(126, 184, 164, 0.08), transparent 55%),
+    rgba(14, 18, 22, 0.35);
+}
+
+.main-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.main-head h3 {
+  font-size: 1.4rem;
+  margin-top: 0.15rem;
+}
+
+.count {
+  color: var(--lh-faint);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.view {
+  animation: rise 0.35s ease both;
+}
+
+.create-card,
+.table-card {
+  border: 1px solid var(--lh-line);
+  border-radius: 0.95rem;
+  background: rgba(16, 20, 26, 0.45);
+}
+
+.create-card {
+  padding: 1.1rem 1.1rem 1.2rem;
+  max-width: 42rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 0.85rem;
 }
 
 label {
-  margin-top: 0.45rem;
+  display: grid;
+  gap: 0.35rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 750;
   color: var(--lh-muted);
+}
+
+.span-2 {
+  grid-column: 1 / -1;
 }
 
 input {
   width: 100%;
   font: inherit;
   font-size: 0.92rem;
-  padding: 0.62rem 0.7rem;
+  font-weight: 500;
+  padding: 0.65rem 0.75rem;
   border: 1px solid var(--lh-line-strong);
   border-radius: 0.55rem;
   background: var(--lh-input);
@@ -325,100 +501,33 @@ input:focus {
 }
 
 .create {
-  margin-top: 0.85rem;
+  margin-top: 1rem;
   border: none;
   border-radius: 0.65rem;
-  padding: 0.72rem 0.95rem;
+  padding: 0.72rem 1rem;
   font-weight: 800;
   cursor: pointer;
   background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
   color: #0d1512;
-  transition: transform 0.15s ease, filter 0.15s ease;
-}
-
-.create:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.04);
 }
 
 .create:disabled {
   opacity: 0.55;
   cursor: not-allowed;
-  transform: none;
 }
 
-.directory-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 0.75rem;
-}
-
-.count {
-  color: var(--lh-faint);
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.95rem;
-}
-
-.filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border: 1px solid var(--lh-line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--lh-muted);
-  padding: 0.38rem 0.7rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
-}
-
-.filter span {
-  min-width: 1.1rem;
-  text-align: center;
-  color: var(--lh-faint);
-  font-variant-numeric: tabular-nums;
-}
-
-.filter.active {
-  background: var(--lh-accent-soft);
-  border-color: rgba(126, 184, 164, 0.4);
-  color: var(--lh-accent);
-}
-
-.filter.active span {
-  color: var(--lh-accent);
-}
-
-.hint {
-  margin-top: 1rem;
-  color: var(--lh-faint);
-  font-style: italic;
-  font-size: 0.9rem;
-}
-
-.table-wrap {
-  margin-top: 0.95rem;
+.table-card {
+  padding: 0.35rem 0.85rem 0.55rem;
 }
 
 .table-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 6.5rem 5.5rem;
   gap: 0.75rem;
-  padding: 0 0.35rem 0.45rem;
+  padding: 0.7rem 0.35rem 0.55rem;
   border-bottom: 1px solid var(--lh-line);
   color: var(--lh-faint);
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -437,7 +546,6 @@ input:focus {
   align-items: center;
   padding: 0.85rem 0.35rem;
   border-bottom: 1px solid var(--lh-line);
-  animation: rise 0.4s ease both;
 }
 
 .user-list li:last-child {
@@ -458,7 +566,6 @@ input:focus {
   border-radius: 0.7rem;
   display: grid;
   place-items: center;
-  font-family: 'Manrope', sans-serif;
   font-size: 0.78rem;
   font-weight: 800;
   background: rgba(231, 236, 239, 0.08);
@@ -512,7 +619,6 @@ input:focus {
   text-transform: capitalize;
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.02em;
   padding: 0.28rem 0.55rem;
   border-radius: 999px;
   background: rgba(231, 236, 239, 0.08);
@@ -542,7 +648,6 @@ input:focus {
   font-size: 0.8rem;
   font-weight: 750;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .delete:hover:not(:disabled) {
@@ -553,6 +658,27 @@ input:focus {
 .delete:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.empty-state {
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.95rem;
+  background: rgba(16, 20, 26, 0.35);
+}
+
+.empty-title {
+  margin: 0;
+  color: var(--lh-ink);
+  font-weight: 750;
+}
+
+.hint {
+  margin-top: 0.35rem;
+  color: var(--lh-faint);
+  font-style: italic;
+  font-size: 0.88rem;
 }
 
 .success,
@@ -582,9 +708,37 @@ input:focus {
   }
 }
 
-@media (max-width: 900px) {
-  .users-workspace {
+@media (max-width: 860px) {
+  .users {
     grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--lh-line);
+  }
+
+  .side-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .nav-group {
+    width: 100%;
+    margin: 0.35rem 0 0;
+  }
+
+  .side-link {
+    width: auto;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .span-2 {
+    grid-column: auto;
   }
 }
 
