@@ -1,27 +1,37 @@
 <template>
   <section class="panel">
-    <h2>{{ title }}</h2>
-    <p>{{ subtitle }}</p>
+    <div class="panel-head">
+      <div>
+        <p class="kicker">Student voice</p>
+        <h2>{{ title }}</h2>
+      </div>
+      <p class="count">{{ items.length }}</p>
+    </div>
+    <p class="subtitle">{{ subtitle }}</p>
 
-    <p v-if="loading" class="empty">Loading feedback...</p>
-    <p v-else-if="!items.length" class="empty">{{ emptyText }}</p>
+    <p v-if="loading" class="empty">Loading feedback…</p>
+    <div v-else-if="!items.length" class="empty-state">
+      <p class="empty-title">No feedback yet</p>
+      <p class="empty">{{ emptyText }}</p>
+    </div>
 
     <ul v-else class="feedback-list">
       <li v-for="item in items" :key="item.id">
         <div class="top">
           <strong>{{ item.lessonTopic || 'Lesson feedback' }}</strong>
-          <span class="chip">{{ item.overallRating }}/5</span>
+          <span class="chip" :data-score="item.overallRating">{{ item.overallRating }}/5</span>
         </div>
         <p class="meta">
           <span v-if="item.reportDate">{{ formatDate(item.reportDate) }}</span>
           <span v-if="item.classSubject"> · {{ item.classSubject }}</span>
         </p>
-        <p v-if="showStudent && item.student" class="meta">
-          Student: {{ item.student.fullName }}
-        </p>
-        <p v-if="showTeacher && item.teacher" class="meta">
-          Teacher: {{ item.teacher.fullName }}
-        </p>
+        <div v-if="showTeacher || showStudent" class="people">
+          <span v-if="showStudent && item.student">{{ item.student.fullName }}</span>
+          <span v-if="showTeacher && showStudent && item.teacher && item.student" class="sep"
+            >→</span
+          >
+          <span v-if="showTeacher && item.teacher">{{ item.teacher.fullName }}</span>
+        </div>
         <p class="section-label">Comments</p>
         <p class="body">{{ item.comments }}</p>
         <template v-if="item.suggestions">
@@ -76,89 +86,172 @@ function formatDateTime(value: string) {
 
 <style scoped>
 .panel {
-  padding: 1.25rem 1.2rem;
+  height: 100%;
+  padding: 1.15rem 1.15rem 1.25rem;
   border: 1px solid var(--lh-line);
-  border-radius: 1rem;
-  background: var(--lh-panel);
+  border-radius: 1.05rem;
+  background:
+    linear-gradient(165deg, rgba(36, 44, 54, 0.5), transparent 40%),
+    var(--lh-panel);
   backdrop-filter: blur(10px);
+  animation: rise 0.45s ease both;
+  animation-delay: 0.05s;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 0.75rem;
+}
+
+.kicker {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lh-faint);
+  margin: 0;
 }
 
 h2 {
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.2rem;
+  font-size: 1.28rem;
   font-weight: 550;
-  color: var(--lh-accent);
+  color: var(--lh-ink);
+  margin: 0.15rem 0 0;
 }
 
-p,
+.count {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: var(--lh-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.subtitle,
 .empty,
+.empty-title,
 .meta,
 .body,
 .section-label,
+.people,
 strong,
 .chip {
   font-family: 'Manrope', sans-serif;
 }
 
-p {
-  margin-top: 0.35rem;
+.subtitle {
+  margin-top: 0.4rem;
   color: var(--lh-muted);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   line-height: 1.45;
 }
 
-.empty {
+.empty-state {
   margin-top: 1rem;
-  padding-top: 0.85rem;
+  padding: 1.15rem 0.85rem;
   border-top: 1px solid var(--lh-line);
+  text-align: center;
+}
+
+.empty-title {
+  color: var(--lh-ink);
+  font-weight: 750;
+  font-size: 0.95rem;
+}
+
+.empty {
+  margin-top: 0.35rem;
   color: var(--lh-faint);
   font-style: italic;
+  font-size: 0.88rem;
 }
 
 .feedback-list {
   list-style: none;
   display: grid;
-  gap: 0.75rem;
-  margin-top: 0.9rem;
+  gap: 0.65rem;
+  margin-top: 0.95rem;
 }
 
 .feedback-list li {
-  padding: 0.8rem 0.85rem;
+  padding: 0.85rem 0.9rem;
   border: 1px solid var(--lh-line);
-  border-radius: 0.75rem;
-  background: rgba(20, 25, 31, 0.65);
+  border-radius: 0.8rem;
+  background: rgba(16, 20, 26, 0.45);
 }
 
 .top {
   display: flex;
   justify-content: space-between;
   gap: 0.75rem;
-  align-items: center;
+  align-items: flex-start;
+}
+
+.top strong {
+  color: var(--lh-ink);
+  font-size: 0.95rem;
+  font-weight: 750;
 }
 
 .chip {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  padding: 0.15rem 0.45rem;
-  border-radius: 0.4rem;
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.14);
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  color: var(--lh-accent);
+  background: var(--lh-accent-soft);
+  border: 1px solid rgba(126, 184, 164, 0.28);
   white-space: nowrap;
 }
 
+.chip[data-score='1'],
+.chip[data-score='2'] {
+  color: var(--lh-danger);
+  background: var(--lh-danger-soft);
+  border-color: rgba(224, 138, 122, 0.28);
+}
+
+.chip[data-score='3'] {
+  color: var(--lh-warm);
+  background: var(--lh-warm-soft);
+  border-color: rgba(196, 165, 116, 0.28);
+}
+
 .meta {
-  font-size: 0.86rem;
+  margin-top: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--lh-muted);
 }
 
 .meta.faint {
   color: var(--lh-faint);
 }
 
+.people {
+  margin-top: 0.45rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--lh-ink);
+}
+
+.sep {
+  color: var(--lh-faint);
+  font-weight: 500;
+}
+
 .section-label {
-  margin-top: 0.65rem;
-  font-size: 0.75rem;
+  margin-top: 0.7rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--lh-faint);
 }
@@ -166,7 +259,18 @@ p {
 .body {
   margin-top: 0.2rem;
   color: var(--lh-ink);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.5;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
