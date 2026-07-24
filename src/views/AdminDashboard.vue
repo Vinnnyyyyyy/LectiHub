@@ -327,7 +327,7 @@
         <div class="dash-section-label">
           <div>
             <h2 id="admin-monitor">Monitoring</h2>
-            <p>Live overview of schedules, attendance, reports, and feedback.</p>
+            <p>Sidebar sections for overview, operations, teachers, and recent activity.</p>
           </div>
         </div>
         <AdminMonitoringPanel
@@ -429,7 +429,7 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
     id: 'monitoring',
     label: 'Monitoring',
-    intro: 'Live overview of schedules, attendance, reports, and feedback.',
+    intro: 'Sidebar sections for overview, operations, teachers, and recent activity.',
   },
   {
     id: 'users',
