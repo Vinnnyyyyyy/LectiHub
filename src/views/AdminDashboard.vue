@@ -348,7 +348,7 @@
         <div class="dash-section-label">
           <div>
             <h2 id="admin-users">Users</h2>
-            <p>Provision teachers on the left. Browse and manage every account on the right.</p>
+            <p>Use the sidebar to create teachers or browse the account directory.</p>
           </div>
         </div>
         <AdminUsersPanel />
@@ -434,7 +434,7 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
     id: 'users',
     label: 'Users',
-    intro: 'Provision teachers on the left. Browse and manage every account on the right.',
+    intro: 'Use the sidebar to create teachers or browse the account directory.',
   },
 ]
 
