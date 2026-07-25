@@ -522,7 +522,6 @@ textarea,
   line-height: 1;
 }
 
-.thread-pane,
 .message-pane {
   min-height: 0;
   display: grid;
@@ -530,14 +529,24 @@ textarea,
 }
 
 .thread-pane {
+  min-height: 0;
   overflow: auto;
   padding: 0.55rem;
+  align-content: start;
 }
 
 .thread-list {
   list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
-  gap: 0.3rem;
+  gap: 0.45rem;
+  align-content: start;
+}
+
+.thread-list li {
+  margin: 0;
+  padding: 0;
 }
 
 .thread-btn {
