@@ -63,10 +63,12 @@ export interface AdminNotification {
 
 interface AdminScheduleState {
   requests: ScheduleRequest[]
+  pastRequests: ScheduleRequest[]
   selected: ScheduleRequestReview | null
   notifications: AdminNotification[]
   unreadCount: number
   loadingRequests: boolean
+  loadingPast: boolean
   loadingReview: boolean
   loadingNotifications: boolean
   assigning: boolean
@@ -76,10 +78,12 @@ interface AdminScheduleState {
 export const useAdminScheduleStore = defineStore('adminSchedule', {
   state: (): AdminScheduleState => ({
     requests: [],
+    pastRequests: [],
     selected: null,
     notifications: [],
     unreadCount: 0,
     loadingRequests: false,
+    loadingPast: false,
     loadingReview: false,
     loadingNotifications: false,
     assigning: false,
@@ -101,6 +105,37 @@ export const useAdminScheduleStore = defineStore('adminSchedule', {
       } finally {
         this.loadingRequests = false
       }
+    },
+
+    async fetchPastRequests() {
+      this.loadingPast = true
+      this.error = null
+      try {
+        const [approvedRes, rejectedRes] = await Promise.all([
+          api.get<ScheduleRequest[]>('/schedule-requests', {
+            params: { status: 'approved' },
+          }),
+          api.get<ScheduleRequest[]>('/schedule-requests', {
+            params: { status: 'rejected' },
+          }),
+        ])
+        const merged = [...(approvedRes.data || []), ...(rejectedRes.data || [])]
+        merged.sort((a, b) => {
+          const aTime = Date.parse(a.assignedAt || a.createdAt) || 0
+          const bTime = Date.parse(b.assignedAt || b.createdAt) || 0
+          return bTime - aTime
+        })
+        this.pastRequests = merged.slice(0, 40)
+      } catch (err) {
+        this.error = 'Could not load past reviews'
+        throw err
+      } finally {
+        this.loadingPast = false
+      }
+    },
+
+    async fetchReviewLists() {
+      await Promise.all([this.fetchPendingRequests(), this.fetchPastRequests()])
     },
 
     async fetchRequestReview(id: number) {
@@ -142,7 +177,7 @@ export const useAdminScheduleStore = defineStore('adminSchedule', {
           ...(slotId != null ? { slotId } : {}),
         })
         this.requests = this.requests.filter((item) => item.id !== requestId)
-        await this.fetchRequestReview(requestId)
+        await Promise.all([this.fetchRequestReview(requestId), this.fetchPastRequests()])
         return res.data
       } catch (err) {
         this.error = 'Could not assign teacher'
