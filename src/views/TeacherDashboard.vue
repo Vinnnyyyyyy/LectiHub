@@ -84,27 +84,33 @@
         <div class="dash-section-label">
           <div>
             <h2 id="teacher-conduct">Conduct &amp; report</h2>
-            <p>Attendance, curriculum coverage, recording link, then the post-lesson report.</p>
+            <p>Conduct the live lesson on the left. File the post-lesson report on the right.</p>
           </div>
         </div>
-        <div class="dash-stack">
-          <p v-if="conductMessage" class="join-feedback" role="status">{{ conductMessage }}</p>
-          <p v-if="joinError" class="join-feedback error" role="alert">{{ joinError }}</p>
-          <ConductLessonPanel
-            :items="inProgress"
-            :loading="loading"
-            :saving-id="savingId"
-            @save="handleSaveConduct"
-            @complete="handleCompleteLesson"
-          />
-          <LessonReportFormPanel
-            :completed-classes="past"
-            :loading="loading"
-            :submitting-id="reportSubmittingId"
-            @submit="handleSubmitReport"
-          />
-          <p v-if="reportMessage" class="join-feedback" role="status">{{ reportMessage }}</p>
-          <p v-if="reportError" class="join-feedback error" role="alert">{{ reportError }}</p>
+
+        <div class="conduct-workspace">
+          <div v-if="conductMessage || joinError || reportMessage || reportError" class="conduct-banners">
+            <p v-if="conductMessage" class="join-feedback" role="status">{{ conductMessage }}</p>
+            <p v-if="joinError" class="join-feedback error" role="alert">{{ joinError }}</p>
+            <p v-if="reportMessage" class="join-feedback" role="status">{{ reportMessage }}</p>
+            <p v-if="reportError" class="join-feedback error" role="alert">{{ reportError }}</p>
+          </div>
+
+          <div class="conduct-columns">
+            <ConductLessonPanel
+              :items="inProgress"
+              :loading="loading"
+              :saving-id="savingId"
+              @save="handleSaveConduct"
+              @complete="handleCompleteLesson"
+            />
+            <LessonReportFormPanel
+              :completed-classes="past"
+              :loading="loading"
+              :submitting-id="reportSubmittingId"
+              @submit="handleSubmitReport"
+            />
+          </div>
         </div>
       </section>
 
@@ -215,7 +221,7 @@ const navItems: { id: TeacherSection; label: string; intro: string }[] = [
   {
     id: 'conduct',
     label: 'Conduct & report',
-    intro: 'Take attendance, note progress, then file the lesson report.',
+    intro: 'Conduct the live lesson on the left. File the post-lesson report on the right.',
   },
   {
     id: 'records',
@@ -335,5 +341,31 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Shell styles live in assets/dashboard.css */
+.conduct-workspace {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.conduct-banners {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.conduct-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.conduct-columns > :deep(.panel) {
+  height: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .conduct-columns {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
