@@ -25,6 +25,7 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/availability', require('./routes/availabilityRoutes'));
 app.use('/api/chat', require('./routes/chatRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

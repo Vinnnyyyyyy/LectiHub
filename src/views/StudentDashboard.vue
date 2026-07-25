@@ -143,6 +143,22 @@
           @submit-feedback="handleSubmitFeedback"
         />
       </section>
+
+      <section
+        v-show="activeSection === 'payment'"
+        id="panel-payment"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-payment"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="student-payment">Payment</h2>
+            <p>Pay for lessons through the LectiHub Dolibarr checkout form.</p>
+          </div>
+        </div>
+        <DolibarrPaymentPanel :display-name="displayName" :username="authStore.username" />
+      </section>
     </main>
 
     <ClassChatWidget />
@@ -169,8 +185,9 @@ import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 import StudentHistoryWorkspace from '../components/StudentHistoryWorkspace.vue'
 import ClassChatWidget from '../components/ClassChatWidget.vue'
+import DolibarrPaymentPanel from '../components/DolibarrPaymentPanel.vue'
 
-type StudentSection = 'schedule' | 'now' | 'calendar' | 'history'
+type StudentSection = 'schedule' | 'now' | 'calendar' | 'history' | 'payment'
 
 const navItems: { id: StudentSection; label: string; intro: string }[] = [
   {
@@ -192,6 +209,11 @@ const navItems: { id: StudentSection; label: string; intro: string }[] = [
     id: 'history',
     label: 'History & feedback',
     intro: 'Use the sidebar to open pending feedback, lessons, reports, or archived history.',
+  },
+  {
+    id: 'payment',
+    label: 'Payment',
+    intro: 'Pay for lessons through the LectiHub Dolibarr checkout form.',
   },
 ]
 
