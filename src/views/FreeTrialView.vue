@@ -6,8 +6,8 @@
       <p class="brand">LectiHub</p>
       <h1>Free 30‑minute trial</h1>
       <p class="lede">
-        Fill in your details and preferred slot. We’ll post your request to Dolibarr and confirm by
-        email.
+        Fill in your details and preferred slot. We’ll send it to Dolibarr and queue it in LectiHub’s
+        scheduler for confirmation.
       </p>
 
       <label for="trial-name">Name</label>
@@ -106,7 +106,7 @@
       <p class="success-kicker">Request sent</p>
       <h1>Thanks, {{ submittedName }}</h1>
       <p class="lede">
-        Your free trial details were posted to Dolibarr. We’ll confirm your
+        Your request was sent to Dolibarr and queued in the E-Scheduler. We’ll confirm your
         {{ submittedSlot }} session by email.
       </p>
       <RouterLink class="back-link" to="/login">Back to log in</RouterLink>

@@ -18,6 +18,12 @@ export interface ScheduleRequest {
   }
   remarks: string
   status: 'pending' | 'approved' | 'rejected'
+  source?: 'student' | 'free_trial' | string
+  program?: string | null
+  entityType?: 'company' | 'individual' | string | null
+  preferredMeetingProvider?: string | null
+  dolibarrThirdpartyId?: string | null
+  dolibarrTicketId?: string | null
   createdAt: string
   assignedTeacherId?: number | null
   assignedTeacher?: {
