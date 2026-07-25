@@ -118,7 +118,7 @@ export const useAdminScheduleStore = defineStore('adminSchedule', {
       }
     },
 
-    async assignTeacher(requestId: number, teacherId: number, slotId?: number) {
+    async assignTeacher(requestId: number, teacherId: number, slotId?: number | null) {
       this.assigning = true
       this.error = null
       try {
@@ -137,7 +137,10 @@ export const useAdminScheduleStore = defineStore('adminSchedule', {
               reason?: string
             }>
           }
-        }>(`/schedule-requests/${requestId}/assign`, { teacherId, slotId })
+        }>(`/schedule-requests/${requestId}/assign`, {
+          teacherId,
+          ...(slotId != null ? { slotId } : {}),
+        })
         this.requests = this.requests.filter((item) => item.id !== requestId)
         await this.fetchRequestReview(requestId)
         return res.data
