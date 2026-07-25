@@ -31,6 +31,11 @@ const router = createRouter({
       meta: { guestOnly: true },
     },
     {
+      path: '/free-trial',
+      name: 'free-trial',
+      component: () => import('../views/FreeTrialView.vue'),
+    },
+    {
       path: '/admin',
       name: 'admin',
       component: () => import('../views/AdminDashboard.vue'),

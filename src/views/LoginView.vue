@@ -28,6 +28,10 @@
         New student?
         <RouterLink to="/register">Create an account</RouterLink>
       </p>
+      <p class="switch">
+        Want a taste first?
+        <RouterLink to="/free-trial">Book a free 30‑min trial</RouterLink>
+      </p>
     </form>
   </div>
 </template>
