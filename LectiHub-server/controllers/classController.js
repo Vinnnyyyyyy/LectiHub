@@ -158,11 +158,14 @@ async function listMyClasses(req, res) {
         )
         .all(req.user.id);
     } else if (req.user.role === 'teacher') {
+      // Only real booked classes (student assigned). Demo/busy-block rows without a
+      // student must not appear as "Scheduled" upcoming lessons.
       rows = db
         .prepare(
           `SELECT *
            FROM classes
            WHERE teacher_id = ?
+             AND student_id IS NOT NULL
            ORDER BY class_date ASC, time_slot ASC`,
         )
         .all(req.user.id);

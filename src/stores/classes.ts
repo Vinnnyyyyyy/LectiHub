@@ -114,8 +114,11 @@ export const useClassesStore = defineStore('classes', {
       const today = new Date().toISOString().slice(0, 10)
       return state.schedules.filter(
         (item) =>
-          item.status === 'in_progress' ||
-          (item.status !== 'completed' && item.status !== 'cancelled' && item.classDate >= today),
+          item.studentId != null &&
+          (item.status === 'in_progress' ||
+            (item.status !== 'completed' &&
+              item.status !== 'cancelled' &&
+              item.classDate >= today)),
       )
     },
     past(state): ConfirmedSchedule[] {
