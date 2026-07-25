@@ -3,15 +3,15 @@
     <div class="booking-intro">
       <h2>Booking</h2>
       <p>
-        Pick from dates and times teachers currently have open. You can book starting
-        <strong>2 days from today</strong>. Highlighted days have at least one available teacher.
-        An administrator will review your request before assigning someone.
+        Pick the dates and times you want. Each selected slot is booked as its own class.
+        You can book starting <strong>2 days from today</strong>. Highlighted days have at least
+        one available teacher. An administrator assigns a teacher to each booked slot.
       </p>
     </div>
 
     <form class="booking-form" @submit.prevent="handleSubmit">
       <div class="picker">
-        <p class="field-label">Preferred date</p>
+        <p class="field-label">Date</p>
         <p v-if="loadingOpen" class="hint">Loading teacher availability...</p>
         <CalendarGrid
           v-else
@@ -46,19 +46,19 @@
         </div>
 
         <button type="button" class="add-slot" :disabled="!canAddPreference" @click="addPreference">
-          Add preference
+          Add slot to book
         </button>
       </div>
 
       <div class="selected">
-        <p class="field-label">Your preferred schedule</p>
+        <p class="field-label">Slots you are booking</p>
         <ul v-if="preferences.length" class="preference-list">
           <li v-for="(item, index) in preferences" :key="`${item.preferredDate}-${item.timeSlot}`">
             <span>{{ formatDate(item.preferredDate) }} · {{ formatSlot(item.timeSlot) }}</span>
             <button type="button" class="remove" @click="removePreference(index)">Remove</button>
           </li>
         </ul>
-        <p v-else class="hint">Add at least one date and time slot to continue.</p>
+        <p v-else class="hint">Add at least one date and time slot. Each one becomes a separate class.</p>
       </div>
 
       <label for="remarks">Additional remarks</label>
@@ -71,7 +71,13 @@
       />
 
       <button type="submit" class="submit" :disabled="submitting || preferences.length === 0">
-        {{ submitting ? 'Submitting...' : 'Submit scheduling request' }}
+        {{
+          submitting
+            ? 'Booking...'
+            : preferences.length <= 1
+              ? 'Book this class slot'
+              : `Book ${preferences.length} class slots`
+        }}
       </button>
 
       <p v-if="successMessage" class="success" role="status">{{ successMessage }}</p>
@@ -79,9 +85,9 @@
     </form>
 
     <div class="requests">
-      <h3>Your requests</h3>
-      <p v-if="loading" class="hint">Loading requests...</p>
-      <p v-else-if="!requests.length" class="hint">No scheduling requests yet.</p>
+      <h3>Your bookings</h3>
+      <p v-if="loading" class="hint">Loading bookings...</p>
+      <p v-else-if="!requests.length" class="hint">No class bookings yet.</p>
       <ul v-else class="request-list">
         <li v-for="request in requests" :key="request.id">
           <div class="request-head">
@@ -219,25 +225,30 @@ async function handleSubmit() {
   successMessage.value = ''
 
   if (!preferences.value.length) {
-    errorMessage.value = 'Add at least one preferred date and time slot'
+    errorMessage.value = 'Add at least one date and time slot to book'
     return
   }
 
   try {
-    await scheduleStore.submitRequest({
+    const result = await scheduleStore.submitRequest({
       slots: preferences.value,
       remarks: remarks.value.trim(),
     })
+    const count = result.count || preferences.value.length
     preferences.value = []
     remarks.value = ''
     selectedDate.value = ''
     selectedTimeSlots.value = []
-    successMessage.value = 'Request submitted with Pending status. An admin will review it soon.'
+    successMessage.value =
+      result.message ||
+      (count === 1
+        ? 'Class slot booked. An admin will assign a teacher soon.'
+        : `${count} class slots booked. An admin will assign a teacher to each.`)
   } catch (err) {
     if (axios.isAxiosError(err)) {
-      errorMessage.value = err.response?.data?.message || 'Could not submit schedule request'
+      errorMessage.value = err.response?.data?.message || 'Could not book class slots'
     } else {
-      errorMessage.value = 'Could not submit schedule request'
+      errorMessage.value = 'Could not book class slots'
     }
   }
 }

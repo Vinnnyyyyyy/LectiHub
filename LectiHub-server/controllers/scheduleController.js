@@ -107,17 +107,54 @@ function getTeacherById(teacherId) {
     .get(teacherId);
 }
 
-function notifyAdminsAboutRequest(requestId, studentName) {
+function notifyAdminsAboutRequests(requestIds, studentName, slotCount) {
+  if (!requestIds.length) return;
+
   const admins = db.prepare(`SELECT id FROM users WHERE role = 'admin'`).all();
-  const title = 'New scheduling request';
-  const message = `${studentName} submitted a preferred schedule awaiting review.`;
+  const title =
+    slotCount === 1 ? 'New class booking' : `New class bookings (${slotCount})`;
+  const message =
+    slotCount === 1
+      ? `${studentName} booked a class slot awaiting teacher assignment.`
+      : `${studentName} booked ${slotCount} class slots awaiting teacher assignment.`;
 
   for (const admin of admins) {
     notifyUser(admin.id, 'schedule_request', title, message, {
-      relatedRequestId: requestId,
-      details: { studentName },
+      relatedRequestId: requestIds[0],
+      details: { studentName, slotCount, requestIds },
     });
   }
+}
+
+function studentAlreadyBookedSlot(studentId, preferredDate, timeSlot) {
+  const pending = db
+    .prepare(
+      `SELECT sr.id
+       FROM schedule_requests sr
+       JOIN schedule_request_slots srs ON srs.request_id = sr.id
+       WHERE sr.student_id = ?
+         AND sr.status = 'pending'
+         AND srs.preferred_date = ?
+         AND srs.time_slot = ?
+       LIMIT 1`,
+    )
+    .get(studentId, preferredDate, timeSlot);
+  if (pending) return 'pending';
+
+  const scheduled = db
+    .prepare(
+      `SELECT id
+       FROM classes
+       WHERE student_id = ?
+         AND class_date = ?
+         AND time_slot = ?
+         AND status != 'cancelled'
+       LIMIT 1`,
+    )
+    .get(studentId, preferredDate, timeSlot);
+  if (scheduled) return 'scheduled';
+
+  return null;
 }
 
 function toSqliteDateTime(date) {
@@ -370,7 +407,7 @@ async function createScheduleRequest(req, res) {
   const { slots, remarks } = req.body || {};
 
   if (!Array.isArray(slots) || slots.length === 0) {
-    return res.status(400).json({ message: 'Select at least one preferred date and time slot' });
+    return res.status(400).json({ message: 'Select at least one date and time slot to book' });
   }
 
   const normalizedSlots = [];
@@ -390,7 +427,7 @@ async function createScheduleRequest(req, res) {
     const earliest = earliestBookableDate();
     if (preferredDate < earliest) {
       return res.status(400).json({
-        message: `Preferred dates must be at least ${BOOKING_LEAD_DAYS} days from today (earliest: ${earliest}).`,
+        message: `Booked dates must be at least ${BOOKING_LEAD_DAYS} days from today (earliest: ${earliest}).`,
       });
     }
 
@@ -401,7 +438,25 @@ async function createScheduleRequest(req, res) {
   }
 
   if (normalizedSlots.length === 0) {
-    return res.status(400).json({ message: 'Select at least one preferred date and time slot' });
+    return res.status(400).json({ message: 'Select at least one date and time slot to book' });
+  }
+
+  for (const slot of normalizedSlots) {
+    const existing = studentAlreadyBookedSlot(
+      req.user.id,
+      slot.preferredDate,
+      slot.timeSlot,
+    );
+    if (existing === 'pending') {
+      return res.status(409).json({
+        message: `You already have a pending booking for ${slot.preferredDate} ${slot.timeSlot}.`,
+      });
+    }
+    if (existing === 'scheduled') {
+      return res.status(409).json({
+        message: `You already have a class scheduled for ${slot.preferredDate} ${slot.timeSlot}.`,
+      });
+    }
   }
 
   const cleanRemarks = typeof remarks === 'string' ? remarks.trim() : '';
@@ -417,22 +472,38 @@ async function createScheduleRequest(req, res) {
     VALUES (?, ?, ?)
   `);
 
+  // Each selected slot becomes its own booking request (one class per slot).
   const create = db.transaction(() => {
-    const result = insertRequest.run(req.user.id, cleanRemarks || null);
-    const requestId = result.lastInsertRowid;
+    const requestIds = [];
 
     for (const slot of normalizedSlots) {
+      const result = insertRequest.run(req.user.id, cleanRemarks || null);
+      const requestId = result.lastInsertRowid;
       insertSlot.run(requestId, slot.preferredDate, slot.timeSlot);
+      requestIds.push(requestId);
     }
 
-    notifyAdminsAboutRequest(requestId, studentName);
-    return requestId;
+    notifyAdminsAboutRequests(requestIds, studentName, requestIds.length);
+    return requestIds;
   });
 
   try {
-    const requestId = create();
-    const request = db.prepare('SELECT * FROM schedule_requests WHERE id = ?').get(requestId);
-    res.status(201).json(mapRequest(request, getSlotsForRequest(requestId), student));
+    const requestIds = create();
+    const requests = requestIds.map((requestId) => {
+      const request = db.prepare('SELECT * FROM schedule_requests WHERE id = ?').get(requestId);
+      return mapRequest(request, getSlotsForRequest(requestId), student);
+    });
+
+    res.status(201).json({
+      message:
+        requests.length === 1
+          ? 'Class booking submitted. An admin will assign a teacher.'
+          : `${requests.length} class bookings submitted. An admin will assign a teacher to each.`,
+      count: requests.length,
+      requests,
+      // Keep a single-request shape for older clients.
+      ...requests[0],
+    });
   } catch (err) {
     res.status(500).json({ message: 'Error creating schedule request', error: err.message });
   }

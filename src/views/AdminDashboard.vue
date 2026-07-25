@@ -48,7 +48,7 @@
         <div class="dash-section-label">
           <div>
             <h2 id="admin-review">Review &amp; assign</h2>
-            <p>Pick a pending request in the sidebar, then assign a teacher in the main pane.</p>
+            <p>Each booked slot is its own request. Assign a teacher to confirm that class.</p>
           </div>
         </div>
 
@@ -57,7 +57,7 @@
             <div class="brand-block">
               <p class="kicker">Queue</p>
               <h2>Pending</h2>
-              <p class="side-copy">Student schedule requests waiting for teacher assignment.</p>
+              <p class="side-copy">Each item is one booked class slot waiting for a teacher.</p>
             </div>
 
             <p v-if="loadingRequests" class="hint side-hint">Loading requests…</p>
@@ -74,7 +74,13 @@
                     <strong>{{ request.student?.fullName || 'Student' }}</strong>
                     <span class="status">{{ request.status }}</span>
                   </div>
-                  <p>{{ request.slots.length }} preferred slot(s)</p>
+                  <p>
+                    {{
+                      request.slots[0]
+                        ? `${formatDate(request.slots[0].preferredDate)} · ${formatSlot(request.slots[0].timeSlot)}`
+                        : 'Class slot'
+                    }}
+                  </p>
                   <time>{{ formatDateTime(request.createdAt) }}</time>
                 </button>
               </li>
@@ -89,8 +95,8 @@
                 <p class="main-copy">
                   {{
                     selected
-                      ? 'Match preferred slots to an available teacher.'
-                      : 'Select a pending request from the sidebar to begin.'
+                      ? 'Assign an available teacher to confirm this booked class slot.'
+                      : 'Select a booked slot from the sidebar to begin.'
                   }}
                 </p>
               </div>
@@ -100,7 +106,7 @@
             <p v-if="loadingReview" class="hint">Loading availability…</p>
             <div v-else-if="!selected" class="empty-state">
               <p class="empty-title">No request selected</p>
-              <p class="hint">Choose a student request from the left to review availability.</p>
+              <p class="hint">Choose a booked slot from the left to assign a teacher.</p>
             </div>
 
             <div v-else class="review">
@@ -170,10 +176,10 @@
                   <h4>Assign teacher</h4>
                 </div>
                 <p class="hint assign-hint">
-                  Ranked by availability, workload, subject expertise, and student preference.
+                  Ranked by availability, workload, subject expertise, and student remarks.
                 </p>
 
-                <label for="assign-slot">Class slot to book</label>
+                <label for="assign-slot">Class slot</label>
                 <select id="assign-slot" v-model="selectedSlotId">
                   <option
                     v-for="slot in selected.request.slots"
@@ -220,7 +226,7 @@
               <div class="summary">
                 <p>
                   <strong>{{ selected.fullyAvailableTeachers.length }}</strong>
-                  teacher(s) free for every preferred slot
+                  teacher(s) free for this slot
                   <span class="muted">· {{ selected.teacherCount }} total teachers</span>
                 </p>
                 <ul v-if="selected.fullyAvailableTeachers.length" class="teacher-chips">
@@ -228,7 +234,7 @@
                     {{ teacher.fullName }}
                   </li>
                 </ul>
-                <p v-else class="hint">No teacher is free across all preferred slots.</p>
+                <p v-else class="hint">No teacher is free for this booked slot.</p>
               </div>
 
               <div
@@ -252,19 +258,20 @@
                 </ul>
                 <p v-else class="hint">No teachers available for this slot.</p>
 
-                <p class="field-label conflict-label">Unavailable (schedule conflict)</p>
-                <ul v-if="slot.unavailableTeachers.length" class="teacher-list conflicts">
-                  <li v-for="teacher in slot.unavailableTeachers" :key="teacher.id">
-                    <span>
-                      {{ teacher.fullName }}
-                      <span class="muted">@{{ teacher.username }}</span>
-                    </span>
-                    <span class="conflict">
-                      Busy: {{ teacher.conflict.title }}
-                    </span>
-                  </li>
-                </ul>
-                <p v-else class="hint">No conflicts for this slot.</p>
+                <template v-if="slot.unavailableTeachers.length">
+                  <p class="field-label conflict-label">Unavailable (schedule conflict)</p>
+                  <ul class="teacher-list conflicts">
+                    <li v-for="teacher in slot.unavailableTeachers" :key="teacher.id">
+                      <span>
+                        {{ teacher.fullName }}
+                        <span class="muted">@{{ teacher.username }}</span>
+                      </span>
+                      <span class="conflict">
+                        Busy: {{ teacher.conflict.title }}
+                      </span>
+                    </li>
+                  </ul>
+                </template>
               </div>
             </div>
 
@@ -428,7 +435,7 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
     id: 'review',
     label: 'Review & assign',
-    intro: 'Queue on the left · request details and teacher assignment on the right.',
+    intro: 'Each booked slot is its own class. Assign a teacher to confirm it.',
   },
   {
     id: 'inbox',

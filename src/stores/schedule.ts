@@ -67,9 +67,30 @@ export const useScheduleStore = defineStore('schedule', {
       this.submitting = true
       this.error = null
       try {
-        const res = await api.post<ScheduleRequest>('/schedule-requests', payload)
-        this.requests = [res.data, ...this.requests]
-        return res.data
+        const res = await api.post<{
+          message?: string
+          count?: number
+          requests?: ScheduleRequest[]
+        } & Partial<ScheduleRequest>>('/schedule-requests', payload)
+
+        const created =
+          Array.isArray(res.data.requests) && res.data.requests.length
+            ? res.data.requests
+            : res.data.id
+              ? [res.data as ScheduleRequest]
+              : []
+
+        if (created.length) {
+          this.requests = [...created, ...this.requests]
+        } else {
+          await this.fetchMine()
+        }
+
+        return {
+          message: res.data.message || 'Booking submitted',
+          count: res.data.count ?? created.length,
+          requests: created,
+        }
       } catch (err) {
         this.error = 'Could not submit schedule request'
         throw err
