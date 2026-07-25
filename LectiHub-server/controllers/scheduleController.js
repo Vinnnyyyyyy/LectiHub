@@ -172,6 +172,12 @@ function mapRequest(row, slots, student = null, assignedTeacher = null) {
       : undefined,
     remarks: row.remarks || '',
     status: row.status,
+    source: row.source || 'student',
+    program: row.program || null,
+    entityType: row.entity_type || null,
+    preferredMeetingProvider: row.preferred_meeting_provider || null,
+    dolibarrThirdpartyId: row.dolibarr_thirdparty_id || null,
+    dolibarrTicketId: row.dolibarr_ticket_id || null,
     createdAt: row.created_at,
     assignedTeacherId: row.assigned_teacher_id || null,
     assignedTeacher: assignedTeacher ? mapTeacher(assignedTeacher) : null,
@@ -758,6 +764,7 @@ async function assignTeacherToRequest(req, res) {
       requestId,
       classDate,
       startTime,
+      request.preferred_meeting_provider || null,
     );
     const subject = teacher.subject_expertise || 'General';
     const title = `${subject} lesson · ${studentName} with ${teacherName}`;

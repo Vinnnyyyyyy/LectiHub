@@ -100,7 +100,12 @@
                   >
                     <div class="request-top">
                       <strong>{{ request.student?.fullName || 'Student' }}</strong>
-                      <span class="status pending">{{ request.status }}</span>
+                      <span
+                        class="status"
+                        :class="request.source === 'free_trial' ? 'trial' : 'pending'"
+                      >
+                        {{ request.source === 'free_trial' ? 'free trial' : request.status }}
+                      </span>
                     </div>
                     <p>
                       {{
@@ -128,7 +133,12 @@
                   >
                     <div class="request-top">
                       <strong>{{ request.student?.fullName || 'Student' }}</strong>
-                      <span class="status" :class="request.status">{{ request.status }}</span>
+                      <span
+                        class="status"
+                        :class="request.source === 'free_trial' ? 'trial' : request.status"
+                      >
+                        {{ request.source === 'free_trial' ? 'free trial' : request.status }}
+                      </span>
                     </div>
                     <p>
                       {{
@@ -178,6 +188,18 @@
             <div v-else class="review">
               <div class="student-block">
                 <p>@{{ selected.request.student?.username }} · {{ selected.request.student?.email }}</p>
+                <p v-if="selected.request.source === 'free_trial'" class="preference-note">
+                  Free trial
+                  <template v-if="selected.request.program">
+                    · {{ selected.request.program }}
+                  </template>
+                  <template v-if="selected.request.entityType">
+                    · {{ selected.request.entityType === 'company' ? 'Company' : 'Individual' }}
+                  </template>
+                  <template v-if="selected.request.preferredMeetingProvider">
+                    · {{ formatMeetingProvider(selected.request.preferredMeetingProvider) }}
+                  </template>
+                </p>
                 <p v-if="selected.request.remarks" class="remarks">
                   Remarks: {{ selected.request.remarks }}
                 </p>
@@ -571,6 +593,17 @@ function requestDurationMinutes(slots: { timeSlot: string }[]) {
     return hours * 60 + minutes
   }
   return Math.max(0, toMinutes(end) - toMinutes(start))
+}
+
+function formatMeetingProvider(value?: string | null) {
+  const labels: Record<string, string> = {
+    zoom: 'Zoom',
+    google_meet: 'Google Meet',
+    digital_samba: 'Digital Samba',
+    jitsi: 'Jitsi',
+  }
+  if (!value) return 'Video platform TBD'
+  return labels[value] || value
 }
 
 function formatDate(value: string) {
@@ -987,6 +1020,11 @@ strong {
 .status.pending {
   color: var(--lh-warm);
   background: var(--lh-warm-soft);
+}
+
+.status.trial {
+  color: var(--lh-accent);
+  background: var(--lh-accent-soft);
 }
 
 .status.approved {

@@ -31,7 +31,7 @@ function normalizeClassStatus(status) {
   return 'scheduled';
 }
 
-const VIDEO_PROVIDERS = new Set(['jitsi', 'google_meet', 'zoom']);
+const VIDEO_PROVIDERS = new Set(['jitsi', 'google_meet', 'zoom', 'digital_samba']);
 
 function getMeetingProvider() {
   const provider = String(process.env.MEETING_PROVIDER || 'jitsi').toLowerCase();
@@ -72,6 +72,17 @@ function buildMeetingDetails(requestId, classDate, startTime, preferredProvider)
     return {
       meetingProvider: 'zoom',
       meetingInfo: `Zoom · Meeting ${roomCode}`,
+      meetingLink: link,
+    };
+  }
+
+  if (provider === 'digital_samba') {
+    const base =
+      process.env.DIGITAL_SAMBA_BASE_URL || 'https://room.digitalsamba.com';
+    const link = `${base.replace(/\/+$/, '')}/${roomCode.toLowerCase()}`;
+    return {
+      meetingProvider: 'digital_samba',
+      meetingInfo: `Digital Samba · Room ${roomCode}`,
       meetingLink: link,
     };
   }
