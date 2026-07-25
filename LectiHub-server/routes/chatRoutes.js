@@ -4,22 +4,22 @@ const auth = require('../middleware/auth');
 const requireRole = require('../middleware/requireRole');
 const {
   listChatThreads,
-  listMessagesForClass,
-  sendMessageForClass,
+  listMessagesForPeer,
+  sendMessageForPeer,
 } = require('../controllers/chatController');
 
 router.get('/threads', auth, requireRole('student', 'teacher'), listChatThreads);
 router.get(
-  '/classes/:classId/messages',
+  '/peers/:peerId/messages',
   auth,
   requireRole('student', 'teacher'),
-  listMessagesForClass,
+  listMessagesForPeer,
 );
 router.post(
-  '/classes/:classId/messages',
+  '/peers/:peerId/messages',
   auth,
   requireRole('student', 'teacher'),
-  sendMessageForClass,
+  sendMessageForPeer,
 );
 
 module.exports = router;

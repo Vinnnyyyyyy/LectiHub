@@ -1,7 +1,5 @@
 const db = require('../config/db');
 
-const CHAT_STATUSES = new Set(['scheduled', 'in_progress', 'completed']);
-
 function mapUser(row) {
   if (!row) return null;
   return {
@@ -10,56 +8,6 @@ function mapUser(row) {
     fullName: row.full_name || row.username,
     email: row.email || '',
   };
-}
-
-function getBookedClassForUser(classId, userId, role) {
-  const row = db
-    .prepare(
-      `SELECT c.*,
-              s.id AS student_user_id, s.username AS student_username,
-              s.full_name AS student_full_name, s.email AS student_email,
-              t.id AS teacher_user_id, t.username AS teacher_username,
-              t.full_name AS teacher_full_name, t.email AS teacher_email
-       FROM classes c
-       LEFT JOIN users s ON s.id = c.student_id
-       LEFT JOIN users t ON t.id = c.teacher_id
-       WHERE c.id = ?`,
-    )
-    .get(classId);
-
-  if (!row) return null;
-  if (!CHAT_STATUSES.has(String(row.status || '').toLowerCase())) return null;
-  if (!row.student_id || !row.teacher_id) return null;
-
-  if (role === 'student' && row.student_id !== userId) return null;
-  if (role === 'teacher' && row.teacher_id !== userId) return null;
-  if (role !== 'student' && role !== 'teacher' && role !== 'admin') return null;
-  if (role === 'admin' && row.student_id !== userId && row.teacher_id !== userId) {
-    // Admins are not part of class chat unless they are also a participant.
-    return null;
-  }
-
-  return row;
-}
-
-function getOrCreateConversation(classRow) {
-  let conversation = db
-    .prepare(`SELECT * FROM conversations WHERE class_id = ?`)
-    .get(classRow.id);
-
-  if (!conversation) {
-    const result = db
-      .prepare(
-        `INSERT INTO conversations (class_id, student_id, teacher_id)
-         VALUES (?, ?, ?)`,
-      )
-      .run(classRow.id, classRow.student_id, classRow.teacher_id);
-    conversation = db
-      .prepare(`SELECT * FROM conversations WHERE id = ?`)
-      .get(result.lastInsertRowid);
-  }
-
-  return conversation;
 }
 
 function mapMessage(row, currentUserId) {
@@ -80,65 +28,136 @@ function mapMessage(row, currentUserId) {
   };
 }
 
-function formatClassLabel(row) {
-  const title = row.title || row.subject || 'Class';
-  const date = row.class_date || '';
-  const time =
-    row.start_time && row.end_time
-      ? `${row.start_time}–${row.end_time}`
-      : String(row.time_slot || '').replace('-', '–');
-  return { title, date, time };
+/** True when this student/teacher pair has at least one booked class together. */
+function pairIsAssigned(studentId, teacherId) {
+  const row = db
+    .prepare(
+      `SELECT id
+       FROM classes
+       WHERE student_id = ?
+         AND teacher_id = ?
+         AND LOWER(COALESCE(status, '')) IN ('scheduled', 'in_progress', 'completed')
+       LIMIT 1`,
+    )
+    .get(studentId, teacherId);
+  return Boolean(row);
+}
+
+function resolvePairForUser(peerId, userId, role) {
+  if (!Number.isInteger(peerId) || peerId < 1) return null;
+
+  const peer = db
+    .prepare(
+      `SELECT id, username, full_name, email, role
+       FROM users
+       WHERE id = ?`,
+    )
+    .get(peerId);
+  if (!peer) return null;
+
+  let studentId = null;
+  let teacherId = null;
+
+  if (role === 'student') {
+    if (peer.role !== 'teacher') return null;
+    studentId = userId;
+    teacherId = peerId;
+  } else if (role === 'teacher') {
+    if (peer.role !== 'student') return null;
+    studentId = peerId;
+    teacherId = userId;
+  } else {
+    return null;
+  }
+
+  if (!pairIsAssigned(studentId, teacherId)) return null;
+
+  return {
+    studentId,
+    teacherId,
+    peer: mapUser(peer),
+  };
+}
+
+function getOrCreateConversation(studentId, teacherId) {
+  let conversation = db
+    .prepare(
+      `SELECT * FROM conversations
+       WHERE student_id = ? AND teacher_id = ?`,
+    )
+    .get(studentId, teacherId);
+
+  if (!conversation) {
+    const result = db
+      .prepare(
+        `INSERT INTO conversations (student_id, teacher_id)
+         VALUES (?, ?)`,
+      )
+      .run(studentId, teacherId);
+    conversation = db
+      .prepare(`SELECT * FROM conversations WHERE id = ?`)
+      .get(result.lastInsertRowid);
+  }
+
+  return conversation;
+}
+
+function listAssignedPeers(userId, role) {
+  if (role === 'student') {
+    return db
+      .prepare(
+        `SELECT DISTINCT
+            t.id,
+            t.username,
+            t.full_name,
+            t.email
+         FROM classes c
+         JOIN users t ON t.id = c.teacher_id
+         WHERE c.student_id = ?
+           AND c.teacher_id IS NOT NULL
+           AND LOWER(COALESCE(c.status, '')) IN ('scheduled', 'in_progress', 'completed')
+         ORDER BY LOWER(COALESCE(t.full_name, t.username)) ASC`,
+      )
+      .all(userId);
+  }
+
+  if (role === 'teacher') {
+    return db
+      .prepare(
+        `SELECT DISTINCT
+            s.id,
+            s.username,
+            s.full_name,
+            s.email
+         FROM classes c
+         JOIN users s ON s.id = c.student_id
+         WHERE c.teacher_id = ?
+           AND c.student_id IS NOT NULL
+           AND LOWER(COALESCE(c.status, '')) IN ('scheduled', 'in_progress', 'completed')
+         ORDER BY LOWER(COALESCE(s.full_name, s.username)) ASC`,
+      )
+      .all(userId);
+  }
+
+  return [];
 }
 
 function listChatThreads(req, res) {
   try {
     const userId = req.user.id;
     const role = req.user.role;
-
-    let classes = [];
-    if (role === 'student') {
-      classes = db
-        .prepare(
-          `SELECT c.*,
-                  s.id AS student_user_id, s.username AS student_username,
-                  s.full_name AS student_full_name, s.email AS student_email,
-                  t.id AS teacher_user_id, t.username AS teacher_username,
-                  t.full_name AS teacher_full_name, t.email AS teacher_email
-           FROM classes c
-           LEFT JOIN users s ON s.id = c.student_id
-           LEFT JOIN users t ON t.id = c.teacher_id
-           WHERE c.student_id = ?
-             AND c.teacher_id IS NOT NULL
-             AND LOWER(COALESCE(c.status, '')) IN ('scheduled', 'in_progress', 'completed')
-           ORDER BY c.class_date DESC, c.start_time DESC, c.id DESC`,
-        )
-        .all(userId);
-    } else if (role === 'teacher') {
-      classes = db
-        .prepare(
-          `SELECT c.*,
-                  s.id AS student_user_id, s.username AS student_username,
-                  s.full_name AS student_full_name, s.email AS student_email,
-                  t.id AS teacher_user_id, t.username AS teacher_username,
-                  t.full_name AS teacher_full_name, t.email AS teacher_email
-           FROM classes c
-           LEFT JOIN users s ON s.id = c.student_id
-           LEFT JOIN users t ON t.id = c.teacher_id
-           WHERE c.teacher_id = ?
-             AND c.student_id IS NOT NULL
-             AND LOWER(COALESCE(c.status, '')) IN ('scheduled', 'in_progress', 'completed')
-           ORDER BY c.class_date DESC, c.start_time DESC, c.id DESC`,
-        )
-        .all(userId);
-    } else {
-      return res.json({ threads: [], unreadTotal: 0 });
-    }
+    const peers = listAssignedPeers(userId, role);
 
     let unreadTotal = 0;
-    const threads = classes.map((row) => {
+    const threads = peers.map((peerRow) => {
+      const studentId = role === 'student' ? userId : peerRow.id;
+      const teacherId = role === 'teacher' ? userId : peerRow.id;
       const conversation = db
-        .prepare(`SELECT id FROM conversations WHERE class_id = ?`)
-        .get(row.id);
+        .prepare(
+          `SELECT id FROM conversations
+           WHERE student_id = ? AND teacher_id = ?`,
+        )
+        .get(studentId, teacherId);
 
       let unreadCount = 0;
       let lastMessage = null;
@@ -172,56 +191,41 @@ function listChatThreads(req, res) {
       }
 
       unreadTotal += unreadCount;
-      const label = formatClassLabel(row);
-      const peer =
-        role === 'student'
-          ? mapUser({
-              id: row.teacher_user_id,
-              username: row.teacher_username,
-              full_name: row.teacher_full_name,
-              email: row.teacher_email,
-            })
-          : mapUser({
-              id: row.student_user_id,
-              username: row.student_username,
-              full_name: row.student_full_name,
-              email: row.student_email,
-            });
 
       return {
-        classId: row.id,
+        peerId: peerRow.id,
         conversationId: conversation?.id || null,
-        title: label.title,
-        classDate: label.date,
-        timeLabel: label.time,
-        status: row.status,
-        peer,
+        peer: mapUser(peerRow),
         unreadCount,
         lastMessage,
       };
     });
 
+    // Contacts with recent messages float to the top.
+    threads.sort((a, b) => {
+      const aTime = a.lastMessage ? Date.parse(a.lastMessage.createdAt) || 0 : 0;
+      const bTime = b.lastMessage ? Date.parse(b.lastMessage.createdAt) || 0 : 0;
+      if (bTime !== aTime) return bTime - aTime;
+      return String(a.peer?.fullName || '').localeCompare(String(b.peer?.fullName || ''));
+    });
+
     res.json({ threads, unreadTotal });
   } catch (err) {
-    res.status(500).json({ message: 'Error loading chat threads', error: err.message });
+    res.status(500).json({ message: 'Error loading chat contacts', error: err.message });
   }
 }
 
-function listMessagesForClass(req, res) {
+function listMessagesForPeer(req, res) {
   try {
-    const classId = Number(req.params.classId);
-    if (!Number.isInteger(classId) || classId < 1) {
-      return res.status(400).json({ message: 'Invalid class id' });
-    }
-
-    const classRow = getBookedClassForUser(classId, req.user.id, req.user.role);
-    if (!classRow) {
+    const peerId = Number(req.params.peerId);
+    const pair = resolvePairForUser(peerId, req.user.id, req.user.role);
+    if (!pair) {
       return res.status(404).json({
-        message: 'Chat is only available for your booked classes',
+        message: 'Chat is only available with your assigned teacher or student',
       });
     }
 
-    const conversation = getOrCreateConversation(classRow);
+    const conversation = getOrCreateConversation(pair.studentId, pair.teacherId);
     const rows = db
       .prepare(
         `SELECT m.*,
@@ -235,7 +239,6 @@ function listMessagesForClass(req, res) {
       )
       .all(conversation.id);
 
-    // Mark peer messages as read when opening the thread.
     db.prepare(
       `UPDATE messages
        SET is_read = 1
@@ -244,29 +247,10 @@ function listMessagesForClass(req, res) {
          AND is_read = 0`,
     ).run(conversation.id, req.user.id);
 
-    const label = formatClassLabel(classRow);
-    const peer =
-      req.user.role === 'student'
-        ? mapUser({
-            id: classRow.teacher_user_id,
-            username: classRow.teacher_username,
-            full_name: classRow.teacher_full_name,
-            email: classRow.teacher_email,
-          })
-        : mapUser({
-            id: classRow.student_user_id,
-            username: classRow.student_username,
-            full_name: classRow.student_full_name,
-            email: classRow.student_email,
-          });
-
     res.json({
       conversationId: conversation.id,
-      classId,
-      title: label.title,
-      classDate: label.date,
-      timeLabel: label.time,
-      peer,
+      peerId,
+      peer: pair.peer,
       messages: rows.map((row) => mapMessage(row, req.user.id)),
     });
   } catch (err) {
@@ -274,14 +258,11 @@ function listMessagesForClass(req, res) {
   }
 }
 
-function sendMessageForClass(req, res) {
+function sendMessageForPeer(req, res) {
   try {
-    const classId = Number(req.params.classId);
+    const peerId = Number(req.params.peerId);
     const body = String(req.body?.body || '').trim();
 
-    if (!Number.isInteger(classId) || classId < 1) {
-      return res.status(400).json({ message: 'Invalid class id' });
-    }
     if (!body) {
       return res.status(400).json({ message: 'Message cannot be empty' });
     }
@@ -289,14 +270,14 @@ function sendMessageForClass(req, res) {
       return res.status(400).json({ message: 'Message is too long (max 2000 characters)' });
     }
 
-    const classRow = getBookedClassForUser(classId, req.user.id, req.user.role);
-    if (!classRow) {
+    const pair = resolvePairForUser(peerId, req.user.id, req.user.role);
+    if (!pair) {
       return res.status(404).json({
-        message: 'Chat is only available for your booked classes',
+        message: 'Chat is only available with your assigned teacher or student',
       });
     }
 
-    const conversation = getOrCreateConversation(classRow);
+    const conversation = getOrCreateConversation(pair.studentId, pair.teacherId);
     const result = db
       .prepare(
         `INSERT INTO messages (conversation_id, sender_id, body, is_read)
@@ -327,6 +308,9 @@ function sendMessageForClass(req, res) {
 
 module.exports = {
   listChatThreads,
-  listMessagesForClass,
-  sendMessageForClass,
+  listMessagesForPeer,
+  sendMessageForPeer,
+  // Keep old names unused by routes for safety during deploys.
+  listMessagesForClass: listMessagesForPeer,
+  sendMessageForClass: sendMessageForPeer,
 };

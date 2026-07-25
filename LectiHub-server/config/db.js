@@ -198,11 +198,10 @@ db.exec(`
 db.exec(`
   CREATE TABLE IF NOT EXISTS conversations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    class_id INTEGER NOT NULL UNIQUE,
     student_id INTEGER NOT NULL,
     teacher_id INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+    UNIQUE(student_id, teacher_id),
     FOREIGN KEY (student_id) REFERENCES users(id),
     FOREIGN KEY (teacher_id) REFERENCES users(id)
   );
@@ -218,6 +217,62 @@ db.exec(`
     FOREIGN KEY (sender_id) REFERENCES users(id)
   );
 `);
+
+// Migrate older per-class conversations → one thread per student/teacher pair.
+(function migrateConversationsToPeerThreads() {
+  const columns = db.prepare(`PRAGMA table_info(conversations)`).all();
+  if (!columns.some((col) => col.name === 'class_id')) return;
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS conversations_peer (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      student_id INTEGER NOT NULL,
+      teacher_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(student_id, teacher_id),
+      FOREIGN KEY (student_id) REFERENCES users(id),
+      FOREIGN KEY (teacher_id) REFERENCES users(id)
+    );
+  `);
+
+  const pairs = db
+    .prepare(
+      `SELECT student_id, teacher_id, MIN(id) AS keep_id, MIN(created_at) AS created_at
+       FROM conversations
+       GROUP BY student_id, teacher_id`,
+    )
+    .all();
+
+  const insertPeer = db.prepare(
+    `INSERT OR IGNORE INTO conversations_peer (id, student_id, teacher_id, created_at)
+     VALUES (?, ?, ?, ?)`,
+  );
+  const remapMessages = db.prepare(
+    `UPDATE messages SET conversation_id = ? WHERE conversation_id = ?`,
+  );
+
+  const migrate = db.transaction(() => {
+    for (const pair of pairs) {
+      insertPeer.run(pair.keep_id, pair.student_id, pair.teacher_id, pair.created_at);
+    }
+
+    const keepByPair = new Map(
+      pairs.map((pair) => [`${pair.student_id}:${pair.teacher_id}`, pair.keep_id]),
+    );
+    const oldRows = db.prepare(`SELECT id, student_id, teacher_id FROM conversations`).all();
+    for (const row of oldRows) {
+      const keepId = keepByPair.get(`${row.student_id}:${row.teacher_id}`);
+      if (keepId && keepId !== row.id) {
+        remapMessages.run(keepId, row.id);
+      }
+    }
+
+    db.exec(`DROP TABLE conversations`);
+    db.exec(`ALTER TABLE conversations_peer RENAME TO conversations`);
+  });
+
+  migrate();
+})();
 
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_student ON lesson_reports(student_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_teacher ON lesson_reports(teacher_id)`);
