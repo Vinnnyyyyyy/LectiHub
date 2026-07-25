@@ -1,13 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Chat">
-  <rect width="64" height="64" rx="10" fill="#0a0a0a"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#243038"/>
+      <stop offset="100%" stop-color="#1c222a"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <rect x="1" y="1" width="62" height="62" rx="15" fill="none" stroke="#7eb8a4" stroke-opacity="0.28"/>
   <path
-    d="M18 22c0-2.2 1.8-4 4-4h20c2.2 0 4 1.8 4 4v14c0 2.2-1.8 4-4 4H31l-7 6v-6h-2c-2.2 0-4-1.8-4-4V22z"
+    d="M18 22c0-2.4 1.9-4.3 4.3-4.3h19.4c2.4 0 4.3 1.9 4.3 4.3v13.2c0 2.4-1.9 4.3-4.3 4.3H31.2L24 46.2v-6.7h-1.7c-2.4 0-4.3-1.9-4.3-4.3V22z"
     fill="none"
-    stroke="#f2f4f5"
-    stroke-width="2.5"
+    stroke="#e7ecef"
+    stroke-width="2.4"
     stroke-linejoin="round"
+    stroke-linecap="round"
   />
-  <circle cx="28" cy="29" r="1.8" fill="#f2f4f5"/>
-  <circle cx="34" cy="29" r="1.8" fill="#f2f4f5"/>
-  <circle cx="40" cy="29" r="1.8" fill="#f2f4f5"/>
+  <circle cx="28" cy="28.5" r="1.7" fill="#7eb8a4"/>
+  <circle cx="34" cy="28.5" r="1.7" fill="#7eb8a4"/>
+  <circle cx="40" cy="28.5" r="1.7" fill="#7eb8a4"/>
 </svg>
