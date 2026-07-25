@@ -35,6 +35,10 @@
         Already registered?
         <RouterLink to="/login">Log in</RouterLink>
       </p>
+      <p class="switch">
+        Not ready to register?
+        <RouterLink to="/free-trial">Book a free 30‑min trial</RouterLink>
+      </p>
     </form>
   </div>
 </template>
