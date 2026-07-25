@@ -143,6 +143,14 @@ async function deleteUser(req, res) {
         db.prepare(`DELETE FROM student_feedback WHERE class_id = ?`).run(classId);
         db.prepare(`DELETE FROM lesson_reports WHERE class_id = ?`).run(classId);
         db.prepare(`DELETE FROM notifications WHERE related_class_id = ?`).run(classId);
+        const conversationIds = db
+          .prepare(`SELECT id FROM conversations WHERE class_id = ?`)
+          .all(classId)
+          .map((row) => row.id);
+        for (const conversationId of conversationIds) {
+          db.prepare(`DELETE FROM messages WHERE conversation_id = ?`).run(conversationId);
+        }
+        db.prepare(`DELETE FROM conversations WHERE class_id = ?`).run(classId);
       }
       db.prepare(`DELETE FROM classes WHERE student_id = ? OR teacher_id = ?`).run(userId, userId);
 

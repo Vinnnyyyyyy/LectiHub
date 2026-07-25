@@ -195,12 +195,40 @@ db.exec(`
   WHERE participation_level IS NULL OR TRIM(participation_level) = ''
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS conversations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_id INTEGER NOT NULL UNIQUE,
+    student_id INTEGER NOT NULL,
+    teacher_id INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(id),
+    FOREIGN KEY (teacher_id) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL,
+    body TEXT NOT NULL,
+    is_read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id)
+  );
+`);
+
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_student ON lesson_reports(student_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_teacher ON lesson_reports(teacher_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_submitted ON lesson_reports(submitted_at)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_student_feedback_student ON student_feedback(student_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_student_feedback_teacher ON student_feedback(teacher_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_student_feedback_submitted ON student_feedback(submitted_at)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_conversations_student ON conversations(student_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_conversations_teacher ON conversations(teacher_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at)`);
 
 const {
   ensureDefaultTeacherAvailability,

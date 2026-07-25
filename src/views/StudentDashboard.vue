@@ -144,6 +144,8 @@
         />
       </section>
     </main>
+
+    <ClassChatWidget />
   </div>
 </template>
 
@@ -166,6 +168,7 @@ import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 import StudentHistoryWorkspace from '../components/StudentHistoryWorkspace.vue'
+import ClassChatWidget from '../components/ClassChatWidget.vue'
 
 type StudentSection = 'schedule' | 'now' | 'calendar' | 'history'
 
