@@ -96,11 +96,21 @@
     <button
       type="button"
       class="launcher"
+      :class="{ open, unread: !open && unreadTotal > 0 }"
       :aria-expanded="open"
       aria-label="Open messenger"
       @click="togglePanel"
     >
-      <img :src="chatLogo" alt="" width="56" height="56" />
+      <span class="launcher-glow" aria-hidden="true" />
+      <svg class="launcher-icon" viewBox="0 0 48 48" aria-hidden="true">
+        <path
+          class="bubble"
+          d="M14 15.5c0-2.5 2-4.5 4.5-4.5h11c2.5 0 4.5 2 4.5 4.5v10c0 2.5-2 4.5-4.5 4.5H24l-5.5 4.5V30H18.5c-2.5 0-4.5-2-4.5-4.5v-10z"
+        />
+        <circle cx="21" cy="20.5" r="1.5" />
+        <circle cx="24.5" cy="20.5" r="1.5" />
+        <circle cx="28" cy="20.5" r="1.5" />
+      </svg>
       <span v-if="!open && unreadTotal" class="launcher-badge">{{ unreadTotal }}</span>
     </button>
   </div>
@@ -110,7 +120,6 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useChatStore, type ChatPopupNotice } from '../stores/chat'
-import chatLogo from '../assets/chat-logo.svg'
 
 const chatStore = useChatStore()
 const {
@@ -331,39 +340,96 @@ onUnmounted(() => {
 
 .launcher {
   position: relative;
-  width: 3.5rem;
-  height: 3.5rem;
+  width: 3.55rem;
+  height: 3.55rem;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 0.85rem;
-  background: #0a0a0a;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--lh-line-strong);
+  border-radius: 1rem;
+  background:
+    linear-gradient(165deg, rgba(126, 184, 164, 0.12), transparent 42%),
+    var(--lh-panel-solid);
+  box-shadow: var(--lh-shadow);
   cursor: pointer;
-  overflow: hidden;
+  overflow: visible;
+  display: grid;
+  place-items: center;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
 }
 
-.launcher img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.launcher-glow {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: radial-gradient(circle at 30% 20%, rgba(126, 184, 164, 0.22), transparent 58%);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.launcher-icon {
+  position: relative;
+  z-index: 1;
+  width: 1.7rem;
+  height: 1.7rem;
+}
+
+.launcher-icon .bubble {
+  fill: none;
+  stroke: var(--lh-ink);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.launcher-icon circle {
+  fill: var(--lh-accent);
+}
+
+.launcher:hover {
+  border-color: rgba(126, 184, 164, 0.45);
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(126, 184, 164, 0.12);
+}
+
+.launcher:focus-visible {
+  outline: 2px solid rgba(126, 184, 164, 0.55);
+  outline-offset: 3px;
+}
+
+.launcher.open {
+  border-color: rgba(126, 184, 164, 0.5);
+  background:
+    linear-gradient(165deg, rgba(126, 184, 164, 0.2), transparent 50%),
+    var(--lh-panel-solid);
+}
+
+.launcher.unread {
+  border-color: rgba(126, 184, 164, 0.4);
 }
 
 .launcher-badge {
   position: absolute;
-  top: -0.3rem;
-  right: -0.3rem;
-  min-width: 1.25rem;
-  height: 1.25rem;
-  padding: 0 0.3rem;
+  top: -0.35rem;
+  right: -0.35rem;
+  z-index: 2;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 0.32rem;
   border-radius: 999px;
-  background: var(--lh-accent);
+  border: 2px solid var(--lh-bg);
+  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
   color: #0d1512;
   font-family: 'Manrope', sans-serif;
   font-size: 0.68rem;
   font-weight: 800;
   display: inline-grid;
   place-items: center;
+  box-shadow: 0 4px 12px rgba(79, 143, 123, 0.35);
 }
 
 .chat-panel {
@@ -372,12 +438,13 @@ onUnmounted(() => {
   display: grid;
   grid-template-rows: auto 1fr auto;
   border: 1px solid var(--lh-line);
-  border-radius: 1.05rem;
+  border-radius: 1.15rem;
   background:
+    radial-gradient(ellipse 70% 45% at 0% 0%, rgba(126, 184, 164, 0.1), transparent 55%),
     linear-gradient(165deg, rgba(36, 44, 54, 0.55), transparent 42%),
     var(--lh-panel);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--lh-shadow);
   overflow: hidden;
 }
 
@@ -480,26 +547,32 @@ textarea,
   align-items: center;
   gap: 0.7rem;
   text-align: left;
-  border: 1px solid transparent;
-  border-radius: 0.8rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.85rem;
   padding: 0.7rem 0.75rem;
-  background: rgba(16, 20, 26, 0.4);
+  background: rgba(16, 20, 26, 0.42);
   color: var(--lh-ink);
   cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
 }
 
 .thread-btn:hover {
-  border-color: rgba(126, 184, 164, 0.3);
+  border-color: rgba(126, 184, 164, 0.35);
   background: var(--lh-accent-soft);
 }
 
 .avatar {
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 2.2rem;
+  height: 2.2rem;
   border-radius: 999px;
   display: inline-grid;
   place-items: center;
-  background: rgba(126, 184, 164, 0.14);
+  border: 1px solid rgba(126, 184, 164, 0.22);
+  background:
+    linear-gradient(160deg, rgba(126, 184, 164, 0.2), transparent 70%),
+    rgba(20, 25, 31, 0.8);
   color: var(--lh-accent);
   font-size: 0.72rem;
   font-weight: 800;
