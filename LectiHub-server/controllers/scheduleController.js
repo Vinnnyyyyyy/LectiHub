@@ -6,7 +6,11 @@ const {
 } = require('../utils/scheduleHelpers');
 const { sendScheduleConfirmationEmails } = require('../utils/emailService');
 const { syncClassToCalendars } = require('../utils/calendarService');
-const { teacherHasConflict } = require('../utils/conflictHelpers');
+const {
+  teacherHasConflict,
+  slotBounds,
+  rangesOverlap,
+} = require('../utils/conflictHelpers');
 const {
   teacherOffersSlot,
   earliestBookableDate,
@@ -17,6 +21,114 @@ const { hydrateClass } = require('./classController');
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_SLOT_RE = /^\d{2}:\d{2}-\d{2}:\d{2}$/;
 const SUBJECTS = ['math', 'writing', 'science', 'english', 'history'];
+
+function sortSlots(slots) {
+  return [...slots].sort((a, b) => {
+    const dateA = a.preferredDate || a.preferred_date;
+    const dateB = b.preferredDate || b.preferred_date;
+    if (dateA !== dateB) return String(dateA).localeCompare(String(dateB));
+    return String(a.timeSlot || a.time_slot).localeCompare(String(b.timeSlot || b.time_slot));
+  });
+}
+
+/** Group consecutive same-day 30-min slots into class blocks (e.g. 09:30–12:00). */
+function groupContiguousBlocks(slots) {
+  const sorted = sortSlots(slots);
+  const blocks = [];
+  let current = [];
+
+  for (const slot of sorted) {
+    if (!current.length) {
+      current = [slot];
+      continue;
+    }
+
+    const prev = current[current.length - 1];
+    const prevDate = prev.preferredDate || prev.preferred_date;
+    const nextDate = slot.preferredDate || slot.preferred_date;
+    const prevParsed = parseTimeSlot(prev.timeSlot || prev.time_slot);
+    const nextParsed = parseTimeSlot(slot.timeSlot || slot.time_slot);
+    const contiguous =
+      prevDate === nextDate &&
+      prevParsed.endTime &&
+      nextParsed.startTime &&
+      prevParsed.endTime === nextParsed.startTime;
+
+    if (contiguous) {
+      current.push(slot);
+    } else {
+      blocks.push(current);
+      current = [slot];
+    }
+  }
+
+  if (current.length) blocks.push(current);
+  return blocks;
+}
+
+function mergeBlockWindow(slots) {
+  const sorted = sortSlots(slots);
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  const firstParsed = parseTimeSlot(first.timeSlot || first.time_slot);
+  const lastParsed = parseTimeSlot(last.timeSlot || last.time_slot);
+  const startTime = firstParsed.startTime;
+  const endTime = lastParsed.endTime;
+  const { durationMinutes } = parseTimeSlot(`${startTime}-${endTime}`);
+  const classDate = first.preferredDate || first.preferred_date;
+  const timeSlot = `${startTime}-${endTime}`;
+
+  return {
+    classDate,
+    startTime,
+    endTime,
+    durationMinutes,
+    timeSlot,
+    firstSlotId: first.id ?? null,
+    slotCount: sorted.length,
+  };
+}
+
+function studentHasOverlappingBooking(studentId, preferredDate, timeSlot) {
+  const requested = slotBounds(timeSlot);
+  if (!requested) return null;
+
+  const pendingSlots = db
+    .prepare(
+      `SELECT srs.preferred_date, srs.time_slot
+       FROM schedule_requests sr
+       JOIN schedule_request_slots srs ON srs.request_id = sr.id
+       WHERE sr.student_id = ?
+         AND sr.status = 'pending'
+         AND srs.preferred_date = ?`,
+    )
+    .all(studentId, preferredDate);
+
+  for (const row of pendingSlots) {
+    const existing = slotBounds(row.time_slot);
+    if (existing && rangesOverlap(requested, existing)) return 'pending';
+  }
+
+  const classRows = db
+    .prepare(
+      `SELECT time_slot, start_time, end_time
+       FROM classes
+       WHERE student_id = ?
+         AND class_date = ?
+         AND status != 'cancelled'`,
+    )
+    .all(studentId, preferredDate);
+
+  for (const row of classRows) {
+    const existing =
+      row.start_time && row.end_time
+        ? slotBounds(`${row.start_time}-${row.end_time}`)
+        : slotBounds(row.time_slot);
+    if (existing && rangesOverlap(requested, existing)) return 'scheduled';
+  }
+
+  return null;
+}
 
 function getConfirmedScheduleForRequest(requestId) {
   const row = db
@@ -107,54 +219,23 @@ function getTeacherById(teacherId) {
     .get(teacherId);
 }
 
-function notifyAdminsAboutRequests(requestIds, studentName, slotCount) {
+function notifyAdminsAboutRequests(requestIds, studentName, classCount) {
   if (!requestIds.length) return;
 
   const admins = db.prepare(`SELECT id FROM users WHERE role = 'admin'`).all();
   const title =
-    slotCount === 1 ? 'New class booking' : `New class bookings (${slotCount})`;
+    classCount === 1 ? 'New class booking' : `New class bookings (${classCount})`;
   const message =
-    slotCount === 1
-      ? `${studentName} booked a class slot awaiting teacher assignment.`
-      : `${studentName} booked ${slotCount} class slots awaiting teacher assignment.`;
+    classCount === 1
+      ? `${studentName} booked a class awaiting teacher assignment.`
+      : `${studentName} booked ${classCount} classes awaiting teacher assignment.`;
 
   for (const admin of admins) {
     notifyUser(admin.id, 'schedule_request', title, message, {
       relatedRequestId: requestIds[0],
-      details: { studentName, slotCount, requestIds },
+      details: { studentName, classCount, requestIds },
     });
   }
-}
-
-function studentAlreadyBookedSlot(studentId, preferredDate, timeSlot) {
-  const pending = db
-    .prepare(
-      `SELECT sr.id
-       FROM schedule_requests sr
-       JOIN schedule_request_slots srs ON srs.request_id = sr.id
-       WHERE sr.student_id = ?
-         AND sr.status = 'pending'
-         AND srs.preferred_date = ?
-         AND srs.time_slot = ?
-       LIMIT 1`,
-    )
-    .get(studentId, preferredDate, timeSlot);
-  if (pending) return 'pending';
-
-  const scheduled = db
-    .prepare(
-      `SELECT id
-       FROM classes
-       WHERE student_id = ?
-         AND class_date = ?
-         AND time_slot = ?
-         AND status != 'cancelled'
-       LIMIT 1`,
-    )
-    .get(studentId, preferredDate, timeSlot);
-  if (scheduled) return 'scheduled';
-
-  return null;
 }
 
 function toSqliteDateTime(date) {
@@ -282,11 +363,11 @@ function buildTeacherCandidates(slots, remarks) {
     const fullyAvailable = freeSlots.length === slots.length && slots.length > 0;
     const reasons = [];
 
-    if (fullyAvailable) reasons.push('Free for every preferred slot');
+    if (fullyAvailable) reasons.push('Free for the full class block');
     else if (freeSlots.length > 0) {
-      reasons.push(`Free for ${freeSlots.length}/${slots.length} preferred slots`);
+      reasons.push(`Free for ${freeSlots.length}/${slots.length} segments only`);
     } else {
-      reasons.push('No free preferred slots');
+      reasons.push('Not free for this class block');
     }
 
     if (expertise) reasons.push(`Expertise: ${expertise}`);
@@ -311,7 +392,8 @@ function buildTeacherCandidates(slots, remarks) {
       availableSlotCount: freeSlots.length,
       fullyAvailable,
       preferenceMatch: preferenceMatch || nameMentioned,
-      assignable: freeSlots.length > 0,
+      // Whole block must be free — one teacher covers the full booked session.
+      assignable: fullyAvailable,
       freeSlots: freeSlots.map((slot) => ({
         id: slot.id,
         preferredDate: slot.preferred_date,
@@ -441,20 +523,24 @@ async function createScheduleRequest(req, res) {
     return res.status(400).json({ message: 'Select at least one date and time slot to book' });
   }
 
-  for (const slot of normalizedSlots) {
-    const existing = studentAlreadyBookedSlot(
+  // Consecutive same-day slots (e.g. 09:30–12:00) become ONE class booking.
+  const blocks = groupContiguousBlocks(normalizedSlots);
+
+  for (const block of blocks) {
+    const window = mergeBlockWindow(block);
+    const existing = studentHasOverlappingBooking(
       req.user.id,
-      slot.preferredDate,
-      slot.timeSlot,
+      window.classDate,
+      window.timeSlot,
     );
     if (existing === 'pending') {
       return res.status(409).json({
-        message: `You already have a pending booking for ${slot.preferredDate} ${slot.timeSlot}.`,
+        message: `You already have a pending booking overlapping ${window.classDate} ${window.timeSlot}.`,
       });
     }
     if (existing === 'scheduled') {
       return res.status(409).json({
-        message: `You already have a class scheduled for ${slot.preferredDate} ${slot.timeSlot}.`,
+        message: `You already have a class overlapping ${window.classDate} ${window.timeSlot}.`,
       });
     }
   }
@@ -472,14 +558,15 @@ async function createScheduleRequest(req, res) {
     VALUES (?, ?, ?)
   `);
 
-  // Each selected slot becomes its own booking request (one class per slot).
   const create = db.transaction(() => {
     const requestIds = [];
 
-    for (const slot of normalizedSlots) {
+    for (const block of blocks) {
       const result = insertRequest.run(req.user.id, cleanRemarks || null);
       const requestId = result.lastInsertRowid;
-      insertSlot.run(requestId, slot.preferredDate, slot.timeSlot);
+      for (const slot of block) {
+        insertSlot.run(requestId, slot.preferredDate, slot.timeSlot);
+      }
       requestIds.push(requestId);
     }
 
@@ -497,8 +584,8 @@ async function createScheduleRequest(req, res) {
     res.status(201).json({
       message:
         requests.length === 1
-          ? 'Class booking submitted. An admin will assign a teacher.'
-          : `${requests.length} class bookings submitted. An admin will assign a teacher to each.`,
+          ? 'Class booking submitted. An admin will assign one teacher to the full session.'
+          : `${requests.length} class bookings submitted (non-consecutive times become separate classes). An admin will assign a teacher to each.`,
       count: requests.length,
       requests,
       // Keep a single-request shape for older clients.
@@ -601,7 +688,6 @@ async function assignTeacherToRequest(req, res) {
   try {
     const requestId = Number(req.params.id);
     const teacherId = Number(req.body?.teacherId);
-    let slotId = req.body?.slotId != null ? Number(req.body.slotId) : null;
 
     if (!Number.isInteger(requestId) || requestId < 1) {
       return res.status(400).json({ message: 'Invalid request id' });
@@ -625,51 +711,52 @@ async function assignTeacherToRequest(req, res) {
 
     const slots = getSlotsForRequest(requestId);
     if (!slots.length) {
-      return res.status(400).json({ message: 'Request has no preferred slots' });
+      return res.status(400).json({ message: 'Request has no booked slots' });
     }
 
-    let selectedSlot = null;
-    if (slotId != null) {
-      if (!Number.isInteger(slotId) || slotId < 1) {
-        return res.status(400).json({ message: 'Invalid slotId' });
-      }
-      selectedSlot = slots.find((slot) => slot.id === slotId);
-      if (!selectedSlot) {
-        return res.status(400).json({ message: 'Selected slot is not part of this request' });
-      }
-    } else {
-      selectedSlot = slots.find(
-        (slot) =>
-          teacherOffersSlot(db, teacherId, slot.preferred_date, slot.time_slot) &&
-          !teacherHasConflict(teacherId, slot.preferred_date, slot.time_slot),
-      );
-      if (!selectedSlot) {
-        return res.status(400).json({
-          message: 'Teacher is unavailable for all preferred slots on this request',
-        });
-      }
-      slotId = selectedSlot.id;
-    }
-
-    if (!teacherOffersSlot(db, teacherId, selectedSlot.preferred_date, selectedSlot.time_slot)) {
-      return res.status(409).json({
-        message: 'Teacher does not offer availability for the selected slot',
+    const blocks = groupContiguousBlocks(
+      slots.map((slot) => ({
+        id: slot.id,
+        preferredDate: slot.preferred_date,
+        timeSlot: slot.time_slot,
+      })),
+    );
+    if (blocks.length !== 1) {
+      return res.status(400).json({
+        message: 'This booking must be one contiguous class block before assignment',
       });
     }
 
-    if (teacherHasConflict(teacherId, selectedSlot.preferred_date, selectedSlot.time_slot)) {
+    const block = blocks[0];
+    const window = mergeBlockWindow(block);
+    const slotId = window.firstSlotId;
+
+    for (const slot of block) {
+      if (!teacherOffersSlot(db, teacherId, slot.preferredDate, slot.timeSlot)) {
+        return res.status(409).json({
+          message: 'Teacher does not offer availability for the full class block',
+        });
+      }
+      if (teacherHasConflict(teacherId, slot.preferredDate, slot.timeSlot)) {
+        return res.status(409).json({
+          message: 'Teacher has a schedule conflict during the class block',
+        });
+      }
+    }
+
+    if (teacherHasConflict(teacherId, window.classDate, window.timeSlot)) {
       return res.status(409).json({
-        message: 'Teacher has a schedule conflict for the selected slot',
+        message: 'Teacher has a schedule conflict for the selected class block',
       });
     }
 
     const student = getStudent(request.student_id);
     const studentName = student?.full_name || student?.username || 'Student';
     const teacherName = teacher.full_name || teacher.username;
-    const { startTime, endTime, durationMinutes } = parseTimeSlot(selectedSlot.time_slot);
+    const { startTime, endTime, durationMinutes, timeSlot, classDate } = window;
     const { meetingInfo, meetingLink, meetingProvider } = buildMeetingDetails(
       requestId,
-      selectedSlot.preferred_date,
+      classDate,
       startTime,
     );
     const subject = teacher.subject_expertise || 'General';
@@ -700,8 +787,8 @@ async function assignTeacherToRequest(req, res) {
         .run(
           teacherId,
           request.student_id,
-          selectedSlot.preferred_date,
-          selectedSlot.time_slot,
+          classDate,
+          timeSlot,
           title,
           requestId,
           startTime,
@@ -718,8 +805,8 @@ async function assignTeacherToRequest(req, res) {
       const scheduleDetails = {
         studentName,
         teacherName,
-        classDate: selectedSlot.preferred_date,
-        timeSlot: selectedSlot.time_slot,
+        classDate,
+        timeSlot,
         startTime,
         endTime,
         durationMinutes,
@@ -730,7 +817,7 @@ async function assignTeacherToRequest(req, res) {
 
       const teacherMessage = [
         `Assigned student: ${studentName}`,
-        `Date and time: ${selectedSlot.preferred_date} ${startTime} – ${endTime}`,
+        `Date and time: ${classDate} ${startTime} – ${endTime}`,
         `Class duration: ${durationMinutes} minutes`,
         `Meeting details: ${meetingInfo}`,
         `Meeting link: ${meetingLink}`,
@@ -738,7 +825,7 @@ async function assignTeacherToRequest(req, res) {
 
       const studentMessage = [
         `Assigned teacher: ${teacherName}`,
-        `Schedule: ${selectedSlot.preferred_date} ${startTime} – ${endTime} (${durationMinutes} minutes)`,
+        `Schedule: ${classDate} ${startTime} – ${endTime} (${durationMinutes} minutes)`,
         `Meeting information: ${meetingInfo}`,
         `Meeting link: ${meetingLink}`,
         'Reminders: you will also receive notifications 24 hours and 1 hour before class begins.',
@@ -800,8 +887,8 @@ async function assignTeacherToRequest(req, res) {
       details: {
         studentName,
         teacherName,
-        classDate: selectedSlot.preferred_date,
-        timeSlot: selectedSlot.time_slot,
+        classDate,
+        timeSlot,
         startTime,
         endTime,
         durationMinutes,
