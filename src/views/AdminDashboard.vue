@@ -48,7 +48,7 @@
         <div class="dash-section-label">
           <div>
             <h2 id="admin-review">Review &amp; assign</h2>
-            <p>Each booked slot is its own request. Assign a teacher to confirm that class.</p>
+            <p>Consecutive times become one class. Assign one teacher to the full session.</p>
           </div>
         </div>
 
@@ -57,7 +57,7 @@
             <div class="brand-block">
               <p class="kicker">Queue</p>
               <h2>Pending</h2>
-              <p class="side-copy">Each item is one booked class slot waiting for a teacher.</p>
+              <p class="side-copy">Each item is one class session waiting for a teacher.</p>
             </div>
 
             <p v-if="loadingRequests" class="hint side-hint">Loading requests…</p>
@@ -76,9 +76,9 @@
                   </div>
                   <p>
                     {{
-                      request.slots[0]
-                        ? `${formatDate(request.slots[0].preferredDate)} · ${formatSlot(request.slots[0].timeSlot)}`
-                        : 'Class slot'
+                      request.slots.length
+                        ? `${formatDate(request.slots[0].preferredDate)} · ${formatRequestWindow(request.slots)}`
+                        : 'Class session'
                     }}
                   </p>
                   <time>{{ formatDateTime(request.createdAt) }}</time>
@@ -95,8 +95,8 @@
                 <p class="main-copy">
                   {{
                     selected
-                      ? 'Assign an available teacher to confirm this booked class slot.'
-                      : 'Select a booked slot from the sidebar to begin.'
+                      ? 'Assign one teacher who is free for the full class block.'
+                      : 'Select a class booking from the sidebar to begin.'
                   }}
                 </p>
               </div>
@@ -106,7 +106,7 @@
             <p v-if="loadingReview" class="hint">Loading availability…</p>
             <div v-else-if="!selected" class="empty-state">
               <p class="empty-title">No request selected</p>
-              <p class="hint">Choose a booked slot from the left to assign a teacher.</p>
+              <p class="hint">Choose a class booking from the left to assign a teacher.</p>
             </div>
 
             <div v-else class="review">
@@ -132,9 +132,9 @@
                 <p>
                   {{ selected.request.assignedTeacher.fullName }} assigned for
                   {{
-                    selected.request.assignedSlot
-                      ? `${formatDate(selected.request.assignedSlot.preferredDate)} · ${formatSlot(selected.request.assignedSlot.timeSlot)}`
-                      : 'selected slot'
+                    selected.request.slots.length
+                      ? `${formatDate(selected.request.slots[0].preferredDate)} · ${formatRequestWindow(selected.request.slots)}`
+                      : 'the class block'
                   }}
                 </p>
               </div>
@@ -176,25 +176,24 @@
                   <h4>Assign teacher</h4>
                 </div>
                 <p class="hint assign-hint">
-                  Ranked by availability, workload, subject expertise, and student remarks.
+                  One teacher covers the full block
+                  ({{ formatRequestWindow(selected.request.slots) }},
+                  {{ requestDurationMinutes(selected.request.slots) }} minutes).
+                  Ranked by availability, workload, subject expertise, and remarks.
                 </p>
 
-                <label for="assign-slot">Class slot</label>
-                <select id="assign-slot" v-model="selectedSlotId">
-                  <option
-                    v-for="slot in selected.request.slots"
-                    :key="slot.id"
-                    :value="slot.id"
-                  >
-                    {{ formatDate(slot.preferredDate) }} · {{ formatSlot(slot.timeSlot) }}
-                  </option>
-                </select>
+                <p class="class-block">
+                  <strong>Class block</strong>
+                  {{ formatDate(selected.request.slots[0].preferredDate) }}
+                  · {{ formatRequestWindow(selected.request.slots) }}
+                  · {{ requestDurationMinutes(selected.request.slots) }} minutes
+                </p>
 
                 <ul class="candidate-list">
                   <li
                     v-for="teacher in selected.teacherCandidates"
                     :key="teacher.id"
-                    :class="{ disabled: !isTeacherFreeForSelectedSlot(teacher) }"
+                    :class="{ disabled: !teacher.fullyAvailable }"
                   >
                     <div class="candidate-top">
                       <div>
@@ -208,7 +207,7 @@
                       <button
                         type="button"
                         class="assign-btn"
-                        :disabled="assigning || !isTeacherFreeForSelectedSlot(teacher)"
+                        :disabled="assigning || !teacher.fullyAvailable"
                         @click="assign(teacher.id)"
                       >
                         {{ assigning ? 'Assigning...' : 'Assign' }}
@@ -226,7 +225,7 @@
               <div class="summary">
                 <p>
                   <strong>{{ selected.fullyAvailableTeachers.length }}</strong>
-                  teacher(s) free for this slot
+                  teacher(s) free for the full class block
                   <span class="muted">· {{ selected.teacherCount }} total teachers</span>
                 </p>
                 <ul v-if="selected.fullyAvailableTeachers.length" class="teacher-chips">
@@ -234,7 +233,7 @@
                     {{ teacher.fullName }}
                   </li>
                 </ul>
-                <p v-else class="hint">No teacher is free for this booked slot.</p>
+                <p v-else class="hint">No teacher is free for the full booked session.</p>
               </div>
 
               <div
@@ -384,10 +383,7 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
-import {
-  useAdminScheduleStore,
-  type TeacherCandidate,
-} from '../stores/adminSchedule'
+import { useAdminScheduleStore } from '../stores/adminSchedule'
 import {
   useNotificationsStore,
   type AppNotification,
@@ -425,7 +421,6 @@ const {
   error: monitoringError,
 } = storeToRefs(monitoringStore)
 
-const selectedSlotId = ref<number | null>(null)
 const successMessage = ref('')
 const errorMessage = ref('')
 
@@ -435,7 +430,7 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
     id: 'review',
     label: 'Review & assign',
-    intro: 'Each booked slot is its own class. Assign a teacher to confirm it.',
+    intro: 'Consecutive booked times become one class with one teacher.',
   },
   {
     id: 'inbox',
@@ -475,12 +470,31 @@ watch(
   () => {
     successMessage.value = ''
     errorMessage.value = ''
-    selectedSlotId.value = selected.value?.request.slots[0]?.id ?? null
   },
 )
 
 function formatSlot(slot: string) {
   return slot.replace('-', ' – ')
+}
+
+function formatRequestWindow(slots: { preferredDate: string; timeSlot: string }[]) {
+  if (!slots.length) return ''
+  const sorted = [...slots].sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
+  const start = sorted[0].timeSlot.split('-')[0]
+  const end = sorted[sorted.length - 1].timeSlot.split('-')[1]
+  return `${start} – ${end}`
+}
+
+function requestDurationMinutes(slots: { timeSlot: string }[]) {
+  if (!slots.length) return 0
+  const sorted = [...slots].sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
+  const start = sorted[0].timeSlot.split('-')[0]
+  const end = sorted[sorted.length - 1].timeSlot.split('-')[1]
+  const toMinutes = (value: string) => {
+    const [hours, minutes] = value.split(':').map(Number)
+    return hours * 60 + minutes
+  }
+  return Math.max(0, toMinutes(end) - toMinutes(start))
 }
 
 function formatDate(value: string) {
@@ -513,11 +527,6 @@ function formatTimeRange(
   return formatSlot(timeSlot)
 }
 
-function isTeacherFreeForSelectedSlot(teacher: TeacherCandidate) {
-  if (!selectedSlotId.value) return false
-  return teacher.freeSlots.some((slot) => slot.id === selectedSlotId.value)
-}
-
 async function openRequest(id: number) {
   successMessage.value = ''
   errorMessage.value = ''
@@ -532,14 +541,14 @@ async function openFromNotification(item: AppNotification) {
 }
 
 async function assign(teacherId: number) {
-  if (!selected.value || !selectedSlotId.value) return
+  if (!selected.value) return
   successMessage.value = ''
   errorMessage.value = ''
   try {
     const result = await adminStore.assignTeacher(
       selected.value.request.id,
       teacherId,
-      selectedSlotId.value,
+      selected.value.request.slots[0]?.id ?? null,
     )
     const emailNote = result.emails?.enabled
       ? ' Confirmation emails were also sent (if recipients have email addresses).'
@@ -898,6 +907,26 @@ strong {
 
 .assign-hint {
   margin: 0;
+}
+
+.class-block {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(126, 184, 164, 0.3);
+  background: var(--lh-accent-soft);
+  color: var(--lh-ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.class-block strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  color: var(--lh-accent);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .assignment label {

@@ -3,9 +3,10 @@
     <div class="booking-intro">
       <h2>Booking</h2>
       <p>
-        Pick the dates and times you want. Each selected slot is booked as its own class.
-        You can book starting <strong>2 days from today</strong>. Highlighted days have at least
-        one available teacher. An administrator assigns a teacher to each booked slot.
+        Pick the dates and times you want. Consecutive slots on the same day become
+        <strong>one class</strong> (for example 09:30–12:00) with one teacher, one upcoming
+        session, and one report/feedback. Gaps or different days become separate classes.
+        You can book starting <strong>2 days from today</strong>.
       </p>
     </div>
 
@@ -58,7 +59,14 @@
             <button type="button" class="remove" @click="removePreference(index)">Remove</button>
           </li>
         </ul>
-        <p v-else class="hint">Add at least one date and time slot. Each one becomes a separate class.</p>
+        <p v-if="preferences.length && bookingPreview.length" class="hint booking-preview">
+          Will create
+          {{ bookingPreview.length === 1 ? '1 class' : `${bookingPreview.length} classes` }}:
+          {{ bookingPreview.join(' · ') }}
+        </p>
+        <p v-else-if="!preferences.length" class="hint">
+          Add at least one date and time. Consecutive times merge into one class.
+        </p>
       </div>
 
       <label for="remarks">Additional remarks</label>
@@ -74,9 +82,9 @@
         {{
           submitting
             ? 'Booking...'
-            : preferences.length <= 1
-              ? 'Book this class slot'
-              : `Book ${preferences.length} class slots`
+            : bookingPreview.length <= 1
+              ? 'Book this class'
+              : `Book ${bookingPreview.length} classes`
         }}
       </button>
 
@@ -95,15 +103,19 @@
             <time>{{ formatDateTime(request.createdAt) }}</time>
           </div>
           <ul class="request-slots">
-            <li v-for="slot in request.slots" :key="`${request.id}-${slot.preferredDate}-${slot.timeSlot}`">
-              {{ formatDate(slot.preferredDate) }} · {{ formatSlot(slot.timeSlot) }}
+            <li v-if="request.slots.length">
+              {{ formatDate(request.slots[0].preferredDate) }}
+              · {{ formatRequestWindow(request.slots) }}
+              <span v-if="request.slots.length > 1">
+                ({{ request.slots.length }} segments · one class)
+              </span>
             </li>
           </ul>
           <p v-if="request.assignedTeacher" class="request-remarks">
             Assigned teacher: {{ request.assignedTeacher.fullName }}
-            <span v-if="request.assignedSlot">
-              · {{ formatDate(request.assignedSlot.preferredDate) }}
-              · {{ formatSlot(request.assignedSlot.timeSlot) }}
+            <span v-if="request.slots.length">
+              · {{ formatDate(request.slots[0].preferredDate) }}
+              · {{ formatRequestWindow(request.slots) }}
             </span>
           </p>
           <p v-if="request.remarks" class="request-remarks">{{ request.remarks }}</p>
@@ -154,6 +166,40 @@ const openSlotsForDay = computed(() =>
 const canAddPreference = computed(
   () => Boolean(selectedDate.value) && selectedTimeSlots.value.length > 0,
 )
+
+/** Consecutive same-day slots preview as one class each. */
+const bookingPreview = computed(() => {
+  const sorted = [...preferences.value].sort((a, b) =>
+    a.preferredDate === b.preferredDate
+      ? a.timeSlot.localeCompare(b.timeSlot)
+      : a.preferredDate.localeCompare(b.preferredDate),
+  )
+  const blocks: ScheduleSlot[][] = []
+  let current: ScheduleSlot[] = []
+
+  for (const slot of sorted) {
+    if (!current.length) {
+      current = [slot]
+      continue
+    }
+    const prev = current[current.length - 1]
+    const prevEnd = prev.timeSlot.split('-')[1]
+    const nextStart = slot.timeSlot.split('-')[0]
+    if (prev.preferredDate === slot.preferredDate && prevEnd === nextStart) {
+      current.push(slot)
+    } else {
+      blocks.push(current)
+      current = [slot]
+    }
+  }
+  if (current.length) blocks.push(current)
+
+  return blocks.map((block) => {
+    const start = block[0].timeSlot.split('-')[0]
+    const end = block[block.length - 1].timeSlot.split('-')[1]
+    return `${formatDate(block[0].preferredDate)} ${start}–${end}`
+  })
+})
 
 function onSelectDate(date: string) {
   selectedDate.value = date
@@ -234,7 +280,7 @@ async function handleSubmit() {
       slots: preferences.value,
       remarks: remarks.value.trim(),
     })
-    const count = result.count || preferences.value.length
+    const count = result.count || bookingPreview.value.length || 1
     preferences.value = []
     remarks.value = ''
     selectedDate.value = ''
@@ -242,15 +288,23 @@ async function handleSubmit() {
     successMessage.value =
       result.message ||
       (count === 1
-        ? 'Class slot booked. An admin will assign a teacher soon.'
-        : `${count} class slots booked. An admin will assign a teacher to each.`)
+        ? 'Class booked. An admin will assign one teacher to the full session.'
+        : `${count} classes booked. An admin will assign a teacher to each.`)
   } catch (err) {
     if (axios.isAxiosError(err)) {
-      errorMessage.value = err.response?.data?.message || 'Could not book class slots'
+      errorMessage.value = err.response?.data?.message || 'Could not book class'
     } else {
-      errorMessage.value = 'Could not book class slots'
+      errorMessage.value = 'Could not book class'
     }
   }
+}
+
+function formatRequestWindow(slots: ScheduleSlot[]) {
+  if (!slots.length) return ''
+  const sorted = [...slots].sort((a, b) => a.timeSlot.localeCompare(b.timeSlot))
+  const start = sorted[0].timeSlot.split('-')[0]
+  const end = sorted[sorted.length - 1].timeSlot.split('-')[1]
+  return `${start} – ${end}`
 }
 
 onMounted(async () => {
