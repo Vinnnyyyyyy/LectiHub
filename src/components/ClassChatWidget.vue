@@ -1,21 +1,37 @@
 <template>
   <div class="chat-widget">
+    <div class="notice-stack" aria-live="polite">
+      <transition-group name="notice">
+        <button
+          v-for="notice in notices"
+          :key="notice.id"
+          type="button"
+          class="chat-notice"
+          @click="openFromNotice(notice)"
+        >
+          <span class="notice-kicker">New message</span>
+          <strong>{{ notice.peerName }}</strong>
+          <span class="notice-body">{{ notice.body }}</span>
+        </button>
+      </transition-group>
+    </div>
+
     <transition name="panel">
-      <section v-if="open" class="chat-panel" aria-label="Class chat">
+      <section v-if="open" class="chat-panel" aria-label="Messenger">
         <header class="panel-head">
           <div>
-            <p class="kicker">Class chat</p>
+            <p class="kicker">Messenger</p>
             <h2>{{ panelTitle }}</h2>
             <p class="copy">{{ panelCopy }}</p>
           </div>
           <div class="head-actions">
             <button
-              v-if="activeClassId"
+              v-if="activePeerId"
               type="button"
               class="text-btn"
-              @click="backToThreads"
+              @click="backToContacts"
             >
-              All classes
+              Contacts
             </button>
             <button type="button" class="icon-btn" aria-label="Close chat" @click="closePanel">
               ×
@@ -23,25 +39,19 @@
           </div>
         </header>
 
-        <div v-if="!activeClassId" class="thread-pane">
-          <p v-if="loadingThreads" class="hint">Loading booked class chats…</p>
+        <div v-if="!activePeerId" class="thread-pane">
+          <p v-if="loadingThreads" class="hint">Loading contacts…</p>
           <p v-else-if="!threads.length" class="hint">
-            No booked classes yet. Chat opens after a class is confirmed with a teacher.
+            No assigned contacts yet. Chat unlocks after a class is booked with a teacher.
           </p>
           <ul v-else class="thread-list">
-            <li v-for="thread in threads" :key="thread.classId">
-              <button type="button" class="thread-btn" @click="openThread(thread.classId)">
-                <div class="thread-top">
-                  <strong>{{ thread.peer?.fullName || 'Class partner' }}</strong>
-                  <span v-if="thread.unreadCount" class="badge">{{ thread.unreadCount }}</span>
-                </div>
-                <p class="meta">
-                  {{ formatDate(thread.classDate) }}
-                  <span v-if="thread.timeLabel"> · {{ thread.timeLabel }}</span>
-                </p>
-                <p class="preview">
-                  {{ thread.lastMessage?.body || thread.title || 'Start the conversation' }}
-                </p>
+            <li v-for="thread in threads" :key="thread.peerId">
+              <button type="button" class="thread-btn" @click="openThread(thread.peerId)">
+                <span class="avatar" aria-hidden="true">
+                  {{ initials(thread.peer?.fullName || thread.peer?.username || '?') }}
+                </span>
+                <span class="contact-name">{{ thread.peer?.fullName || 'Contact' }}</span>
+                <span v-if="thread.unreadCount" class="badge">{{ thread.unreadCount }}</span>
               </button>
             </li>
           </ul>
@@ -51,7 +61,7 @@
           <p v-if="loadingMessages" class="hint">Loading messages…</p>
           <div v-else ref="messageListEl" class="message-list">
             <p v-if="!messages.length" class="hint">
-              No messages yet. Say hello about this booked class.
+              No messages yet. Say hello to start the conversation.
             </p>
             <div
               v-for="item in messages"
@@ -69,7 +79,7 @@
               v-model="draft"
               rows="2"
               maxlength="2000"
-              placeholder="Message about this class…"
+              placeholder="Write a message…"
               :disabled="sending"
               @keydown.enter.exact.prevent="handleSend"
             />
@@ -87,7 +97,7 @@
       type="button"
       class="launcher"
       :aria-expanded="open"
-      aria-label="Open class chat"
+      aria-label="Open messenger"
       @click="togglePanel"
     >
       <img :src="chatLogo" alt="" width="56" height="56" />
@@ -99,66 +109,78 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useChatStore } from '../stores/chat'
+import { useChatStore, type ChatPopupNotice } from '../stores/chat'
 import chatLogo from '../assets/chat-logo.svg'
 
 const chatStore = useChatStore()
 const {
   threads,
   unreadTotal,
-  activeClassId,
-  activeTitle,
+  activePeerId,
   activePeer,
   messages,
   loadingThreads,
   loadingMessages,
   sending,
   error,
+  notices,
 } = storeToRefs(chatStore)
 
 const open = ref(false)
 const draft = ref('')
 const messageListEl = ref<HTMLElement | null>(null)
 let pollTimer: number | null = null
+let noticeTimers = new Map<string, number>()
 
 const panelTitle = computed(() => {
-  if (!activeClassId.value) return 'Booked classes'
-  return activePeer.value?.fullName || activeTitle.value || 'Class chat'
+  if (!activePeerId.value) return 'Contacts'
+  return activePeer.value?.fullName || 'Chat'
 })
 
 const panelCopy = computed(() => {
-  if (!activeClassId.value) {
-    return 'Message your teacher or student for a booked class only.'
+  if (!activePeerId.value) {
+    return 'Chat with your assigned teacher or student.'
   }
-  return activeTitle.value || 'Class conversation'
+  return 'Direct messages for your booked classes.'
 })
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+}
 
 async function togglePanel() {
   open.value = !open.value
   if (open.value) {
-    await chatStore.fetchThreads()
-    startPolling()
+    chatStore.clearNotices()
+    await chatStore.fetchThreads({ announce: false })
   } else {
-    stopPolling()
     chatStore.clearActiveThread()
   }
 }
 
 function closePanel() {
   open.value = false
-  stopPolling()
   chatStore.clearActiveThread()
 }
 
-function backToThreads() {
+function backToContacts() {
   chatStore.clearActiveThread()
-  void chatStore.fetchThreads()
+  void chatStore.fetchThreads({ announce: false })
 }
 
-async function openThread(classId: number) {
+async function openThread(peerId: number) {
   draft.value = ''
-  await chatStore.openThread(classId)
+  open.value = true
+  await chatStore.openThread(peerId)
   await scrollToBottom()
+}
+
+async function openFromNotice(notice: ChatPopupNotice) {
+  chatStore.dismissNotice(notice.id)
+  await openThread(notice.peerId)
 }
 
 async function handleSend() {
@@ -179,18 +201,18 @@ async function scrollToBottom() {
 function startPolling() {
   stopPolling()
   pollTimer = window.setInterval(async () => {
-    if (!open.value) return
     try {
-      if (activeClassId.value) {
+      if (activePeerId.value) {
         await chatStore.refreshActiveThread()
+        await chatStore.fetchThreads({ announce: false })
         await scrollToBottom()
       } else {
-        await chatStore.fetchThreads()
+        await chatStore.fetchThreads({ announce: true })
       }
     } catch {
       // ignore transient poll errors
     }
-  }, 5000)
+  }, 4000)
 }
 
 function stopPolling() {
@@ -198,16 +220,6 @@ function stopPolling() {
     window.clearInterval(pollTimer)
     pollTimer = null
   }
-}
-
-function formatDate(value: string) {
-  if (!value) return ''
-  const date = new Date(`${value}T00:00:00`)
-  return date.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  })
 }
 
 function formatDateTime(value: string) {
@@ -225,20 +237,38 @@ function formatDateTime(value: string) {
 watch(
   () => messages.value.length,
   async () => {
-    if (open.value && activeClassId.value) await scrollToBottom()
+    if (open.value && activePeerId.value) await scrollToBottom()
   },
+)
+
+watch(
+  notices,
+  (items) => {
+    for (const notice of items) {
+      if (noticeTimers.has(notice.id)) continue
+      const timer = window.setTimeout(() => {
+        chatStore.dismissNotice(notice.id)
+        noticeTimers.delete(notice.id)
+      }, 6000)
+      noticeTimers.set(notice.id, timer)
+    }
+  },
+  { deep: true },
 )
 
 onMounted(async () => {
   try {
-    await chatStore.fetchThreads()
+    await chatStore.fetchThreads({ announce: false })
   } catch {
     // store error
   }
+  startPolling()
 })
 
 onUnmounted(() => {
   stopPolling()
+  for (const timer of noticeTimers.values()) window.clearTimeout(timer)
+  noticeTimers.clear()
 })
 </script>
 
@@ -250,7 +280,53 @@ onUnmounted(() => {
   z-index: 40;
   display: grid;
   justify-items: end;
-  gap: 0.75rem;
+  gap: 0.7rem;
+}
+
+.notice-stack {
+  display: grid;
+  gap: 0.45rem;
+  width: min(20rem, calc(100vw - 1.5rem));
+}
+
+.chat-notice {
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+  border: 1px solid rgba(126, 184, 164, 0.35);
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.8rem;
+  background:
+    linear-gradient(135deg, rgba(126, 184, 164, 0.16), transparent 55%),
+    rgba(16, 20, 26, 0.92);
+  color: var(--lh-ink);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.notice-kicker {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lh-accent);
+}
+
+.chat-notice strong {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 750;
+}
+
+.notice-body {
+  font-family: 'Manrope', sans-serif;
+  color: var(--lh-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .launcher {
@@ -316,14 +392,13 @@ onUnmounted(() => {
 .kicker,
 .copy,
 .hint,
-.meta,
-.preview,
 .bubble-body,
 time,
 button,
 textarea,
 .error,
-strong {
+.contact-name,
+.badge {
   font-family: 'Manrope', sans-serif;
 }
 
@@ -389,20 +464,24 @@ strong {
 
 .thread-pane {
   overflow: auto;
-  padding: 0.65rem;
+  padding: 0.55rem;
 }
 
 .thread-list {
   list-style: none;
   display: grid;
-  gap: 0.45rem;
+  gap: 0.3rem;
 }
 
 .thread-btn {
   width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.7rem;
   text-align: left;
   border: 1px solid transparent;
-  border-radius: 0.75rem;
+  border-radius: 0.8rem;
   padding: 0.7rem 0.75rem;
   background: rgba(16, 20, 26, 0.4);
   color: var(--lh-ink);
@@ -414,15 +493,20 @@ strong {
   background: var(--lh-accent-soft);
 }
 
-.thread-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  align-items: center;
+.avatar {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(126, 184, 164, 0.14);
+  color: var(--lh-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
 }
 
-.thread-top strong {
-  font-size: 0.9rem;
+.contact-name {
+  font-size: 0.95rem;
   font-weight: 750;
 }
 
@@ -437,25 +521,13 @@ strong {
   text-align: center;
 }
 
-.meta,
-.preview,
 .hint {
-  margin-top: 0.25rem;
-  color: var(--lh-muted);
-  font-size: 0.78rem;
-  line-height: 1.4;
-}
-
-.preview {
-  color: var(--lh-faint);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.hint {
+  margin: 0;
   padding: 0.85rem 0.35rem;
+  color: var(--lh-muted);
+  font-size: 0.8rem;
   font-style: italic;
+  line-height: 1.4;
 }
 
 .message-pane {
@@ -548,14 +620,18 @@ time {
 }
 
 .panel-enter-active,
-.panel-leave-active {
+.panel-leave-active,
+.notice-enter-active,
+.notice-leave-active {
   transition:
     opacity 0.18s ease,
     transform 0.18s ease;
 }
 
 .panel-enter-from,
-.panel-leave-to {
+.panel-leave-to,
+.notice-enter-from,
+.notice-leave-to {
   opacity: 0;
   transform: translateY(10px) scale(0.98);
 }
@@ -566,7 +642,8 @@ time {
     bottom: 0.85rem;
   }
 
-  .chat-panel {
+  .chat-panel,
+  .notice-stack {
     width: min(22.5rem, calc(100vw - 1.2rem));
   }
 }
