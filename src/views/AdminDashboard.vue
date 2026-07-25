@@ -48,65 +48,131 @@
         <div class="dash-section-label">
           <div>
             <h2 id="admin-review">Review &amp; assign</h2>
-            <p>Consecutive times become one class. Assign one teacher to the full session.</p>
+            <p>Work the pending queue, or open past reviews from the sidebar.</p>
           </div>
         </div>
 
         <section class="review-workspace">
-          <aside class="review-sidebar" aria-label="Pending scheduling requests">
+          <aside class="review-sidebar" aria-label="Review sections">
             <div class="brand-block">
-              <p class="kicker">Queue</p>
-              <h2>Pending</h2>
-              <p class="side-copy">Each item is one class session waiting for a teacher.</p>
+              <p class="kicker">Review</p>
+              <h2>Assign</h2>
+              <p class="side-copy">Pending sessions and previously decided reviews.</p>
             </div>
 
-            <p v-if="loadingRequests" class="hint side-hint">Loading requests…</p>
-            <p v-else-if="!requests.length" class="hint side-hint">No pending requests right now.</p>
-            <ul v-else class="request-list side-list">
-              <li v-for="request in requests" :key="request.id">
-                <button
-                  type="button"
-                  class="request-btn"
-                  :class="{ active: selected?.request.id === request.id }"
-                  @click="openRequest(request.id)"
-                >
-                  <div class="request-top">
-                    <strong>{{ request.student?.fullName || 'Student' }}</strong>
-                    <span class="status">{{ request.status }}</span>
-                  </div>
-                  <p>
-                    {{
-                      request.slots.length
-                        ? `${formatDate(request.slots[0].preferredDate)} · ${formatRequestWindow(request.slots)}`
-                        : 'Class session'
-                    }}
-                  </p>
-                  <time>{{ formatDateTime(request.createdAt) }}</time>
-                </button>
-              </li>
-            </ul>
+            <nav class="side-nav" role="tablist" aria-orientation="vertical">
+              <button
+                type="button"
+                role="tab"
+                class="side-link"
+                :class="{ active: reviewView === 'queue' }"
+                :aria-selected="reviewView === 'queue'"
+                @click="reviewView = 'queue'"
+              >
+                <span class="side-label">Queue</span>
+                <span class="side-badge">{{ requests.length }}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                class="side-link"
+                :class="{ active: reviewView === 'past' }"
+                :aria-selected="reviewView === 'past'"
+                @click="reviewView = 'past'"
+              >
+                <span class="side-label">Past reviews</span>
+                <span class="side-badge">{{ pastRequests.length }}</span>
+              </button>
+            </nav>
+
+            <p class="nav-group">{{ reviewView === 'queue' ? 'Waiting' : 'History' }}</p>
+
+            <template v-if="reviewView === 'queue'">
+              <p v-if="loadingRequests" class="hint side-hint">Loading queue…</p>
+              <p v-else-if="!requests.length" class="hint side-hint">No pending requests right now.</p>
+              <ul v-else class="request-list side-list">
+                <li v-for="request in requests" :key="request.id">
+                  <button
+                    type="button"
+                    class="request-btn"
+                    :class="{ active: selected?.request.id === request.id }"
+                    @click="openRequest(request.id)"
+                  >
+                    <div class="request-top">
+                      <strong>{{ request.student?.fullName || 'Student' }}</strong>
+                      <span class="status pending">{{ request.status }}</span>
+                    </div>
+                    <p>
+                      {{
+                        request.slots.length
+                          ? `${formatDate(request.slots[0].preferredDate)} · ${formatRequestWindow(request.slots)}`
+                          : 'Class session'
+                      }}
+                    </p>
+                    <time>{{ formatDateTime(request.createdAt) }}</time>
+                  </button>
+                </li>
+              </ul>
+            </template>
+
+            <template v-else>
+              <p v-if="loadingPast" class="hint side-hint">Loading past reviews…</p>
+              <p v-else-if="!pastRequests.length" class="hint side-hint">No past reviews yet.</p>
+              <ul v-else class="request-list side-list">
+                <li v-for="request in pastRequests" :key="request.id">
+                  <button
+                    type="button"
+                    class="request-btn"
+                    :class="{ active: selected?.request.id === request.id }"
+                    @click="openRequest(request.id)"
+                  >
+                    <div class="request-top">
+                      <strong>{{ request.student?.fullName || 'Student' }}</strong>
+                      <span class="status" :class="request.status">{{ request.status }}</span>
+                    </div>
+                    <p>
+                      {{
+                        request.assignedTeacher
+                          ? request.assignedTeacher.fullName
+                          : request.slots.length
+                            ? `${formatDate(request.slots[0].preferredDate)} · ${formatRequestWindow(request.slots)}`
+                            : 'Past review'
+                      }}
+                    </p>
+                    <time>{{ formatDateTime(request.assignedAt || request.createdAt) }}</time>
+                  </button>
+                </li>
+              </ul>
+            </template>
           </aside>
 
           <div class="review-main">
             <header class="main-head">
               <div>
-                <p class="kicker">Review</p>
-                <h3>{{ selected?.request.student?.fullName || 'Request review' }}</h3>
-                <p class="main-copy">
-                  {{
-                    selected
-                      ? 'Assign one teacher who is free for the full class block.'
-                      : 'Select a class booking from the sidebar to begin.'
-                  }}
-                </p>
+                <p class="kicker">{{ reviewMainKicker }}</p>
+                <h3>{{ selected?.request.student?.fullName || reviewMainTitle }}</h3>
+                <p class="main-copy">{{ reviewMainCopy }}</p>
               </div>
-              <p v-if="requests.length" class="queue-count">{{ requests.length }} in queue</p>
+              <p v-if="reviewView === 'queue' && requests.length" class="queue-count">
+                {{ requests.length }} in queue
+              </p>
+              <p v-else-if="reviewView === 'past' && pastRequests.length" class="past-count">
+                {{ pastRequests.length }} reviewed
+              </p>
             </header>
 
             <p v-if="loadingReview" class="hint">Loading availability…</p>
             <div v-else-if="!selected" class="empty-state">
-              <p class="empty-title">No request selected</p>
-              <p class="hint">Choose a class booking from the left to assign a teacher.</p>
+              <p class="empty-title">
+                {{ reviewView === 'queue' ? 'No request selected' : 'No past review selected' }}
+              </p>
+              <p class="hint">
+                {{
+                  reviewView === 'queue'
+                    ? 'Choose a pending booking from the left to assign a teacher.'
+                    : 'Choose a past review from the left to inspect the decision.'
+                }}
+              </p>
             </div>
 
             <div v-else class="review">
@@ -222,56 +288,58 @@
                 </ul>
               </div>
 
-              <div class="summary">
-                <p>
-                  <strong>{{ selected.fullyAvailableTeachers.length }}</strong>
-                  teacher(s) free for the full class block
-                  <span class="muted">· {{ selected.teacherCount }} total teachers</span>
-                </p>
-                <ul v-if="selected.fullyAvailableTeachers.length" class="teacher-chips">
-                  <li v-for="teacher in selected.fullyAvailableTeachers" :key="teacher.id">
-                    {{ teacher.fullName }}
-                  </li>
-                </ul>
-                <p v-else class="hint">No teacher is free for the full booked session.</p>
-              </div>
-
-              <div
-                v-for="slot in selected.slotAvailability"
-                :key="`${slot.preferredDate}-${slot.timeSlot}`"
-                class="slot-card"
-              >
-                <h4>{{ formatDate(slot.preferredDate) }} · {{ formatSlot(slot.timeSlot) }}</h4>
-
-                <p class="field-label">Available teachers</p>
-                <ul v-if="slot.availableTeachers.length" class="teacher-list">
-                  <li v-for="teacher in slot.availableTeachers" :key="teacher.id">
-                    <span>
+              <template v-if="selected.request.status === 'pending'">
+                <div class="summary">
+                  <p>
+                    <strong>{{ selected.fullyAvailableTeachers.length }}</strong>
+                    teacher(s) free for the full class block
+                    <span class="muted">· {{ selected.teacherCount }} total teachers</span>
+                  </p>
+                  <ul v-if="selected.fullyAvailableTeachers.length" class="teacher-chips">
+                    <li v-for="teacher in selected.fullyAvailableTeachers" :key="teacher.id">
                       {{ teacher.fullName }}
-                      <span class="muted">
-                        · {{ teacher.subjectExpertise || 'General' }}
-                        · load {{ teacher.workload ?? 0 }}
-                      </span>
-                    </span>
-                  </li>
-                </ul>
-                <p v-else class="hint">No teachers available for this slot.</p>
+                    </li>
+                  </ul>
+                  <p v-else class="hint">No teacher is free for the full booked session.</p>
+                </div>
 
-                <template v-if="slot.unavailableTeachers.length">
-                  <p class="field-label conflict-label">Unavailable (schedule conflict)</p>
-                  <ul class="teacher-list conflicts">
-                    <li v-for="teacher in slot.unavailableTeachers" :key="teacher.id">
+                <div
+                  v-for="slot in selected.slotAvailability"
+                  :key="`${slot.preferredDate}-${slot.timeSlot}`"
+                  class="slot-card"
+                >
+                  <h4>{{ formatDate(slot.preferredDate) }} · {{ formatSlot(slot.timeSlot) }}</h4>
+
+                  <p class="field-label">Available teachers</p>
+                  <ul v-if="slot.availableTeachers.length" class="teacher-list">
+                    <li v-for="teacher in slot.availableTeachers" :key="teacher.id">
                       <span>
                         {{ teacher.fullName }}
-                        <span class="muted">@{{ teacher.username }}</span>
-                      </span>
-                      <span class="conflict">
-                        Busy: {{ teacher.conflict.title }}
+                        <span class="muted">
+                          · {{ teacher.subjectExpertise || 'General' }}
+                          · load {{ teacher.workload ?? 0 }}
+                        </span>
                       </span>
                     </li>
                   </ul>
-                </template>
-              </div>
+                  <p v-else class="hint">No teachers available for this slot.</p>
+
+                  <template v-if="slot.unavailableTeachers.length">
+                    <p class="field-label conflict-label">Unavailable (schedule conflict)</p>
+                    <ul class="teacher-list conflicts">
+                      <li v-for="teacher in slot.unavailableTeachers" :key="teacher.id">
+                        <span>
+                          {{ teacher.fullName }}
+                          <span class="muted">@{{ teacher.username }}</span>
+                        </span>
+                        <span class="conflict">
+                          Busy: {{ teacher.conflict.title }}
+                        </span>
+                      </li>
+                    </ul>
+                  </template>
+                </div>
+              </template>
             </div>
 
             <p v-if="successMessage" class="success" role="status">{{ successMessage }}</p>
@@ -391,8 +459,10 @@ const router = useRouter()
 
 const {
   requests,
+  pastRequests,
   selected,
   loadingRequests,
+  loadingPast,
   loadingReview,
   assigning,
   error,
@@ -407,14 +477,36 @@ const {
 
 const successMessage = ref('')
 const errorMessage = ref('')
+const reviewView = ref<'queue' | 'past'>('queue')
 
 type AdminSection = 'review' | 'inbox' | 'records' | 'monitoring' | 'users'
+
+const reviewMainKicker = computed(() => {
+  if (!selected.value) return reviewView.value === 'queue' ? 'Queue' : 'History'
+  return selected.value.request.status === 'pending' ? 'Assign' : 'Past review'
+})
+
+const reviewMainTitle = computed(() =>
+  reviewView.value === 'queue' ? 'Request review' : 'Past review',
+)
+
+const reviewMainCopy = computed(() => {
+  if (!selected.value) {
+    return reviewView.value === 'queue'
+      ? 'Select a pending booking from the sidebar to begin.'
+      : 'Select a past review to see who was assigned and when.'
+  }
+  if (selected.value.request.status === 'pending') {
+    return 'Assign one teacher who is free for the full class block.'
+  }
+  return 'This booking was already reviewed. Details below are read-only.'
+})
 
 const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
     id: 'review',
     label: 'Review & assign',
-    intro: 'Consecutive booked times become one class with one teacher.',
+    intro: 'Pending queue and past reviews — assign teachers, then revisit decisions.',
   },
   {
     id: 'inbox',
@@ -520,7 +612,11 @@ async function openRequest(id: number) {
 async function openFromNotification(item: AppNotification) {
   if (item.relatedRequestId) {
     activeSection.value = 'review'
+    reviewView.value = 'queue'
     await openRequest(item.relatedRequestId)
+    if (selected.value && selected.value.request.status !== 'pending') {
+      reviewView.value = 'past'
+    }
   }
 }
 
@@ -545,6 +641,7 @@ async function assign(teacherId: number) {
         `Assigned ${result.request.assignedTeacher?.fullName || 'teacher'} and approved the request.`) +
       calendarNote +
       emailNote
+    reviewView.value = 'past'
   } catch (err) {
     if (axios.isAxiosError(err)) {
       errorMessage.value = err.response?.data?.message || 'Could not assign teacher'
@@ -566,7 +663,7 @@ async function refreshMonitoring() {
 onMounted(async () => {
   await Promise.all([
     monitoringStore.fetchOverview(),
-    adminStore.fetchPendingRequests(),
+    adminStore.fetchReviewLists(),
     notificationsStore.fetchMine(),
     lessonReportsStore.fetchMine(),
     studentFeedbackStore.fetchMine(),
@@ -690,6 +787,75 @@ strong {
   margin: 0.15rem 0.2rem 0;
 }
 
+.side-nav {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.side-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--lh-muted);
+  padding: 0.65rem 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: 'Manrope', sans-serif;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.side-link:hover {
+  background: rgba(231, 236, 239, 0.05);
+  color: var(--lh-ink);
+}
+
+.side-link.active {
+  background: var(--lh-accent-soft);
+  border-color: rgba(126, 184, 164, 0.35);
+  color: var(--lh-accent);
+}
+
+.side-label {
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.side-badge {
+  min-width: 1.35rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(231, 236, 239, 0.08);
+  color: var(--lh-faint);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-family: 'Manrope', sans-serif;
+}
+
+.side-link.active .side-badge {
+  background: rgba(126, 184, 164, 0.18);
+  color: var(--lh-accent);
+}
+
+.nav-group {
+  margin: 0.15rem 0 0 0.35rem;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lh-faint);
+}
+
 .review-main {
   min-width: 0;
   padding: 1.15rem 1.2rem 1.25rem;
@@ -711,16 +877,27 @@ strong {
   margin-top: 0.15rem;
 }
 
-.queue-count {
-  color: var(--lh-warm);
+.queue-count,
+.past-count {
   font-size: 0.8rem;
   font-weight: 700;
   white-space: nowrap;
   margin-top: 0.35rem;
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
+  font-family: 'Manrope', sans-serif;
+}
+
+.queue-count {
+  color: var(--lh-warm);
   border: 1px solid rgba(242, 183, 5, 0.28);
   background: var(--lh-warm-soft);
+}
+
+.past-count {
+  color: var(--lh-accent);
+  border: 1px solid rgba(126, 184, 164, 0.28);
+  background: var(--lh-accent-soft);
 }
 
 .empty-state {
@@ -748,9 +925,10 @@ strong {
 
 .side-list {
   gap: 0.35rem;
-  max-height: min(52vh, 28rem);
+  max-height: min(42vh, 22rem);
   overflow: auto;
   padding-right: 0.15rem;
+  align-content: start;
 }
 
 .notice-btn,
@@ -798,12 +976,27 @@ strong {
 
 .status {
   text-transform: capitalize;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 800;
   color: var(--lh-warm);
   background: var(--lh-warm-soft);
   padding: 0.15rem 0.4rem;
   border-radius: 0.35rem;
+}
+
+.status.pending {
+  color: var(--lh-warm);
+  background: var(--lh-warm-soft);
+}
+
+.status.approved {
+  color: var(--lh-accent);
+  background: var(--lh-accent-soft);
+}
+
+.status.rejected {
+  color: var(--lh-danger);
+  background: var(--lh-danger-soft);
 }
 
 .hint {
