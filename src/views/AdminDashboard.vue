@@ -48,18 +48,21 @@
         <div class="dash-section-label">
           <div>
             <h2 id="admin-review">Review &amp; assign</h2>
-            <p>Approve or decline student requests, then match confirmed sessions to a teacher.</p>
+            <p>Pick a pending request in the sidebar, then assign a teacher in the main pane.</p>
           </div>
         </div>
-        <div class="layout">
-          <section class="panel requests-panel">
-            <div class="section-head">
-              <h2>Pending scheduling requests</h2>
+
+        <section class="review-workspace">
+          <aside class="review-sidebar" aria-label="Pending scheduling requests">
+            <div class="brand-block">
+              <p class="kicker">Queue</p>
+              <h2>Pending</h2>
+              <p class="side-copy">Student schedule requests waiting for teacher assignment.</p>
             </div>
 
-            <p v-if="loadingRequests" class="hint">Loading requests...</p>
-            <p v-else-if="!requests.length" class="hint">No pending requests right now.</p>
-            <ul v-else class="request-list">
+            <p v-if="loadingRequests" class="hint side-hint">Loading requests…</p>
+            <p v-else-if="!requests.length" class="hint side-hint">No pending requests right now.</p>
+            <ul v-else class="request-list side-list">
               <li v-for="request in requests" :key="request.id">
                 <button
                   type="button"
@@ -76,21 +79,32 @@
                 </button>
               </li>
             </ul>
-          </section>
+          </aside>
 
-          <section class="panel review-panel">
-            <div class="section-head">
-              <h2>Request review</h2>
+          <div class="review-main">
+            <header class="main-head">
+              <div>
+                <p class="kicker">Review</p>
+                <h3>{{ selected?.request.student?.fullName || 'Request review' }}</h3>
+                <p class="main-copy">
+                  {{
+                    selected
+                      ? 'Match preferred slots to an available teacher.'
+                      : 'Select a pending request from the sidebar to begin.'
+                  }}
+                </p>
+              </div>
+              <p v-if="requests.length" class="queue-count">{{ requests.length }} in queue</p>
+            </header>
+
+            <p v-if="loadingReview" class="hint">Loading availability…</p>
+            <div v-else-if="!selected" class="empty-state">
+              <p class="empty-title">No request selected</p>
+              <p class="hint">Choose a student request from the left to review availability.</p>
             </div>
-
-            <p v-if="loadingReview" class="hint">Loading availability...</p>
-            <p v-else-if="!selected" class="hint">
-              Select a request to review the student’s preferred schedule and available teachers.
-            </p>
 
             <div v-else class="review">
               <div class="student-block">
-                <h3>{{ selected.request.student?.fullName }}</h3>
                 <p>@{{ selected.request.student?.username }} · {{ selected.request.student?.email }}</p>
                 <p v-if="selected.request.remarks" class="remarks">
                   Remarks: {{ selected.request.remarks }}
@@ -120,7 +134,7 @@
               </div>
 
               <div v-if="selected.confirmedSchedule" class="confirmed-schedule">
-                <h3>Confirmed class schedule</h3>
+                <h4>Confirmed class schedule</h4>
                 <p><strong>{{ selected.confirmedSchedule.title }}</strong></p>
                 <p>
                   {{ formatDate(selected.confirmedSchedule.classDate) }}
@@ -153,7 +167,7 @@
 
               <div v-if="selected.request.status === 'pending'" class="assignment">
                 <div class="section-head">
-                  <h3>Assign teacher</h3>
+                  <h4>Assign teacher</h4>
                 </div>
                 <p class="hint assign-hint">
                   Ranked by availability, workload, subject expertise, and student preference.
@@ -258,8 +272,8 @@
             <p v-if="errorMessage || error" class="error" role="alert">
               {{ errorMessage || error }}
             </p>
-          </section>
-        </div>
+          </div>
+        </section>
       </section>
 
       <section
@@ -414,7 +428,7 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
     id: 'review',
     label: 'Review & assign',
-    intro: 'Confirm schedule requests and match sessions to the right teacher.',
+    intro: 'Queue on the left · request details and teacher assignment on the right.',
   },
   {
     id: 'inbox',
@@ -574,7 +588,6 @@ strong {
 }
 
 .text-btn,
-.request-btn,
 .notice-btn {
   border: 1px solid var(--lh-line);
   background: var(--lh-panel-solid);
@@ -582,24 +595,21 @@ strong {
   cursor: pointer;
 }
 
+.request-btn {
+  cursor: pointer;
+  font: inherit;
+}
+
 .text-btn:hover {
   border-color: var(--lh-line-strong);
 }
 
-.panel h2,
-.review h3,
-.slot-card h4 {
+.slot-card h4,
+.confirmed-schedule h4,
+.assignment h4 {
   font-family: 'Fraunces', Georgia, serif;
   font-weight: 550;
   color: var(--lh-accent);
-}
-
-.panel {
-  padding: 1.2rem 1.15rem;
-  border: 1px solid var(--lh-line);
-  border-radius: 1rem;
-  background: var(--lh-panel);
-  backdrop-filter: blur(10px);
 }
 
 .section-head {
@@ -610,27 +620,6 @@ strong {
   margin-bottom: 0.75rem;
 }
 
-.section-head h2 {
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.badge {
-  display: inline-grid;
-  place-items: center;
-  min-width: 1.35rem;
-  height: 1.35rem;
-  padding: 0 0.35rem;
-  border-radius: 0.4rem;
-  background: var(--lh-warm-soft);
-  color: var(--lh-warm);
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
 .text-btn {
   border-radius: 0.55rem;
   padding: 0.4rem 0.65rem;
@@ -638,10 +627,114 @@ strong {
   font-weight: 700;
 }
 
-.layout {
+.review-workspace {
   display: grid;
-  grid-template-columns: minmax(16rem, 0.9fr) minmax(0, 1.4fr);
+  grid-template-columns: 15.5rem minmax(0, 1fr);
+  min-height: 34rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 1.1rem;
+  overflow: hidden;
+  background: var(--lh-panel);
+  backdrop-filter: blur(10px);
+  animation: rise 0.45s ease both;
+}
+
+.review-sidebar {
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
+  padding: 1.15rem 0.9rem 1.1rem;
+  border-right: 1px solid var(--lh-line);
+  background: linear-gradient(180deg, rgba(36, 44, 54, 0.72), rgba(20, 25, 31, 0.35));
+}
+
+.brand-block h2,
+.main-head h3 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-weight: 550;
+  color: var(--lh-ink);
+  margin: 0;
+}
+
+.brand-block h2 {
+  font-size: 1.35rem;
+  margin-top: 0.15rem;
+}
+
+.kicker {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lh-faint);
+  margin: 0;
+}
+
+.side-copy,
+.main-copy,
+.empty-title,
+.queue-count {
+  font-family: 'Manrope', sans-serif;
+}
+
+.side-copy,
+.main-copy {
+  margin-top: 0.4rem;
+  color: var(--lh-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.side-hint {
+  margin: 0.15rem 0.2rem 0;
+}
+
+.review-main {
+  min-width: 0;
+  padding: 1.15rem 1.2rem 1.25rem;
+  background:
+    radial-gradient(ellipse 55% 40% at 100% 0%, rgba(126, 184, 164, 0.08), transparent 55%),
+    rgba(14, 18, 22, 0.35);
+}
+
+.main-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.main-head h3 {
+  font-size: 1.4rem;
+  margin-top: 0.15rem;
+}
+
+.queue-count {
+  color: var(--lh-warm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  margin-top: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(242, 183, 5, 0.28);
+  background: var(--lh-warm-soft);
+}
+
+.empty-state {
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.95rem;
+  background: rgba(16, 20, 26, 0.35);
+}
+
+.empty-title {
+  margin: 0;
+  color: var(--lh-ink);
+  font-weight: 750;
 }
 
 .notice-list,
@@ -653,14 +746,31 @@ strong {
   gap: 0.5rem;
 }
 
+.side-list {
+  gap: 0.35rem;
+  max-height: min(52vh, 28rem);
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
 .notice-btn,
 .request-btn {
   width: 100%;
   text-align: left;
-  border-radius: 0.75rem;
-  padding: 0.75rem 0.8rem;
+  border-radius: 0.7rem;
+  padding: 0.65rem 0.7rem;
   display: grid;
   gap: 0.2rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--lh-ink);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.request-btn:hover {
+  background: rgba(231, 236, 239, 0.05);
 }
 
 .notice-list li.unread .notice-btn {
@@ -671,11 +781,11 @@ strong {
 .notice-btn span,
 .request-btn p {
   color: var(--lh-muted);
-  font-size: 0.9rem;
+  font-size: 0.84rem;
 }
 
 .request-btn.active {
-  border-color: rgba(126, 184, 164, 0.45);
+  border-color: rgba(126, 184, 164, 0.35);
   background: var(--lh-accent-soft);
 }
 
@@ -748,10 +858,9 @@ strong {
   gap: 0.2rem;
 }
 
-.confirmed-schedule h3 {
-  font-family: 'Fraunces', Georgia, serif;
+.confirmed-schedule h4 {
   font-size: 1.05rem;
-  color: var(--lh-accent);
+  margin: 0 0 0.15rem;
 }
 
 .meet-link {
@@ -775,10 +884,9 @@ strong {
   margin-bottom: 0;
 }
 
-.assignment h3 {
-  font-family: 'Fraunces', Georgia, serif;
+.assignment h4 {
   font-size: 1.1rem;
-  color: var(--lh-accent);
+  margin: 0;
 }
 
 .assign-hint {
@@ -954,10 +1062,31 @@ time {
   align-items: stretch;
 }
 
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 900px) {
-  .layout,
+  .review-workspace,
   .records-workspace {
     grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .review-sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--lh-line);
+  }
+
+  .side-list {
+    max-height: none;
   }
 }
 </style>
