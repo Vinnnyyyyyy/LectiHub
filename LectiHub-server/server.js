@@ -24,6 +24,7 @@ app.use('/api/student-feedback', require('./routes/studentFeedbackRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/availability', require('./routes/availabilityRoutes'));
+app.use('/api/chat', require('./routes/chatRoutes'));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

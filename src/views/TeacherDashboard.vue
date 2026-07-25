@@ -181,6 +181,8 @@
         </div>
       </section>
     </main>
+
+    <ClassChatWidget />
   </div>
 </template>
 
@@ -209,6 +211,7 @@ import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue'
 import TeacherAvailabilityPanel from '../components/TeacherAvailabilityPanel.vue'
+import ClassChatWidget from '../components/ClassChatWidget.vue'
 
 type TeacherSection = 'today' | 'conduct' | 'records' | 'calendar'
 
