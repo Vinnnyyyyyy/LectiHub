@@ -125,50 +125,22 @@
         <div class="dash-section-label">
           <div>
             <h2 id="student-history">History &amp; feedback</h2>
-            <p>Past lessons, teacher reports, and feedback after each report.</p>
+            <p>Use the sidebar to open pending feedback, lessons, reports, or archived history.</p>
           </div>
         </div>
-        <p v-if="feedbackMessage" class="join-feedback" role="status">{{ feedbackMessage }}</p>
-        <p v-if="feedbackError" class="join-feedback error" role="alert">{{ feedbackError }}</p>
-        <div class="dash-grid-2">
-          <UpcomingClassesPanel
-            title="Lesson history"
-            subtitle="Past lessons with attendance notes and recordings when available."
-            empty-text="No lessons recorded yet."
-            :items="past"
-            :loading="loadingClasses"
-            show-teacher
-          />
-          <LessonReportsPanel
-            title="Lesson reports"
-            subtitle="Reports submitted by your teacher after each class."
-            empty-text="No lesson reports yet."
-            :items="lessonReports"
-            :loading="loadingReports"
-            show-teacher
-          />
-          <StudentFeedbackFormPanel
-            :reports="lessonReports"
-            :loading="loadingReports"
-            :submitting-id="feedbackSubmittingId"
-            @submit="handleSubmitFeedback"
-          />
-          <StudentFeedbackPanel
-            title="Your submitted feedback"
-            subtitle="Feedback you have shared after lesson reports."
-            empty-text="No feedback submitted yet."
-            :items="myFeedback"
-            :loading="loadingFeedback"
-            show-teacher
-          />
-        </div>
-        <ClassHistoryPanel
-          title="Learning history"
-          subtitle="Classes archived after both the lesson report and your feedback are submitted."
-          empty-text="No archived learning history yet."
-          :items="archivedHistory"
-          :loading="loadingHistory"
-          show-teacher
+        <StudentHistoryWorkspace
+          :past="past"
+          :lesson-reports="lessonReports"
+          :my-feedback="myFeedback"
+          :archived-history="archivedHistory"
+          :loading-classes="loadingClasses"
+          :loading-reports="loadingReports"
+          :loading-feedback="loadingFeedback"
+          :loading-history="loadingHistory"
+          :feedback-submitting-id="feedbackSubmittingId"
+          :feedback-message="feedbackMessage"
+          :feedback-error="feedbackError"
+          @submit-feedback="handleSubmitFeedback"
         />
       </section>
     </main>
@@ -191,12 +163,9 @@ import { useCalendarStore } from '../stores/calendar'
 import { useAvailabilityStore } from '../stores/availability'
 import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
-import LessonReportsPanel from '../components/LessonReportsPanel.vue'
-import StudentFeedbackFormPanel from '../components/StudentFeedbackFormPanel.vue'
-import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
-import ClassHistoryPanel from '../components/ClassHistoryPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
+import StudentHistoryWorkspace from '../components/StudentHistoryWorkspace.vue'
 
 type StudentSection = 'schedule' | 'now' | 'calendar' | 'history'
 
@@ -219,7 +188,7 @@ const navItems: { id: StudentSection; label: string; intro: string }[] = [
   {
     id: 'history',
     label: 'History & feedback',
-    intro: 'Past lessons, teacher reports, and feedback after each report.',
+    intro: 'Use the sidebar to open pending feedback, lessons, reports, or archived history.',
   },
 ]
 
