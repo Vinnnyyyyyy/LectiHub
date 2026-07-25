@@ -312,29 +312,14 @@
         <div class="dash-section-label">
           <div>
             <h2 id="admin-records">Reports &amp; feedback</h2>
-            <p>Teacher reports on the left. Student feedback on the right — reviewed side by side.</p>
+            <p>Each lesson teacher report and student feedback stay aligned in the same row.</p>
           </div>
         </div>
-        <div class="records-workspace">
-          <LessonReportsPanel
-            title="Lesson reports"
-            subtitle="What teachers submitted after each class."
-            empty-text="Reports appear here once a teacher completes a lesson write-up."
-            :items="lessonReports"
-            :loading="loadingReports"
-            show-teacher
-            show-student
-          />
-          <StudentFeedbackPanel
-            title="Student feedback"
-            subtitle="How students rated the lesson and learning experience."
-            empty-text="Feedback appears here after a student responds to a lesson report."
-            :items="studentFeedback"
-            :loading="loadingFeedback"
-            show-teacher
-            show-student
-          />
-        </div>
+        <AdminReportsFeedbackWorkspace
+          :reports="lessonReports"
+          :feedback="studentFeedback"
+          :loading="loadingReports || loadingFeedback"
+        />
       </section>
 
       <section
@@ -392,8 +377,7 @@ import { useLessonReportsStore } from '../stores/lessonReports'
 import { useStudentFeedbackStore } from '../stores/studentFeedback'
 import { useAdminMonitoringStore } from '../stores/adminMonitoring'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
-import LessonReportsPanel from '../components/LessonReportsPanel.vue'
-import StudentFeedbackPanel from '../components/StudentFeedbackPanel.vue'
+import AdminReportsFeedbackWorkspace from '../components/AdminReportsFeedbackWorkspace.vue'
 import AdminMonitoringPanel from '../components/AdminMonitoringPanel.vue'
 import AdminUsersPanel from '../components/AdminUsersPanel.vue'
 
@@ -440,7 +424,7 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
   {
     id: 'records',
     label: 'Reports & feedback',
-    intro: 'Teacher reports on the left. Student feedback on the right — reviewed side by side.',
+    intro: 'Each lesson teacher report and student feedback stay aligned in the same row.',
   },
   {
     id: 'monitoring',
@@ -1091,13 +1075,6 @@ time {
   font-size: 0.9rem;
 }
 
-.records-workspace {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  align-items: stretch;
-}
-
 @keyframes rise {
   from {
     opacity: 0;
@@ -1110,8 +1087,7 @@ time {
 }
 
 @media (max-width: 900px) {
-  .review-workspace,
-  .records-workspace {
+  .review-workspace {
     grid-template-columns: 1fr;
     min-height: 0;
   }
