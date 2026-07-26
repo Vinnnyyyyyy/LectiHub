@@ -2,6 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
+if (!process.env.JWT_SECRET) {
+  console.error(
+    [
+      'Missing JWT_SECRET in LectiHub-server/.env',
+      'Fix: run  npm run setup:env  (or copy .env.example to .env), then restart.',
+    ].join('\n'),
+  );
+  process.exit(1);
+}
+
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
