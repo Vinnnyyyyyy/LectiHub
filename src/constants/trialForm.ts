@@ -3,6 +3,7 @@ import { TIME_SLOTS } from './timeSlots'
 export const TRIAL_DURATION_MINUTES = 30
 
 export const TRIAL_PROGRAMS = [
+  'Data Analytics',
   'English Conversation',
   'Math Tutoring',
   'Coding Basics',
