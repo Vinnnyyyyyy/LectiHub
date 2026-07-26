@@ -36,6 +36,9 @@ function getApiKey() {
 }
 
 function buildThirdpartyPayload(trial) {
+  // Extrafield codes must match Dolibarr Setup → Modules → Third parties → Extra fields
+  // (API returns options_<code>). This Dolibarr instance uses:
+  // program, pref_date, pref_time, video_platform
   return {
     name: trial.name,
     email: trial.email,
@@ -43,8 +46,8 @@ function buildThirdpartyPayload(trial) {
     code_client: '-1', // Auto-generate customer code
     array_options: {
       options_program: trial.program,
-      options_preferred_date: trial.preferredDate,
-      options_time_slot: trial.preferredSlot,
+      options_pref_date: trial.preferredDate,
+      options_pref_time: trial.preferredSlot,
       options_video_platform: trial.videoPlatformLabel,
     },
   };
