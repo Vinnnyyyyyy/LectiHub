@@ -32,6 +32,16 @@
         placeholder="alex@email.com"
       />
 
+      <label for="trial-phone">Phone <span class="optional">(optional)</span></label>
+      <input
+        id="trial-phone"
+        v-model="phone"
+        type="tel"
+        maxlength="40"
+        autocomplete="tel"
+        placeholder="+1 555 123 4567"
+      />
+
       <fieldset class="entity-field">
         <legend>Company / Individual</legend>
         <div class="entity-options" role="radiogroup" aria-label="Company or Individual">
@@ -130,6 +140,7 @@ import {
 
 const name = ref('')
 const email = ref('')
+const phone = ref('')
 const entityType = ref<TrialEntityType>('individual')
 const program = ref('')
 const preferredDate = ref('')
@@ -156,6 +167,7 @@ async function handleSubmit() {
     await api.post('/trial-requests', {
       name: name.value.trim(),
       email: email.value.trim(),
+      phone: phone.value.trim() || undefined,
       entityType: entityType.value,
       program: program.value,
       preferredDate: preferredDate.value,
@@ -264,8 +276,14 @@ button,
 .switch,
 .success-kicker,
 .back-link,
-.entity-option {
+.entity-option,
+.optional {
   font-family: 'Manrope', sans-serif;
+}
+
+.optional {
+  font-weight: 500;
+  color: var(--lh-faint);
 }
 
 .lede {

@@ -10,6 +10,11 @@
  * Env (never commit real keys — use LectiHub-server/.env):
  * - DOLIBARR_API_URL  e.g. https://host/dolibarr/api/index.php
  * - DOLIBARR_API_KEY  DOLAPIKEY header value
+ *
+ * This Dolibarr instance uses select extrafields with these option keys:
+ * - program: p1 / p2
+ * - pref_time: slot1 / slot2
+ * - video_platform: zoom / gmeet
  */
 
 function isDolibarrEnabled() {
@@ -35,22 +40,108 @@ function getApiKey() {
   return String(process.env.DOLIBARR_API_KEY || '').trim();
 }
 
+/** Map LectiHub program labels → Dolibarr select keys (Program 1 / Program 2). */
+function mapProgramOption(program) {
+  const value = String(program || '').trim();
+  const byLabel = {
+    'Program 1': 'p1',
+    'Program 2': 'p2',
+    'English Conversation': 'p1',
+    'Math Tutoring': 'p2',
+    'Coding Basics': 'p1',
+    'Exam Prep': 'p2',
+    Other: 'p1',
+  };
+  if (byLabel[value]) return byLabel[value];
+  if (value === 'p1' || value === 'p2') return value;
+  return 'p1';
+}
+
+/**
+ * Map LectiHub 30-min slots → Dolibarr pref_time select keys.
+ * Dolibarr currently only has:
+ *   slot1 = 09:00 - 10:00
+ *   slot2 = 14:00 - 15:00
+ */
+function mapTimeSlotOption(preferredSlot) {
+  const slot = String(preferredSlot || '').trim();
+  if (slot === 'slot1' || slot === 'slot2') return slot;
+  const start = slot.split('-')[0] || '';
+  const hour = Number(String(start).split(':')[0]);
+  if (Number.isFinite(hour) && hour >= 12) return 'slot2';
+  return 'slot1';
+}
+
+/** Map LectiHub video providers → Dolibarr select keys (zoom / gmeet). */
+function mapVideoPlatformOption(videoPlatform, videoPlatformLabel) {
+  const raw = String(videoPlatform || '').toLowerCase().trim();
+  const label = String(videoPlatformLabel || '').toLowerCase().trim();
+  if (raw === 'zoom' || label === 'zoom') return 'zoom';
+  if (
+    raw === 'google_meet' ||
+    raw === 'gmeet' ||
+    label.includes('google meet') ||
+    label === 'gmeet'
+  ) {
+    return 'gmeet';
+  }
+  // Dolibarr select currently only has zoom + gmeet; keep a valid key.
+  if (raw === 'jitsi' || label.includes('jitsi')) return 'gmeet';
+  if (raw === 'digital_samba' || label.includes('samba')) return 'zoom';
+  return 'zoom';
+}
+
+function entityTypentId(entityType) {
+  // Common Dolibarr dictionary: 8 = Private individual, 2 = Company/Group
+  if (entityType === 'company') {
+    return Number(process.env.DOLIBARR_TYPENT_COMPANY || 2);
+  }
+  return Number(process.env.DOLIBARR_TYPENT_INDIVIDUAL || 8);
+}
+
 function buildThirdpartyPayload(trial) {
-  // Extrafield codes must match Dolibarr Setup → Modules → Third parties → Extra fields
-  // (API returns options_<code>). This Dolibarr instance uses:
-  // program, pref_date, pref_time, video_platform
-  return {
+  const entityLabel = trial.entityType === 'company' ? 'Company' : 'Individual';
+  const programKey = mapProgramOption(trial.program);
+  const timeKey = mapTimeSlotOption(trial.preferredSlot);
+  const videoKey = mapVideoPlatformOption(trial.videoPlatform, trial.videoPlatformLabel);
+
+  const note = [
+    'LectiHub free trial (30 minutes)',
+    `Name: ${trial.name}`,
+    `Email: ${trial.email}`,
+    trial.phone ? `Phone: ${trial.phone}` : null,
+    `Company / Individual: ${entityLabel}`,
+    `Program: ${trial.program} (${programKey})`,
+    `Preferred date: ${trial.preferredDate}`,
+    `Preferred time slot: ${trial.preferredSlot} → ${timeKey}`,
+    `Preferred video platform: ${trial.videoPlatformLabel || trial.videoPlatform} (${videoKey})`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const payload = {
     name: trial.name,
+    // Shows in Dolibarr "Alias name" column
+    name_alias: trial.email,
     email: trial.email,
     client: '2', // Prospect
     code_client: '-1', // Auto-generate customer code
+    typent_id: entityTypentId(trial.entityType),
     array_options: {
-      options_program: trial.program,
+      options_program: programKey,
       options_pref_date: trial.preferredDate,
-      options_pref_time: trial.preferredSlot,
-      options_video_platform: trial.videoPlatformLabel,
+      options_pref_time: timeKey,
+      options_video_platform: videoKey,
     },
+    note_public: note,
+    note_private: note,
   };
+
+  if (trial.phone) {
+    payload.phone = trial.phone;
+  }
+
+  return payload;
 }
 
 async function dolibarrFetch(path, { method = 'GET', body } = {}) {
@@ -161,5 +252,8 @@ module.exports = {
   isDolibarrEnabled,
   getDolibarrMode,
   buildThirdpartyPayload,
+  mapProgramOption,
+  mapTimeSlotOption,
+  mapVideoPlatformOption,
   submitFreeTrialToDolibarr,
 };
