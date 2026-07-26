@@ -22,6 +22,7 @@ const TIME_SLOTS = [
 ];
 
 const PROGRAMS = [
+  'Data Analytics',
   'English Conversation',
   'Math Tutoring',
   'Coding Basics',
