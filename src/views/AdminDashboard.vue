@@ -434,6 +434,22 @@
       </section>
 
       <section
+        v-show="activeSection === 'payments'"
+        id="panel-payments"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-payments"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="admin-payments">Payments</h2>
+            <p>Student payment invoice receipts — record, confirm, or void.</p>
+          </div>
+        </div>
+        <AdminPaymentReceiptsPanel />
+      </section>
+
+      <section
         v-show="activeSection === 'users'"
         id="panel-users"
         class="dash-section"
@@ -470,6 +486,7 @@ import NotificationsPanel from '../components/NotificationsPanel.vue'
 import AdminReportsFeedbackWorkspace from '../components/AdminReportsFeedbackWorkspace.vue'
 import AdminMonitoringPanel from '../components/AdminMonitoringPanel.vue'
 import AdminUsersPanel from '../components/AdminUsersPanel.vue'
+import AdminPaymentReceiptsPanel from '../components/AdminPaymentReceiptsPanel.vue'
 
 const authStore = useAuthStore()
 const adminStore = useAdminScheduleStore()
@@ -501,7 +518,7 @@ const successMessage = ref('')
 const errorMessage = ref('')
 const reviewView = ref<'queue' | 'past'>('queue')
 
-type AdminSection = 'review' | 'inbox' | 'records' | 'monitoring' | 'users'
+type AdminSection = 'review' | 'inbox' | 'records' | 'monitoring' | 'payments' | 'users'
 
 const reviewMainKicker = computed(() => {
   if (!selected.value) return reviewView.value === 'queue' ? 'Queue' : 'History'
@@ -544,6 +561,11 @@ const navItems: { id: AdminSection; label: string; intro: string }[] = [
     id: 'monitoring',
     label: 'Monitoring',
     intro: 'Sidebar sections for overview, operations, teachers, and recent activity.',
+  },
+  {
+    id: 'payments',
+    label: 'Payments',
+    intro: 'Student payment invoice receipts — record, confirm, or void.',
   },
   {
     id: 'users',

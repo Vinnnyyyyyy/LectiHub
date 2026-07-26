@@ -203,9 +203,66 @@ async function submitFreeTrialToDolibarr(trial) {
   };
 }
 
+/**
+ * Best-effort Dolibarr customer invoice for a LectiHub payment receipt.
+ * Returns invoice id or null in log mode.
+ */
+async function createInvoiceForReceipt({
+  thirdpartyId,
+  amount,
+  currency,
+  receiptNumber,
+  description,
+  paidAt,
+}) {
+  if (!isDolibarrEnabled()) {
+    const err = new Error('Dolibarr is not enabled');
+    err.status = 503;
+    throw err;
+  }
+
+  const payload = {
+    socid: Number(thirdpartyId),
+    type: 0,
+    note_public: `LectiHub receipt ${receiptNumber} · ${currency || 'USD'}`,
+    note_private: description || `LectiHub payment receipt ${receiptNumber}`,
+    lines: [
+      {
+        desc: description || `LectiHub payment ${receiptNumber}`,
+        subprice: Number(amount),
+        qty: 1,
+        tva_tx: 0,
+      },
+    ],
+  };
+
+  if (paidAt) {
+    // Dolibarr accepts unix timestamp for date on many versions
+    const ts = Math.floor(new Date(`${paidAt}T12:00:00Z`).getTime() / 1000);
+    if (Number.isFinite(ts)) payload.date = ts;
+  }
+
+  if (getDolibarrMode() === 'log') {
+    console.log('[dolibarr:log] POST /invoices', payload);
+    return null;
+  }
+
+  const result = await dolibarrFetch('/invoices', {
+    method: 'POST',
+    body: payload,
+  });
+
+  if (typeof result === 'number') return result;
+  if (result && typeof result === 'object' && result.id != null) return Number(result.id);
+  const parsed = Number(result);
+  if (Number.isFinite(parsed)) return parsed;
+  return null;
+}
+
 module.exports = {
   isDolibarrEnabled,
   getDolibarrMode,
   buildThirdpartyPayload,
   submitFreeTrialToDolibarr,
+  createInvoiceForReceipt,
 };

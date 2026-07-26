@@ -280,6 +280,36 @@ db.exec(`
   migrate();
 })();
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS payment_receipts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER NOT NULL,
+    recorded_by INTEGER,
+    amount_cents INTEGER NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    method TEXT CHECK(method IN ('cash', 'card', 'transfer', 'other')) NOT NULL DEFAULT 'other',
+    status TEXT CHECK(status IN ('recorded', 'confirmed', 'void')) NOT NULL DEFAULT 'recorded',
+    description TEXT,
+    paid_at TEXT NOT NULL,
+    receipt_number TEXT UNIQUE,
+    dolibarr_invoice_id TEXT,
+    dolibarr_thirdparty_id TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (student_id) REFERENCES users(id),
+    FOREIGN KEY (recorded_by) REFERENCES users(id)
+  );
+`);
+db.exec(
+  `CREATE INDEX IF NOT EXISTS idx_payment_receipts_student ON payment_receipts(student_id)`,
+);
+db.exec(
+  `CREATE INDEX IF NOT EXISTS idx_payment_receipts_paid_at ON payment_receipts(paid_at)`,
+);
+db.exec(
+  `CREATE INDEX IF NOT EXISTS idx_payment_receipts_status ON payment_receipts(status)`,
+);
+
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_student ON lesson_reports(student_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_teacher ON lesson_reports(teacher_id)`);
 db.exec(`CREATE INDEX IF NOT EXISTS idx_lesson_reports_submitted ON lesson_reports(submitted_at)`);

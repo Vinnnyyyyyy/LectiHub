@@ -143,6 +143,22 @@
           @submit-feedback="handleSubmitFeedback"
         />
       </section>
+
+      <section
+        v-show="activeSection === 'payments'"
+        id="panel-payments"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-payments"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="student-payments">Payments</h2>
+            <p>Submit a payment receipt for admin review and keep your invoice history here.</p>
+          </div>
+        </div>
+        <StudentPaymentReceiptsPanel />
+      </section>
     </main>
 
     <ClassChatWidget />
@@ -169,8 +185,9 @@ import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
 import StudentHistoryWorkspace from '../components/StudentHistoryWorkspace.vue'
 import ClassChatWidget from '../components/ClassChatWidget.vue'
+import StudentPaymentReceiptsPanel from '../components/StudentPaymentReceiptsPanel.vue'
 
-type StudentSection = 'schedule' | 'now' | 'calendar' | 'history'
+type StudentSection = 'schedule' | 'now' | 'calendar' | 'history' | 'payments'
 
 const navItems: { id: StudentSection; label: string; intro: string }[] = [
   {
@@ -192,6 +209,11 @@ const navItems: { id: StudentSection; label: string; intro: string }[] = [
     id: 'history',
     label: 'History & feedback',
     intro: 'Use the sidebar to open pending feedback, lessons, reports, or archived history.',
+  },
+  {
+    id: 'payments',
+    label: 'Payments',
+    intro: 'Submit a payment receipt for admin review and keep your invoice history here.',
   },
 ]
 
