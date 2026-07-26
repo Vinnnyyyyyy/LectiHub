@@ -83,6 +83,7 @@ async function createFreeTrialRequest(req, res) {
       typeof req.body?.videoPlatform === 'string'
         ? req.body.videoPlatform.trim().toLowerCase()
         : '';
+    const phone = typeof req.body?.phone === 'string' ? req.body.phone.trim() : '';
 
     if (!name || name.length < 2) {
       return res.status(400).json({ message: 'Enter your name.' });
@@ -115,6 +116,7 @@ async function createFreeTrialRequest(req, res) {
     const trial = {
       name: name.slice(0, 120),
       email: email.slice(0, 180).toLowerCase(),
+      phone: phone ? phone.slice(0, 40) : null,
       entityType,
       companyName: entityType === 'company' ? name.slice(0, 120) : null,
       program,
