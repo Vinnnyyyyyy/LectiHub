@@ -22,11 +22,7 @@
           <span v-if="report.teacher"> · {{ report.teacher.fullName }}</span>
         </p>
 
-        <form
-          v-if="drafts[report.id]"
-          class="form"
-          @submit.prevent="submit(report.id)"
-        >
+        <form v-if="drafts[report.id]" class="form" @submit.prevent="submit(report.id)">
           <fieldset>
             <legend>Overall rating</legend>
             <div class="rating-row">
@@ -146,7 +142,6 @@ function formatDate(value: string) {
   border: 1px solid var(--lh-line);
   border-radius: 1rem;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
 }
 
 h2 {
@@ -194,7 +189,7 @@ p {
   padding: 0.85rem 0.9rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.75rem;
-  background: rgba(20, 25, 31, 0.65);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 65%, transparent);
 }
 
 .top {
@@ -209,8 +204,8 @@ p {
   font-weight: 800;
   padding: 0.15rem 0.45rem;
   border-radius: 0.4rem;
-  color: #fcd34d;
-  background: rgba(251, 191, 36, 0.14);
+  color: var(--lh-warm);
+  background: color-mix(in srgb, var(--lh-warm) 14%, transparent);
   white-space: nowrap;
 }
 
@@ -256,7 +251,7 @@ label {
   padding: 0.35rem 0.55rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.45rem;
-  background: rgba(10, 14, 18, 0.65);
+  background: color-mix(in srgb, var(--lh-rail) 65%, transparent);
   color: var(--lh-ink);
   font-weight: 700;
   cursor: pointer;
@@ -270,7 +265,7 @@ textarea {
   width: 100%;
   border: 1px solid var(--lh-line);
   border-radius: 0.55rem;
-  background: rgba(10, 14, 18, 0.75);
+  background: color-mix(in srgb, var(--lh-rail) 75%, transparent);
   color: var(--lh-ink);
   padding: 0.55rem 0.65rem;
   font-size: 0.9rem;
@@ -283,8 +278,8 @@ textarea {
   border: 0;
   border-radius: 0.55rem;
   padding: 0.55rem 0.95rem;
-  background: linear-gradient(135deg, var(--lh-accent), var(--lh-accent-deep));
-  color: #041018;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
   font-size: 0.86rem;
   font-weight: 800;
   cursor: pointer;

@@ -149,7 +149,9 @@
           </ul>
         </div>
 
-        <p v-if="message && activeView === 'directory'" class="success" role="status">{{ message }}</p>
+        <p v-if="message && activeView === 'directory'" class="success" role="status">
+          {{ message }}
+        </p>
         <p v-if="error && activeView === 'directory'" class="error" role="alert">{{ error }}</p>
       </div>
     </div>
@@ -289,7 +291,6 @@ onMounted(async () => {
   border-radius: 1.1rem;
   overflow: hidden;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
   animation: rise 0.45s ease both;
 }
 
@@ -299,7 +300,7 @@ onMounted(async () => {
   gap: 1rem;
   padding: 1.15rem 0.9rem 1.1rem;
   border-right: 1px solid var(--lh-line);
-  background: linear-gradient(180deg, rgba(36, 44, 54, 0.72), rgba(20, 25, 31, 0.35));
+  background: var(--lh-bg-elevated);
 }
 
 .brand-block h2,
@@ -384,13 +385,13 @@ p,
 }
 
 .side-link:hover {
-  background: rgba(231, 236, 239, 0.05);
+  background: color-mix(in srgb, var(--lh-ink) 5%, transparent);
   color: var(--lh-ink);
 }
 
 .side-link.active {
   background: var(--lh-accent-soft);
-  border-color: rgba(126, 184, 164, 0.35);
+  border-color: color-mix(in srgb, var(--lh-accent) 35%, transparent);
   color: var(--lh-accent);
 }
 
@@ -403,7 +404,7 @@ p,
   min-width: 1.35rem;
   padding: 0.1rem 0.35rem;
   border-radius: 999px;
-  background: rgba(231, 236, 239, 0.08);
+  background: color-mix(in srgb, var(--lh-ink) 8%, transparent);
   color: var(--lh-faint);
   font-size: 0.72rem;
   font-weight: 800;
@@ -412,16 +413,14 @@ p,
 }
 
 .side-link.active .side-badge {
-  background: rgba(126, 184, 164, 0.18);
+  background: color-mix(in srgb, var(--lh-accent) 18%, transparent);
   color: var(--lh-accent);
 }
 
 .main {
   min-width: 0;
   padding: 1.15rem 1.2rem 1.25rem;
-  background:
-    radial-gradient(ellipse 55% 40% at 100% 0%, rgba(126, 184, 164, 0.08), transparent 55%),
-    rgba(14, 18, 22, 0.35);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 35%, transparent);
 }
 
 .main-head {
@@ -452,7 +451,7 @@ p,
 .table-card {
   border: 1px solid var(--lh-line);
   border-radius: 0.95rem;
-  background: rgba(16, 20, 26, 0.45);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 45%, transparent);
 }
 
 .create-card {
@@ -496,8 +495,8 @@ input::placeholder {
 
 input:focus {
   outline: none;
-  border-color: rgba(126, 184, 164, 0.55);
-  box-shadow: 0 0 0 3px rgba(126, 184, 164, 0.12);
+  border-color: color-mix(in srgb, var(--lh-accent) 55%, transparent);
+  box-shadow: 0 0 0 1px var(--lh-accent);
 }
 
 .create {
@@ -507,8 +506,8 @@ input:focus {
   padding: 0.72rem 1rem;
   font-weight: 800;
   cursor: pointer;
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
 }
 
 .create:disabled {
@@ -568,7 +567,7 @@ input:focus {
   place-items: center;
   font-size: 0.78rem;
   font-weight: 800;
-  background: rgba(231, 236, 239, 0.08);
+  background: color-mix(in srgb, var(--lh-ink) 8%, transparent);
   color: var(--lh-ink);
   border: 1px solid var(--lh-line);
 }
@@ -576,13 +575,13 @@ input:focus {
 .avatar[data-role='teacher'] {
   background: var(--lh-accent-soft);
   color: var(--lh-accent);
-  border-color: rgba(126, 184, 164, 0.28);
+  border-color: color-mix(in srgb, var(--lh-accent) 28%, transparent);
 }
 
 .avatar[data-role='student'] {
   background: var(--lh-warm-soft);
   color: var(--lh-warm);
-  border-color: rgba(196, 165, 116, 0.28);
+  border-color: color-mix(in srgb, var(--lh-warm) 28%, transparent);
 }
 
 .person-text {
@@ -621,7 +620,7 @@ input:focus {
   font-weight: 800;
   padding: 0.28rem 0.55rem;
   border-radius: 999px;
-  background: rgba(231, 236, 239, 0.08);
+  background: color-mix(in srgb, var(--lh-ink) 8%, transparent);
   color: var(--lh-muted);
   border: 1px solid var(--lh-line);
 }
@@ -629,13 +628,13 @@ input:focus {
 .role[data-role='teacher'] {
   background: var(--lh-accent-soft);
   color: var(--lh-accent);
-  border-color: rgba(126, 184, 164, 0.28);
+  border-color: color-mix(in srgb, var(--lh-accent) 28%, transparent);
 }
 
 .role[data-role='student'] {
   background: var(--lh-warm-soft);
   color: var(--lh-warm);
-  border-color: rgba(196, 165, 116, 0.28);
+  border-color: color-mix(in srgb, var(--lh-warm) 28%, transparent);
 }
 
 .delete {
@@ -652,7 +651,7 @@ input:focus {
 
 .delete:hover:not(:disabled) {
   background: var(--lh-danger-soft);
-  border-color: rgba(224, 138, 122, 0.28);
+  border-color: color-mix(in srgb, var(--lh-danger) 28%, transparent);
 }
 
 .delete:disabled {
@@ -665,7 +664,7 @@ input:focus {
   text-align: center;
   border: 1px solid var(--lh-line);
   border-radius: 0.95rem;
-  background: rgba(16, 20, 26, 0.35);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 35%, transparent);
 }
 
 .empty-title {

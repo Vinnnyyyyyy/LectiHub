@@ -28,10 +28,7 @@
           Student: {{ item.student.fullName }}
           <span v-if="item.subject"> · {{ item.subject }}</span>
         </p>
-        <p
-          v-if="item.attendanceStatus && item.attendanceStatus !== 'not_recorded'"
-          class="meta"
-        >
+        <p v-if="item.attendanceStatus && item.attendanceStatus !== 'not_recorded'" class="meta">
           Attendance: {{ item.attendanceStatusLabel || item.attendanceStatus }}
         </p>
         <p v-if="item.homeworkAssigned" class="meta">Homework: {{ item.homeworkAssigned }}</p>
@@ -98,7 +95,6 @@ function formatTimeRange(
   border: 1px solid var(--lh-line);
   border-radius: 1rem;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
 }
 
 h2 {
@@ -143,7 +139,7 @@ p {
   padding: 0.8rem 0.85rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.75rem;
-  background: rgba(20, 25, 31, 0.65);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 65%, transparent);
 }
 
 .top {
@@ -170,7 +166,7 @@ p {
 
 .chip.status {
   color: var(--lh-faint);
-  background: rgba(148, 163, 184, 0.12);
+  background: var(--lh-chip);
 }
 
 .chip.archived {

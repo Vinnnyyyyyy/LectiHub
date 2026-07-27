@@ -1,13 +1,20 @@
 <template>
   <div class="auth-page">
-    <div class="auth-atmosphere" aria-hidden="true" />
     <form class="auth-panel" @submit.prevent="handleRegister">
       <p class="brand">LectiHub</p>
       <h1>Create your student account</h1>
-      <p class="lede">Sign up to reach your dashboard, schedule lessons, and track your learning.</p>
+      <p class="lede">
+        Sign up to reach your dashboard, schedule lessons, and track your learning.
+      </p>
 
       <label for="full_name">Full name</label>
-      <input id="full_name" v-model="fullName" type="text" autocomplete="name" placeholder="Alex Rivera" />
+      <input
+        id="full_name"
+        v-model="fullName"
+        type="text"
+        autocomplete="name"
+        placeholder="Alex Rivera"
+      />
 
       <label for="username">Username</label>
       <input id="username" v-model="username" type="text" required autocomplete="username" />
@@ -95,22 +102,6 @@ async function handleRegister() {
   overflow: hidden;
 }
 
-.auth-atmosphere {
-  position: absolute;
-  inset: 0;
-  background: var(--lh-atmosphere);
-  animation: drift 16s ease-in-out infinite alternate;
-}
-
-@keyframes drift {
-  from {
-    transform: scale(1) translate3d(0, 0, 0);
-  }
-  to {
-    transform: scale(1.03) translate3d(-1%, 0.8%, 0);
-  }
-}
-
 .auth-panel {
   position: relative;
   width: min(100%, 26rem);
@@ -121,8 +112,6 @@ async function handleRegister() {
   background: var(--lh-panel);
   border: 1px solid var(--lh-line);
   border-radius: 1.25rem;
-  backdrop-filter: blur(14px);
-  box-shadow: var(--lh-shadow);
   animation: rise 0.55s ease both;
 }
 
@@ -189,8 +178,8 @@ input::placeholder {
 
 input:focus {
   outline: none;
-  border-color: rgba(126, 184, 164, 0.55);
-  box-shadow: 0 0 0 3px rgba(126, 184, 164, 0.12);
+  border-color: color-mix(in srgb, var(--lh-accent) 55%, transparent);
+  box-shadow: 0 0 0 1px var(--lh-accent);
 }
 
 button {
@@ -201,8 +190,8 @@ button {
   padding: 0.8rem 1rem;
   border: none;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
   cursor: pointer;
   transition:
     transform 0.18s ease,

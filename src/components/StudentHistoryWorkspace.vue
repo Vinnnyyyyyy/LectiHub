@@ -191,7 +191,6 @@ function forwardSubmit(reportId: number, payload: StudentFeedbackPayload) {
   border-radius: 1.1rem;
   overflow: hidden;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
   animation: rise 0.45s ease both;
 }
 
@@ -201,7 +200,7 @@ function forwardSubmit(reportId: number, payload: StudentFeedbackPayload) {
   gap: 1rem;
   padding: 1.15rem 0.9rem 1.1rem;
   border-right: 1px solid var(--lh-line);
-  background: linear-gradient(180deg, rgba(36, 44, 54, 0.72), rgba(20, 25, 31, 0.35));
+  background: var(--lh-bg-elevated);
 }
 
 .brand-block h2,
@@ -267,13 +266,13 @@ function forwardSubmit(reportId: number, payload: StudentFeedbackPayload) {
 }
 
 .side-link:hover {
-  background: rgba(231, 236, 239, 0.05);
+  background: color-mix(in srgb, var(--lh-ink) 5%, transparent);
   color: var(--lh-ink);
 }
 
 .side-link.active {
   background: var(--lh-accent-soft);
-  border-color: rgba(126, 184, 164, 0.35);
+  border-color: color-mix(in srgb, var(--lh-accent) 35%, transparent);
   color: var(--lh-accent);
 }
 
@@ -286,7 +285,7 @@ function forwardSubmit(reportId: number, payload: StudentFeedbackPayload) {
   min-width: 1.35rem;
   padding: 0.1rem 0.35rem;
   border-radius: 999px;
-  background: rgba(231, 236, 239, 0.08);
+  background: color-mix(in srgb, var(--lh-ink) 8%, transparent);
   color: var(--lh-faint);
   font-size: 0.72rem;
   font-weight: 800;
@@ -295,16 +294,14 @@ function forwardSubmit(reportId: number, payload: StudentFeedbackPayload) {
 }
 
 .side-link.active .side-badge {
-  background: rgba(126, 184, 164, 0.18);
+  background: color-mix(in srgb, var(--lh-accent) 18%, transparent);
   color: var(--lh-accent);
 }
 
 .main {
   min-width: 0;
   padding: 1.15rem 1.2rem 1.25rem;
-  background:
-    radial-gradient(ellipse 55% 40% at 100% 0%, rgba(126, 184, 164, 0.08), transparent 55%),
-    rgba(14, 18, 22, 0.35);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 35%, transparent);
 }
 
 .main-head {
@@ -334,8 +331,8 @@ function forwardSubmit(reportId: number, payload: StudentFeedbackPayload) {
 }
 
 .view :deep(.panel) {
-  border-color: rgba(231, 236, 239, 0.1);
-  background: rgba(16, 20, 26, 0.45);
+  border-color: color-mix(in srgb, var(--lh-ink) 10%, transparent);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 45%, transparent);
 }
 
 @keyframes rise {

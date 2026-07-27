@@ -105,9 +105,7 @@ async function connectGoogle() {
 async function connectCalendly() {
   message.value = ''
   await calendarStore.connectProvider('calendly', {
-    externalAccount: authStore.username
-      ? `${authStore.username}.calendly`
-      : 'teacher-calendly',
+    externalAccount: authStore.username ? `${authStore.username}.calendly` : 'teacher-calendly',
     schedulingUrl: 'https://calendly.com/lectihub-teacher',
   })
   message.value = 'Calendly connected. Future approved classes will sync automatically.'
@@ -165,7 +163,7 @@ button,
   padding: 0.75rem 0.8rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.75rem;
-  background: rgba(20, 25, 31, 0.62);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 62%, transparent);
 }
 
 .status {
@@ -189,8 +187,8 @@ button,
   border-radius: 0.6rem;
   padding: 0.55rem 0.8rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
   cursor: pointer;
   white-space: nowrap;
 }

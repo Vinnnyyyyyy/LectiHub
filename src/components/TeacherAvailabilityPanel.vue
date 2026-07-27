@@ -182,7 +182,7 @@ td {
 th {
   color: var(--lh-muted);
   font-weight: 700;
-  background: rgba(20, 25, 31, 0.7);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 70%, transparent);
 }
 
 th[scope='row'] {
@@ -204,7 +204,7 @@ th[scope='row'] {
 
 .toggle.open {
   background: var(--lh-accent-soft);
-  border-color: rgba(126, 184, 164, 0.45);
+  border-color: color-mix(in srgb, var(--lh-accent) 45%, transparent);
   color: var(--lh-accent);
 }
 
@@ -215,8 +215,8 @@ th[scope='row'] {
   padding: 0.7rem 1rem;
   font-weight: 700;
   cursor: pointer;
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
 }
 
 .save:disabled {

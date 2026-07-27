@@ -5,12 +5,7 @@
         Notifications
         <span v-if="unreadCount" class="badge">{{ unreadCount }}</span>
       </h2>
-      <button
-        v-if="notifications.length"
-        type="button"
-        class="text-btn"
-        @click="markAllRead"
-      >
+      <button v-if="notifications.length" type="button" class="text-btn" @click="markAllRead">
         Mark all read
       </button>
     </div>
@@ -25,9 +20,7 @@
           <p>
             Delivers
             {{ formatDateTime(item.deliverAt) }}
-            <span v-if="item.details?.teacherName">
-              · {{ item.details.teacherName }}
-            </span>
+            <span v-if="item.details?.teacherName"> · {{ item.details.teacherName }} </span>
           </p>
         </li>
       </ul>
@@ -49,12 +42,8 @@
           <pre class="message">{{ item.message }}</pre>
 
           <div v-if="item.details" class="details">
-            <p v-if="item.details.teacherName">
-              Assigned teacher: {{ item.details.teacherName }}
-            </p>
-            <p v-if="item.details.studentName">
-              Assigned student: {{ item.details.studentName }}
-            </p>
+            <p v-if="item.details.teacherName">Assigned teacher: {{ item.details.teacherName }}</p>
+            <p v-if="item.details.studentName">Assigned student: {{ item.details.studentName }}</p>
             <p v-if="item.details.classDate">
               Schedule:
               {{ item.details.classDate }}
@@ -91,10 +80,7 @@
 
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import {
-  useNotificationsStore,
-  type AppNotification,
-} from '../stores/notifications'
+import { useNotificationsStore, type AppNotification } from '../stores/notifications'
 
 withDefaults(
   defineProps<{
@@ -114,8 +100,7 @@ const emit = defineEmits<{
 }>()
 
 const notificationsStore = useNotificationsStore()
-const { notifications, pendingReminders, unreadCount, loading } =
-  storeToRefs(notificationsStore)
+const { notifications, pendingReminders, unreadCount, loading } = storeToRefs(notificationsStore)
 
 function formatDateTime(value: string) {
   const date = new Date(value.includes('T') ? value : `${value.replace(' ', 'T')}Z`)
@@ -150,7 +135,6 @@ async function markAllRead() {
   border: 1px solid var(--lh-line);
   border-radius: 1rem;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
 }
 
 .section-head {
@@ -207,7 +191,7 @@ strong {
   padding: 0.7rem 0.75rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.75rem;
-  background: rgba(20, 25, 31, 0.55);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 55%, transparent);
 }
 
 .field-label {
@@ -245,7 +229,7 @@ strong {
 }
 
 .notice-list li.reminder .notice-btn {
-  border-color: rgba(196, 165, 116, 0.35);
+  border-color: color-mix(in srgb, var(--lh-warm) 35%, transparent);
 }
 
 .text-btn {
@@ -288,7 +272,7 @@ strong {
 }
 
 .notice-list li.unread .notice-btn {
-  border-color: rgba(126, 184, 164, 0.35);
+  border-color: color-mix(in srgb, var(--lh-accent) 35%, transparent);
   background: var(--lh-accent-soft);
 }
 

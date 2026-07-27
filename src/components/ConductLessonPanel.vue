@@ -25,11 +25,7 @@
         </p>
         <p v-if="item.student" class="meta">Student: {{ item.student.fullName }}</p>
 
-        <form
-          v-if="drafts[item.id]"
-          class="conduct-form"
-          @submit.prevent="save(item.id, false)"
-        >
+        <form v-if="drafts[item.id]" class="conduct-form" @submit.prevent="save(item.id, false)">
           <label>
             Curriculum plan
             <textarea
@@ -190,11 +186,7 @@ function formatDate(value: string) {
   })
 }
 
-function formatTimeRange(
-  startTime: string | null,
-  endTime: string | null,
-  timeSlot: string,
-) {
+function formatTimeRange(startTime: string | null, endTime: string | null, timeSlot: string) {
   if (startTime && endTime) return `${startTime} – ${endTime}`
   return timeSlot.replace('-', ' – ')
 }
@@ -206,7 +198,6 @@ function formatTimeRange(
   border: 1px solid var(--lh-line);
   border-radius: 1rem;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
 }
 
 h2 {
@@ -255,7 +246,7 @@ p {
   padding: 0.85rem 0.9rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.75rem;
-  background: rgba(20, 25, 31, 0.65);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 65%, transparent);
 }
 
 .lesson-top {
@@ -271,8 +262,8 @@ p {
   padding: 0.15rem 0.45rem;
   border-radius: 0.4rem;
   white-space: nowrap;
-  color: #86efac;
-  background: rgba(34, 197, 94, 0.14);
+  color: var(--lh-accent);
+  background: var(--lh-accent-soft);
 }
 
 .meta {
@@ -299,7 +290,7 @@ select {
   width: 100%;
   border: 1px solid var(--lh-line);
   border-radius: 0.55rem;
-  background: rgba(10, 14, 18, 0.75);
+  background: color-mix(in srgb, var(--lh-rail) 75%, transparent);
   color: var(--lh-ink);
   padding: 0.55rem 0.65rem;
   font-size: 0.9rem;
@@ -338,14 +329,14 @@ button:disabled {
 }
 
 .secondary {
-  background: rgba(148, 163, 184, 0.16);
+  background: var(--lh-chip);
   color: var(--lh-ink);
   border: 1px solid var(--lh-line);
 }
 
 .primary {
-  background: linear-gradient(135deg, var(--lh-accent), var(--lh-accent-deep));
-  color: #041018;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
 }
 
 .primary:hover:not(:disabled),

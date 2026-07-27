@@ -90,10 +90,7 @@ function formatDateTime(value: string) {
   padding: 1.15rem 1.15rem 1.25rem;
   border: 1px solid var(--lh-line);
   border-radius: 1.05rem;
-  background:
-    linear-gradient(165deg, rgba(36, 44, 54, 0.5), transparent 40%),
-    var(--lh-panel);
-  backdrop-filter: blur(10px);
+  background: var(--lh-panel);
   animation: rise 0.45s ease both;
   animation-delay: 0.05s;
 }
@@ -181,7 +178,7 @@ strong,
   padding: 0.85rem 0.9rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.8rem;
-  background: rgba(16, 20, 26, 0.45);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 45%, transparent);
 }
 
 .top {
@@ -204,7 +201,7 @@ strong,
   border-radius: 999px;
   color: var(--lh-accent);
   background: var(--lh-accent-soft);
-  border: 1px solid rgba(126, 184, 164, 0.28);
+  border: 1px solid color-mix(in srgb, var(--lh-accent) 28%, transparent);
   white-space: nowrap;
 }
 
@@ -212,13 +209,13 @@ strong,
 .chip[data-score='2'] {
   color: var(--lh-danger);
   background: var(--lh-danger-soft);
-  border-color: rgba(224, 138, 122, 0.28);
+  border-color: color-mix(in srgb, var(--lh-danger) 28%, transparent);
 }
 
 .chip[data-score='3'] {
   color: var(--lh-warm);
   background: var(--lh-warm-soft);
-  border-color: rgba(196, 165, 116, 0.28);
+  border-color: color-mix(in srgb, var(--lh-warm) 28%, transparent);
 }
 
 .meta {

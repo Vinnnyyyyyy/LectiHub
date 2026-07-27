@@ -198,8 +198,8 @@ button {
   padding: 0.75rem 1rem;
   font-weight: 750;
   cursor: pointer;
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
 }
 
 button:disabled {
@@ -233,7 +233,7 @@ button:disabled {
   padding: 0.75rem 0.8rem;
   border-radius: 0.8rem;
   border: 1px solid var(--lh-line);
-  background: rgba(16, 20, 26, 0.4);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 40%, transparent);
 }
 
 .history p {

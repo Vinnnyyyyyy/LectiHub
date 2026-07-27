@@ -17,9 +17,7 @@
 
       <div class="legend" v-if="highlightDates.length || eventDates.length">
         <span v-if="eventDates.length" class="legend-item event">Scheduled</span>
-        <span v-if="highlightDates.length" class="legend-item open">{{
-          highlightLabel
-        }}</span>
+        <span v-if="highlightDates.length" class="legend-item open">{{ highlightLabel }}</span>
       </div>
 
       <div class="day-detail">
@@ -33,10 +31,7 @@
               <strong>{{ item.title }}</strong>
               <span class="chip" :data-provider="item.provider">{{ item.provider }}</span>
             </div>
-            <p>
-              {{ item.startTime }} – {{ item.endTime }}
-              · {{ item.durationMinutes }} min
-            </p>
+            <p>{{ item.startTime }} – {{ item.endTime }} · {{ item.durationMinutes }} min</p>
             <p v-if="item.meetingInfo" class="meta">{{ item.meetingInfo }}</p>
             <p class="meta">
               Sync:
@@ -135,7 +130,6 @@ watch(
   border: 1px solid var(--lh-line);
   border-radius: 1rem;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
 }
 
 .section-head h2,
@@ -223,7 +217,7 @@ strong,
   padding: 0.75rem 0.8rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.75rem;
-  background: rgba(20, 25, 31, 0.62);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 62%, transparent);
 }
 
 .event-top {

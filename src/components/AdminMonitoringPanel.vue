@@ -56,7 +56,10 @@
             <article class="insight">
               <p class="insight-label">Scheduling health</p>
               <strong>{{ overview.scheduling.approvalRate }}% approval</strong>
-              <p>{{ overview.scheduling.pending }} pending · {{ overview.scheduling.approved }} approved</p>
+              <p>
+                {{ overview.scheduling.pending }} pending ·
+                {{ overview.scheduling.approved }} approved
+              </p>
             </article>
             <article class="insight">
               <p class="insight-label">Attendance</p>
@@ -66,7 +69,10 @@
             <article class="insight">
               <p class="insight-label">Pipeline</p>
               <strong>{{ overview.classStats.completionRate }}% complete</strong>
-              <p>{{ overview.classStats.scheduled }} scheduled · {{ overview.classStats.completed }} done</p>
+              <p>
+                {{ overview.classStats.scheduled }} scheduled ·
+                {{ overview.classStats.completed }} done
+              </p>
             </article>
           </div>
         </div>
@@ -165,7 +171,9 @@
               <h4>Teacher performance</h4>
               <p>{{ overview.teacherPerformance.length }} teachers</p>
             </div>
-            <p v-if="!overview.teacherPerformance.length" class="empty soft">No teachers to evaluate yet.</p>
+            <p v-if="!overview.teacherPerformance.length" class="empty soft">
+              No teachers to evaluate yet.
+            </p>
             <div v-else class="table-wrap">
               <table>
                 <thead>
@@ -183,7 +191,9 @@
                   <tr v-for="teacher in overview.teacherPerformance" :key="teacher.id">
                     <td>
                       <div class="teacher-cell">
-                        <span class="avatar" aria-hidden="true">{{ initials(teacher.fullName) }}</span>
+                        <span class="avatar" aria-hidden="true">{{
+                          initials(teacher.fullName)
+                        }}</span>
                         <span>{{ teacher.fullName }}</span>
                       </div>
                     </td>
@@ -191,7 +201,9 @@
                     <td>{{ teacher.completedClasses }}</td>
                     <td>{{ teacher.reportsSubmitted }}</td>
                     <td>{{ teacher.feedbackCount }}</td>
-                    <td>{{ teacher.averageRating == null ? '—' : `${teacher.averageRating}/5` }}</td>
+                    <td>
+                      {{ teacher.averageRating == null ? '—' : `${teacher.averageRating}/5` }}
+                    </td>
                     <td>{{ teacher.attendanceRecorded }}</td>
                   </tr>
                 </tbody>
@@ -204,13 +216,17 @@
           <div class="activity-grid">
             <section class="feed-card">
               <h4>Completed classes</h4>
-              <p v-if="!overview.recentCompletedClasses.length" class="empty soft">No completed classes yet.</p>
+              <p v-if="!overview.recentCompletedClasses.length" class="empty soft">
+                No completed classes yet.
+              </p>
               <ul v-else>
                 <li v-for="item in overview.recentCompletedClasses" :key="item.id">
                   <strong>{{ item.title }}</strong>
                   <span>
                     {{ formatDate(item.classDate) }} ·
-                    {{ item.attendanceStatusLabel || item.attendanceStatus || 'Attendance pending' }}
+                    {{
+                      item.attendanceStatusLabel || item.attendanceStatus || 'Attendance pending'
+                    }}
                   </span>
                   <span v-if="item.teacher || item.student">
                     {{ item.teacher?.fullName || 'Teacher' }} with
@@ -222,7 +238,9 @@
 
             <section class="feed-card">
               <h4>Attendance log</h4>
-              <p v-if="!overview.attendanceRecords.length" class="empty soft">No attendance records yet.</p>
+              <p v-if="!overview.attendanceRecords.length" class="empty soft">
+                No attendance records yet.
+              </p>
               <ul v-else>
                 <li v-for="item in overview.attendanceRecords" :key="item.id">
                   <strong>{{ item.title }}</strong>
@@ -237,7 +255,9 @@
 
             <section class="feed-card">
               <h4>Teacher reports</h4>
-              <p v-if="!overview.recentLessonReports.length" class="empty soft">No lesson reports yet.</p>
+              <p v-if="!overview.recentLessonReports.length" class="empty soft">
+                No lesson reports yet.
+              </p>
               <ul v-else>
                 <li v-for="item in overview.recentLessonReports" :key="item.id">
                   <strong>{{ item.lessonTopic }}</strong>
@@ -252,10 +272,15 @@
 
             <section class="feed-card">
               <h4>Student feedback</h4>
-              <p v-if="!overview.recentStudentFeedback.length" class="empty soft">No feedback yet.</p>
+              <p v-if="!overview.recentStudentFeedback.length" class="empty soft">
+                No feedback yet.
+              </p>
               <ul v-else>
                 <li v-for="item in overview.recentStudentFeedback" :key="item.id">
-                  <strong>{{ item.lessonTopic || 'Lesson feedback' }} · {{ item.overallRating }}/5</strong>
+                  <strong
+                    >{{ item.lessonTopic || 'Lesson feedback' }} ·
+                    {{ item.overallRating }}/5</strong
+                  >
                   <span>{{ item.comments }}</span>
                   <span v-if="item.student">From {{ item.student.fullName }}</span>
                 </li>
@@ -395,7 +420,6 @@ function formatDateTime(value: string) {
   border-radius: 1.1rem;
   overflow: hidden;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
   animation: rise 0.45s ease both;
 }
 
@@ -405,8 +429,7 @@ function formatDateTime(value: string) {
   gap: 1rem;
   padding: 1.15rem 0.9rem 1.1rem;
   border-right: 1px solid var(--lh-line);
-  background:
-    linear-gradient(180deg, rgba(36, 44, 54, 0.72), rgba(20, 25, 31, 0.35));
+  background: var(--lh-bg-elevated);
 }
 
 .brand-block h2,
@@ -486,13 +509,13 @@ ul,
 }
 
 .side-link:hover {
-  background: rgba(231, 236, 239, 0.05);
+  background: color-mix(in srgb, var(--lh-ink) 5%, transparent);
   color: var(--lh-ink);
 }
 
 .side-link.active {
   background: var(--lh-accent-soft);
-  border-color: rgba(126, 184, 164, 0.35);
+  border-color: color-mix(in srgb, var(--lh-accent) 35%, transparent);
   color: var(--lh-accent);
 }
 
@@ -505,7 +528,7 @@ ul,
   min-width: 1.35rem;
   padding: 0.1rem 0.35rem;
   border-radius: 999px;
-  background: rgba(231, 236, 239, 0.08);
+  background: color-mix(in srgb, var(--lh-ink) 8%, transparent);
   color: var(--lh-faint);
   font-size: 0.72rem;
   font-weight: 800;
@@ -514,14 +537,14 @@ ul,
 }
 
 .side-link.active .side-badge {
-  background: rgba(126, 184, 164, 0.18);
+  background: color-mix(in srgb, var(--lh-accent) 18%, transparent);
   color: var(--lh-accent);
 }
 
 .refresh {
   border: 1px solid var(--lh-line);
   border-radius: 0.65rem;
-  background: rgba(16, 20, 26, 0.45);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 45%, transparent);
   color: var(--lh-ink);
   font-size: 0.82rem;
   font-weight: 750;
@@ -537,9 +560,7 @@ ul,
 .main {
   min-width: 0;
   padding: 1.15rem 1.2rem 1.25rem;
-  background:
-    radial-gradient(ellipse 55% 40% at 100% 0%, rgba(126, 184, 164, 0.08), transparent 55%),
-    rgba(14, 18, 22, 0.35);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 35%, transparent);
 }
 
 .main-head {
@@ -576,7 +597,7 @@ ul,
   padding: 0.85rem 0.9rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.85rem;
-  background: rgba(16, 20, 26, 0.5);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 50%, transparent);
 }
 
 .metric-label {
@@ -620,7 +641,7 @@ ul,
   padding: 0.95rem 1rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.9rem;
-  background: rgba(16, 20, 26, 0.45);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 45%, transparent);
 }
 
 .insight-label {
@@ -740,7 +761,7 @@ td {
   font-weight: 800;
   background: var(--lh-accent-soft);
   color: var(--lh-accent);
-  border: 1px solid rgba(126, 184, 164, 0.28);
+  border: 1px solid color-mix(in srgb, var(--lh-accent) 28%, transparent);
 }
 
 ul {

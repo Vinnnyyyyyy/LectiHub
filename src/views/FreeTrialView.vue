@@ -1,13 +1,11 @@
 <template>
   <div class="trial-page">
-    <div class="trial-atmosphere" aria-hidden="true" />
-
     <form v-if="!submitted" class="trial-panel" @submit.prevent="handleSubmit">
       <p class="brand">LectiHub</p>
       <h1>Free 30‑minute trial</h1>
       <p class="lede">
-        Fill in your details and preferred slot. We’ll send it to Dolibarr and queue it in LectiHub’s
-        scheduler for confirmation.
+        Fill in your details and preferred slot. We’ll send it to Dolibarr and queue it in
+        LectiHub’s scheduler for confirmation.
       </p>
 
       <label for="trial-name">Name</label>
@@ -180,8 +178,7 @@ async function handleSubmit() {
   } catch (err) {
     if (axios.isAxiosError(err)) {
       if (!err.response) {
-        error.value =
-          'Cannot reach the LectiHub API. Make sure the server is running on port 3000.'
+        error.value = 'Cannot reach the LectiHub API. Make sure the backend server is running.'
       } else {
         error.value = err.response.data?.message || 'Could not submit free trial request'
       }
@@ -206,22 +203,6 @@ async function handleSubmit() {
   overflow: hidden;
 }
 
-.trial-atmosphere {
-  position: absolute;
-  inset: 0;
-  background: var(--lh-atmosphere);
-  animation: drift 16s ease-in-out infinite alternate;
-}
-
-@keyframes drift {
-  from {
-    transform: scale(1) translate3d(0, 0, 0);
-  }
-  to {
-    transform: scale(1.03) translate3d(-1%, 0.8%, 0);
-  }
-}
-
 .trial-panel {
   position: relative;
   width: min(100%, 32rem);
@@ -232,8 +213,6 @@ async function handleSubmit() {
   background: var(--lh-panel);
   border: 1px solid var(--lh-line);
   border-radius: 1.25rem;
-  backdrop-filter: blur(14px);
-  box-shadow: var(--lh-shadow);
   animation: rise 0.55s ease both;
 }
 
@@ -336,7 +315,7 @@ legend {
 }
 
 .entity-option.selected {
-  border-color: rgba(126, 184, 164, 0.55);
+  border-color: color-mix(in srgb, var(--lh-accent) 55%, transparent);
   background: var(--lh-accent-soft);
 }
 
@@ -377,8 +356,8 @@ select {
 input:focus,
 select:focus {
   outline: none;
-  border-color: rgba(126, 184, 164, 0.55);
-  box-shadow: 0 0 0 3px rgba(126, 184, 164, 0.12);
+  border-color: color-mix(in srgb, var(--lh-accent) 55%, transparent);
+  box-shadow: 0 0 0 1px var(--lh-accent);
 }
 
 button {
@@ -388,8 +367,8 @@ button {
   padding: 0.8rem 1rem;
   border: none;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
   cursor: pointer;
   transition:
     transform 0.18s ease,

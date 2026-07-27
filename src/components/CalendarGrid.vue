@@ -10,11 +10,7 @@
       <p class="cal-title">{{ headerLabel }}</p>
 
       <div class="mode-toggle" role="group" aria-label="Calendar view">
-        <button
-          type="button"
-          :class="{ active: mode === 'month' }"
-          @click="mode = 'month'"
-        >
+        <button type="button" :class="{ active: mode === 'month' }" @click="mode = 'month'">
           month
         </button>
         <button type="button" :class="{ active: mode === 'year' }" @click="mode = 'year'">
@@ -315,7 +311,7 @@ function onSelect(cell: { iso: string; disabled: boolean }) {
 .nav-btn:hover,
 .mode-toggle button:hover {
   background: var(--lh-warm-soft);
-  border-color: rgba(196, 165, 116, 0.45);
+  border-color: color-mix(in srgb, var(--lh-warm) 45%, transparent);
   color: var(--lh-warm);
 }
 
@@ -370,7 +366,7 @@ function onSelect(cell: { iso: string; disabled: boolean }) {
 
 .day-cell.muted {
   color: var(--lh-faint);
-  background: #14181e;
+  background: var(--lh-bg-elevated);
 }
 
 .day-cell.today .day-num {
@@ -380,7 +376,7 @@ function onSelect(cell: { iso: string; disabled: boolean }) {
 
 .day-cell.has-event,
 .day-cell.has-highlight {
-  background: rgba(196, 165, 116, 0.18);
+  background: color-mix(in srgb, var(--lh-warm) 18%, transparent);
   color: var(--lh-warm);
 }
 
@@ -396,7 +392,7 @@ function onSelect(cell: { iso: string; disabled: boolean }) {
 }
 
 .day-cell:not(.disabled):hover {
-  background: rgba(196, 165, 116, 0.28);
+  background: color-mix(in srgb, var(--lh-warm) 28%, transparent);
 }
 
 .day-num {
@@ -430,8 +426,8 @@ function onSelect(cell: { iso: string; disabled: boolean }) {
 
 .mini-month:hover,
 .mini-month.active {
-  border-color: rgba(196, 165, 116, 0.45);
-  background: rgba(196, 165, 116, 0.1);
+  border-color: color-mix(in srgb, var(--lh-warm) 45%, transparent);
+  background: color-mix(in srgb, var(--lh-warm) 10%, transparent);
 }
 
 .mini-title {
@@ -450,7 +446,7 @@ function onSelect(cell: { iso: string; disabled: boolean }) {
 .mini-dot {
   aspect-ratio: 1;
   border-radius: 0.2rem;
-  background: rgba(231, 236, 239, 0.08);
+  background: color-mix(in srgb, var(--lh-ink) 8%, transparent);
 }
 
 .mini-dot.muted {

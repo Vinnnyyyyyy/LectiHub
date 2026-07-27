@@ -32,10 +32,7 @@
         </p>
         <p v-if="item.meetingInfo" class="meta">{{ item.meetingInfo }}</p>
         <div
-          v-if="
-            allowJoin &&
-            (item.status === 'scheduled' || item.status === 'in_progress')
-          "
+          v-if="allowJoin && (item.status === 'scheduled' || item.status === 'in_progress')"
           class="provider-pick"
         >
           <label :for="`provider-${item.id}`">Video platform</label>
@@ -61,10 +58,7 @@
           Platform: {{ formatProvider(item.meetingProvider) }}
         </p>
         <p v-if="item.curriculumPlan" class="meta">Curriculum: {{ item.curriculumPlan }}</p>
-        <p
-          v-if="item.attendanceStatus && item.attendanceStatus !== 'not_recorded'"
-          class="meta"
-        >
+        <p v-if="item.attendanceStatus && item.attendanceStatus !== 'not_recorded'" class="meta">
           Attendance: {{ item.attendanceStatusLabel || item.attendanceStatus }}
         </p>
         <p
@@ -90,9 +84,17 @@
             type="button"
             class="join-btn"
             :disabled="joiningId === item.id"
-            @click="emit('join', item, draftProviders[item.id] || item.meetingProvider || undefined)"
+            @click="
+              emit('join', item, draftProviders[item.id] || item.meetingProvider || undefined)
+            "
           >
-            {{ joiningId === item.id ? 'Joining…' : item.status === 'in_progress' ? 'Rejoin class' : 'Join class' }}
+            {{
+              joiningId === item.id
+                ? 'Joining…'
+                : item.status === 'in_progress'
+                  ? 'Rejoin class'
+                  : 'Join class'
+            }}
           </button>
           <p v-else-if="item.status === 'scheduled'" class="join-hint">
             {{ item.joinReason || 'Join opens near the scheduled start time.' }}
@@ -176,11 +178,7 @@ function formatDate(value: string) {
   })
 }
 
-function formatTimeRange(
-  startTime: string | null,
-  endTime: string | null,
-  timeSlot: string,
-) {
+function formatTimeRange(startTime: string | null, endTime: string | null, timeSlot: string) {
   if (startTime && endTime) return `${startTime} – ${endTime}`
   return timeSlot.replace('-', ' – ')
 }
@@ -205,7 +203,6 @@ function formatProvider(provider: string) {
   border: 1px solid var(--lh-line);
   border-radius: 1rem;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
 }
 
 h2 {
@@ -255,7 +252,7 @@ p {
   padding: 0.75rem 0.8rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.75rem;
-  background: rgba(20, 25, 31, 0.65);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 65%, transparent);
 }
 
 .class-top {
@@ -289,13 +286,13 @@ p {
 }
 
 .chip.status[data-status='in_progress'] {
-  color: #9fd4c0;
-  background: rgba(79, 143, 123, 0.18);
+  color: var(--lh-accent);
+  background: var(--lh-accent-soft);
 }
 
 .chip.status[data-status='completed'] {
   color: var(--lh-faint);
-  background: rgba(148, 163, 184, 0.1);
+  background: var(--lh-chip);
 }
 
 .chip.archived {
@@ -357,8 +354,8 @@ p {
   border: 0;
   border-radius: 0.55rem;
   padding: 0.45rem 0.85rem;
-  background: linear-gradient(135deg, var(--lh-accent), var(--lh-accent-deep));
-  color: #0c1210;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
   font-size: 0.86rem;
   font-weight: 800;
   cursor: pointer;

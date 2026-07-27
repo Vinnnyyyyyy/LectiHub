@@ -239,7 +239,9 @@ const form = reactive({
 })
 
 const students = computed(() =>
-  usersStore.users.filter((user) => user.role === 'student').sort((a, b) => a.fullName.localeCompare(b.fullName)),
+  usersStore.users
+    .filter((user) => user.role === 'student')
+    .sort((a, b) => a.fullName.localeCompare(b.fullName)),
 )
 
 const counts = computed(() => ({
@@ -254,9 +256,7 @@ const filtered = computed(() => {
   return receipts.value.filter((item) => item.status === statusFilter.value)
 })
 
-const selected = computed(
-  () => filtered.value.find((item) => item.id === selectedId.value) || null,
-)
+const selected = computed(() => filtered.value.find((item) => item.id === selectedId.value) || null)
 
 const listTitle = computed(() => {
   const match = filters.find((item) => item.value === statusFilter.value)
@@ -266,7 +266,11 @@ const listTitle = computed(() => {
 function openList(value: typeof statusFilter.value) {
   view.value = 'list'
   statusFilter.value = value
-  if (selected.value && statusFilter.value !== 'all' && selected.value.status !== statusFilter.value) {
+  if (
+    selected.value &&
+    statusFilter.value !== 'all' &&
+    selected.value.status !== statusFilter.value
+  ) {
     selectedId.value = null
   }
 }
@@ -346,7 +350,7 @@ h4 {
 .sidebar {
   padding: 1.15rem 1rem 1.25rem;
   border-right: 1px solid var(--lh-line);
-  background: rgba(12, 16, 20, 0.45);
+  background: var(--lh-rail);
 }
 
 .brand-block h2,
@@ -407,7 +411,7 @@ h4 {
 }
 
 .side-link.active {
-  border-color: rgba(126, 184, 164, 0.35);
+  border-color: color-mix(in srgb, var(--lh-accent) 35%, transparent);
   background: var(--lh-accent-soft);
   color: var(--lh-ink);
 }
@@ -421,7 +425,7 @@ h4 {
   min-width: 1.35rem;
   padding: 0.1rem 0.35rem;
   border-radius: 999px;
-  background: rgba(231, 236, 239, 0.08);
+  background: color-mix(in srgb, var(--lh-ink) 8%, transparent);
   color: var(--lh-faint);
   font-size: 0.72rem;
   font-weight: 800;
@@ -449,7 +453,7 @@ h4 {
 .create-card {
   border: 1px solid var(--lh-line);
   border-radius: 0.95rem;
-  background: rgba(16, 20, 26, 0.45);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 45%, transparent);
   padding: 1.1rem;
   max-width: 42rem;
 }
@@ -497,8 +501,8 @@ textarea {
 
 .create {
   margin-top: 1rem;
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
 }
 
 .create:disabled {
@@ -528,13 +532,13 @@ textarea {
   border: 1px solid var(--lh-line);
   border-radius: 0.8rem;
   padding: 0.75rem 0.8rem;
-  background: rgba(16, 20, 26, 0.45);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 45%, transparent);
   color: var(--lh-ink);
   cursor: pointer;
 }
 
 .receipt-btn.active {
-  border-color: rgba(126, 184, 164, 0.45);
+  border-color: color-mix(in srgb, var(--lh-accent) 45%, transparent);
   background: var(--lh-accent-soft);
 }
 
@@ -581,7 +585,7 @@ textarea {
   border: 1px solid var(--lh-line);
   border-radius: 0.95rem;
   padding: 1rem;
-  background: rgba(16, 20, 26, 0.45);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 45%, transparent);
 }
 
 .facts {
@@ -614,13 +618,13 @@ textarea {
 .action.confirm {
   background: var(--lh-accent-soft);
   color: var(--lh-accent);
-  border: 1px solid rgba(126, 184, 164, 0.35);
+  border: 1px solid color-mix(in srgb, var(--lh-accent) 35%, transparent);
 }
 
 .action.void {
   background: var(--lh-danger-soft);
   color: var(--lh-danger);
-  border: 1px solid rgba(224, 138, 122, 0.35);
+  border: 1px solid color-mix(in srgb, var(--lh-danger) 35%, transparent);
 }
 
 .success {

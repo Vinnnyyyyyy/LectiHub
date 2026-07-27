@@ -4,9 +4,9 @@
       <h2>Booking</h2>
       <p>
         Pick the dates and times you want. Consecutive slots on the same day become
-        <strong>one class</strong> (for example 09:30–12:00) with one teacher, one upcoming
-        session, and one report/feedback. Gaps or different days become separate classes.
-        You can book starting <strong>2 days from today</strong>.
+        <strong>one class</strong> (for example 09:30–12:00) with one teacher, one upcoming session,
+        and one report/feedback. Gaps or different days become separate classes. You can book
+        starting <strong>2 days from today</strong>.
       </p>
     </div>
 
@@ -42,7 +42,11 @@
             @click="toggleTimeSlot(slot.timeSlot)"
           >
             <span>{{ formatSlot(slot.timeSlot) }}</span>
-            <small>{{ slot.availableTeacherCount }} teacher{{ slot.availableTeacherCount === 1 ? '' : 's' }}</small>
+            <small
+              >{{ slot.availableTeacherCount }} teacher{{
+                slot.availableTeacherCount === 1 ? '' : 's'
+              }}</small
+            >
           </button>
         </div>
 
@@ -114,8 +118,8 @@
           <p v-if="request.assignedTeacher" class="request-remarks">
             Assigned teacher: {{ request.assignedTeacher.fullName }}
             <span v-if="request.slots.length">
-              · {{ formatDate(request.slots[0].preferredDate) }}
-              · {{ formatRequestWindow(request.slots) }}
+              · {{ formatDate(request.slots[0].preferredDate) }} ·
+              {{ formatRequestWindow(request.slots) }}
             </span>
           </p>
           <p v-if="request.remarks" class="request-remarks">{{ request.remarks }}</p>
@@ -155,9 +159,7 @@ const minDate = computed(() => {
   return `${y}-${m}-${d}`
 })
 
-const bookableOpenDates = computed(() =>
-  openDates.value.filter((date) => date >= minDate.value),
-)
+const bookableOpenDates = computed(() => openDates.value.filter((date) => date >= minDate.value))
 
 const openSlotsForDay = computed(() =>
   selectedDate.value ? availabilityStore.slotsForDate(selectedDate.value) : [],
@@ -309,10 +311,7 @@ function formatRequestWindow(slots: ScheduleSlot[]) {
 
 onMounted(async () => {
   try {
-    await Promise.all([
-      scheduleStore.fetchMine(),
-      availabilityStore.fetchOpen(minDate.value),
-    ])
+    await Promise.all([scheduleStore.fetchMine(), availabilityStore.fetchOpen(minDate.value)])
     const firstOpen = availabilityStore.openDates.find((date) => date >= minDate.value)
     if (!selectedDate.value && firstOpen) {
       selectedDate.value = firstOpen
@@ -330,7 +329,6 @@ onMounted(async () => {
   border: 1px solid var(--lh-line);
   border-radius: 1.1rem;
   background: var(--lh-panel);
-  backdrop-filter: blur(10px);
   color: var(--lh-ink);
   animation: fade-up 0.5s ease both;
 }
@@ -417,8 +415,8 @@ label,
 }
 
 .legend-item.unavailable::before {
-  background: rgba(231, 236, 239, 0.28);
-  border: 1px solid rgba(231, 236, 239, 0.22);
+  background: color-mix(in srgb, var(--lh-ink) 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--lh-ink) 22%, transparent);
   box-sizing: border-box;
 }
 
@@ -442,8 +440,8 @@ textarea::placeholder {
 
 textarea:focus {
   outline: none;
-  border-color: rgba(126, 184, 164, 0.55);
-  box-shadow: 0 0 0 3px rgba(126, 184, 164, 0.12);
+  border-color: color-mix(in srgb, var(--lh-accent) 55%, transparent);
+  box-shadow: 0 0 0 1px var(--lh-accent);
 }
 
 .slot-grid {
@@ -485,12 +483,12 @@ textarea:focus {
 
 .slot.active {
   background: var(--lh-accent-soft);
-  border-color: rgba(126, 184, 164, 0.45);
+  border-color: color-mix(in srgb, var(--lh-accent) 45%, transparent);
   color: var(--lh-accent);
 }
 
 .slot.active small {
-  color: rgba(126, 184, 164, 0.85);
+  color: color-mix(in srgb, var(--lh-accent) 85%, transparent);
 }
 
 .add-slot,
@@ -516,8 +514,8 @@ textarea:focus {
 
 .submit {
   border: none;
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
 }
 
 .preference-list,
@@ -537,7 +535,7 @@ textarea:focus {
   padding: 0.7rem 0.8rem;
   border: 1px solid var(--lh-line);
   border-radius: 0.7rem;
-  background: rgba(20, 25, 31, 0.72);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 72%, transparent);
 }
 
 .request-list > li {
