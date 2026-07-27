@@ -1,5 +1,35 @@
 # LectiHub
 
+Vue 3 frontend + **Laravel 12** API (new backend).
+
+| Layer | Path | Stack |
+|---|---|---|
+| Frontend | `/` (`src/`) | Vue 3, Vite, Pinia, Vue Router |
+| Backend (new) | `LectiHub-api/` | Laravel 12 + Sanctum + SQLite |
+| Backend (legacy) | `LectiHub-server/` | Express — kept during migration |
+
+See `LectiHub-api/README.md` for Laravel setup and the Express → Laravel cutover plan.
+
+### Local development (Laravel + Vue)
+
+```sh
+# API
+cd LectiHub-api
+composer install
+php artisan migrate:fresh --seed
+php artisan serve --port=8000
+
+# Frontend (separate terminal)
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` — Vite proxies `/api` to Laravel `:8000`.
+
+Demo logins: `admin` / `admin123`, teachers `teacher_ava` / `teacher123`.
+
+---
+
 This template should help get you started developing with Vue 3 in Vite.
 
 ## Recommended IDE Setup
