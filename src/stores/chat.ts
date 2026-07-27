@@ -156,9 +156,7 @@ export const useChatStore = defineStore('chat', {
     async refreshActiveThread() {
       if (!this.activePeerId) return
       const previousIds = new Set(this.messages.map((item) => item.id))
-      const res = await api.get<ChatMessagesResponse>(
-        `/chat/peers/${this.activePeerId}/messages`,
-      )
+      const res = await api.get<ChatMessagesResponse>(`/chat/peers/${this.activePeerId}/messages`)
       this.messages = res.data.messages || []
       this.activePeer = res.data.peer
 

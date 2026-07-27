@@ -58,9 +58,7 @@ export const useCalendarStore = defineStore('calendar', {
     upcoming(state): CalendarEvent[] {
       const today = new Date().toISOString().slice(0, 10)
       // Prefer LectiHub entries for the main calendar list
-      return state.events.filter(
-        (item) => item.eventDate >= today && item.provider === 'lectihub',
-      )
+      return state.events.filter((item) => item.eventDate >= today && item.provider === 'lectihub')
     },
     googleConnected(state): boolean {
       return state.connections.some((c) => c.provider === 'google' && c.isActive)

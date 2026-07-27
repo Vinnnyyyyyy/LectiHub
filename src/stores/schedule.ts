@@ -73,11 +73,13 @@ export const useScheduleStore = defineStore('schedule', {
       this.submitting = true
       this.error = null
       try {
-        const res = await api.post<{
-          message?: string
-          count?: number
-          requests?: ScheduleRequest[]
-        } & Partial<ScheduleRequest>>('/schedule-requests', payload)
+        const res = await api.post<
+          {
+            message?: string
+            count?: number
+            requests?: ScheduleRequest[]
+          } & Partial<ScheduleRequest>
+        >('/schedule-requests', payload)
 
         const created =
           Array.isArray(res.data.requests) && res.data.requests.length

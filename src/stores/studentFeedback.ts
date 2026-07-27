@@ -93,10 +93,7 @@ export const useStudentFeedbackStore = defineStore('studentFeedback', {
       this.error = null
       this.message = null
       try {
-        const res = await api.post<SubmitResponse>(
-          `/lesson-reports/${reportId}/feedback`,
-          payload,
-        )
+        const res = await api.post<SubmitResponse>(`/lesson-reports/${reportId}/feedback`, payload)
         this.upsertFeedback(res.data.feedback)
         this.message = res.data.message
         return res.data
