@@ -42,7 +42,14 @@ const router = createRouter({
       component: () => import('../views/admin/AdminShell.vue'),
       meta: { requiresAuth: true, role: 'admin', workspace: true },
       children: [
-        { path: '', redirect: '/admin/requests' },
+        { path: '', redirect: '/admin/timetable' },
+        {
+          path: 'timetable',
+          name: 'admin-timetable',
+          component: () => import('../views/admin/TimetableView.vue'),
+          // Eyebrow and title are set live by the view (week range).
+          meta: { title: 'Timetable' },
+        },
         {
           path: 'overview',
           name: 'admin-overview',

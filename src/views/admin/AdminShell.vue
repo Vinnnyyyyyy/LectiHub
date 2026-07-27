@@ -24,6 +24,7 @@ const initials = computed(() => initialsFrom(displayName.value))
 
 const items = computed<RailItem[]>(() => [
   { to: '/admin/overview', label: 'Overview', icon: 'grid' },
+  { to: '/admin/timetable', label: 'Timetable', icon: 'calendar' },
   {
     to: '/admin/requests',
     label: 'Review & assign',
