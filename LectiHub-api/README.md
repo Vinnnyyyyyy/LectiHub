@@ -1,83 +1,72 @@
-# LectiHub backend migration: Express → Laravel 12
+# LectiHub API (Laravel 12)
 
-## Stack decision
+Vue 3 frontend stays in the repo root. This Laravel app replaces `LectiHub-server/` (Express).
 
-| Layer | Framework |
-|---|---|
-| Frontend | **Vue 3** + Vite + Pinia + Vue Router (unchanged) |
-| Backend (new) | **Laravel 12** + Sanctum + SQLite/MySQL |
-| Backend (legacy) | Express in `LectiHub-server/` kept during cutover |
-
-## New backend location
-
-`LectiHub-api/` — Laravel 12 API.
-
-Vue still calls `/api/...`. Vite proxies to Laravel on **port 8000**:
+## Run locally
 
 ```bash
-# Terminal A — Laravel
+# Terminal A — Laravel API (port 8000)
 cd LectiHub-api
+cp .env.example .env   # first time
+composer install
+php artisan key:generate
+php artisan migrate:fresh --seed
 php artisan serve --port=8000
 
 # Terminal B — Vue
+npm install
 npm run dev
 ```
 
-To keep using Express temporarily:
+Vite proxies `/api` → `http://localhost:8000`. To keep Express temporarily:
 
 ```bash
 VITE_API_PROXY_TARGET=http://localhost:3000 npm run dev
 ```
 
-## Auth (done)
+### Windows / Composer zip error
 
-Compatible with the existing Vue auth store:
+Enable `extension=zip` (and `fileinfo`, `mbstring`, `openssl`, `pdo_sqlite`, `sqlite3`, `curl`) in `php.ini`, then confirm with `php -m | findstr zip`. WAMP is not required.
 
-- `POST /api/auth/register` → student account + Sanctum token
-- `POST /api/auth/login` → `{ token, role, username, fullName, mustChangePassword }`
-- `GET /api/auth/me` (Bearer token)
-- `POST /api/auth/logout`
-
-Demo seeds:
+## Demo accounts
 
 | User | Password | Role |
 |---|---|---|
 | `admin` | `admin123` | admin |
 | `teacher_ava` / `teacher_ben` / `teacher_cara` | `teacher123` | teacher |
+| Students | self-register | student |
 
-```bash
-cd LectiHub-api
-php artisan migrate:fresh --seed
-```
+## Ported modules (Vue contracts preserved)
 
-## Migration roadmap (modules still on Express)
+| Module | Paths |
+|---|---|
+| Auth | `/api/auth/*` |
+| Users | `/api/users` |
+| Schedule | `/api/schedule-requests` |
+| Availability | `/api/availability/*` |
+| Classes | `/api/classes/*` |
+| Lesson reports | `/api/lesson-reports`, `/api/classes/:id/report` |
+| Student feedback | `/api/student-feedback`, `/api/lesson-reports/:id/feedback` |
+| Notifications | `/api/notifications` |
+| Chat | `/api/chat/*` |
+| Calendar | `/api/calendar/*` |
+| Admin monitoring | `/api/admin/monitoring` |
+| Free trial + Dolibarr | `/api/trial-requests` |
+| Payment receipts | `/api/payment-receipts` |
 
-Port these from `LectiHub-server/` into Laravel controllers/models/migrations:
+JSON responses stay **camelCase** to match Pinia stores.
 
-1. **Users admin** — create teachers, list/delete users  
-2. **Schedule requests** — student booking + admin assign  
-3. **Classes / join / complete**  
-4. **Availability**  
-5. **Lesson reports + student feedback**  
-6. **Notifications**  
-7. **Calendar**  
-8. **Chat**  
-9. **Free trial + Dolibarr** (`DOLIBARR_*` env)  
-10. **Payment receipts**  
-
-Suggested order: Users → Schedule → Classes → Free trial/Dolibarr → Payments → Chat/Calendar.
-
-## Env notes
-
-Copy `LectiHub-api/.env.example` values. Add Dolibarr when porting trial/payments:
+## Env (see `.env.example`)
 
 ```env
 DOLIBARR_ENABLED=false
-DOLIBARR_MODE=api
+DOLIBARR_MODE=log
 DOLIBARR_API_URL=
 DOLIBARR_API_KEY=
+MEETING_PROVIDER=jitsi
+MEETING_ALLOW_EARLY_JOIN=true
+BOOKING_LEAD_DAYS=2
+EMAIL_ENABLED=false
 ```
 
-## Why not rewrite everything in one PR
-
-The Express API is large (~4k+ lines of controllers). This PR establishes Laravel 12 + Vue 3 auth so the team can migrate feature-by-feature without blocking the frontend.
+Legacy Express code remains in `LectiHub-server/` until cutover is confirmed.

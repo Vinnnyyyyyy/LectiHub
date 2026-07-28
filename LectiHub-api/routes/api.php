@@ -1,22 +1,164 @@
 <?php
 
+use App\Http\Controllers\Api\AdminMonitoringController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AvailabilityController;
+use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ClassController;
+use App\Http\Controllers\Api\LessonReportController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\PaymentReceiptController;
+use App\Http\Controllers\Api\ScheduleRequestController;
+use App\Http\Controllers\Api\StudentFeedbackController;
+use App\Http\Controllers\Api\TrialRequestController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
+// ── Health ────────────────────────────────────────────────────────────────────
+Route::get('/health', function () {
+    return response()->json([
+        'ok'        => true,
+        'service'   => 'LectiHub API',
+        'framework' => 'Laravel ' . app()->version(),
+    ]);
+});
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login',    [AuthController::class, 'login']);
 
     Route::middleware('auth:sanctum')->group(function () {
-        Route::get('/me', [AuthController::class, 'me']);
-        Route::post('/logout', [AuthController::class, 'logout']);
+        Route::get('/me',       [AuthController::class, 'me']);
+        Route::post('/logout',  [AuthController::class, 'logout']);
     });
 });
 
-Route::get('/health', function () {
-    return response()->json([
-        'ok' => true,
-        'service' => 'LectiHub API',
-        'framework' => 'Laravel '.app()->version(),
-    ]);
+// ── Free-trial intake (public — no auth) ─────────────────────────────────────
+Route::prefix('trial-requests')->group(function () {
+    Route::get('/config', [TrialRequestController::class, 'getTrialConfig']);
+    Route::post('/',      [TrialRequestController::class, 'createFreeTrialRequest']);
+});
+
+// ── Authenticated routes ──────────────────────────────────────────────────────
+Route::middleware('auth:sanctum')->group(function () {
+
+    // ── Users (admin) ─────────────────────────────────────────────────────────
+    Route::prefix('users')->middleware('role:admin')->group(function () {
+        Route::get('/',          [UserController::class, 'listUsers']);
+        Route::post('/create',   [UserController::class, 'createUser']);
+        Route::delete('/{id}',   [UserController::class, 'deleteUser']);
+    });
+
+    // ── Schedule requests ─────────────────────────────────────────────────────
+    Route::prefix('schedule-requests')->group(function () {
+        // Student-only
+        Route::post('/',       [ScheduleRequestController::class, 'createScheduleRequest'])
+            ->middleware('role:student');
+        Route::get('/mine',    [ScheduleRequestController::class, 'listMyScheduleRequests'])
+            ->middleware('role:student');
+
+        // Admin-only  (static /mine declared first so it isn't swallowed by /{id})
+        Route::get('/',        [ScheduleRequestController::class, 'listScheduleRequestsForAdmin'])
+            ->middleware('role:admin');
+        Route::get('/{id}',    [ScheduleRequestController::class, 'getScheduleRequestForAdmin'])
+            ->middleware('role:admin');
+        Route::post('/{id}/assign', [ScheduleRequestController::class, 'assignTeacherToRequest'])
+            ->middleware('role:admin');
+    });
+
+    // ── Notifications (all authenticated roles) ───────────────────────────────
+    Route::prefix('notifications')->group(function () {
+        Route::get('/',              [NotificationController::class, 'listMyNotifications']);
+        Route::patch('/read-all',    [NotificationController::class, 'markAllNotificationsRead']);
+        Route::patch('/{id}/read',   [NotificationController::class, 'markNotificationRead']);
+    });
+
+    // ── Classes ───────────────────────────────────────────────────────────────
+    Route::prefix('classes')->group(function () {
+        Route::get('/mine',                 [ClassController::class, 'listMyClasses'])
+            ->middleware('role:student,teacher,admin');
+        Route::get('/history',              [ClassController::class, 'listClassHistory'])
+            ->middleware('role:student,teacher,admin');
+        Route::get('/by-request/{requestId}', [ClassController::class, 'getClassByRequest']);
+
+        Route::post('/{id}/join',           [ClassController::class, 'joinClass'])
+            ->middleware('role:student,teacher,admin');
+        Route::patch('/{id}/meeting-provider', [ClassController::class, 'updateMeetingProvider'])
+            ->middleware('role:student,teacher,admin');
+        Route::patch('/{id}/conduct',       [ClassController::class, 'updateLessonConduct'])
+            ->middleware('role:teacher,admin');
+        Route::post('/{id}/complete',       [ClassController::class, 'completeClass'])
+            ->middleware('role:teacher,admin');
+
+        Route::get('/{id}/report',          [LessonReportController::class, 'getLessonReportForClass'])
+            ->middleware('role:student,teacher,admin');
+        Route::post('/{id}/report',         [LessonReportController::class, 'submitLessonReport'])
+            ->middleware('role:teacher,admin');
+    });
+
+    // ── Lesson reports ────────────────────────────────────────────────────────
+    Route::prefix('lesson-reports')->group(function () {
+        Route::get('/', [LessonReportController::class, 'listLessonReports'])
+            ->middleware('role:student,teacher,admin');
+
+        // /{reportId}/feedback before /{reportId} to avoid parameter capture
+        Route::post('/{reportId}/feedback', [StudentFeedbackController::class, 'submitFeedbackForReport'])
+            ->middleware('role:student');
+        Route::get('/{reportId}/feedback',  [StudentFeedbackController::class, 'getFeedbackForReport'])
+            ->middleware('role:student,teacher,admin');
+        Route::get('/{reportId}',           [LessonReportController::class, 'getLessonReportById'])
+            ->middleware('role:student,teacher,admin');
+    });
+
+    // ── Student feedback ──────────────────────────────────────────────────────
+    Route::get('/student-feedback', [StudentFeedbackController::class, 'listStudentFeedback'])
+        ->middleware('role:student,teacher,admin');
+
+    // ── Admin monitoring ──────────────────────────────────────────────────────
+    Route::prefix('admin')->middleware('role:admin')->group(function () {
+        Route::get('/monitoring', [AdminMonitoringController::class, 'getMonitoringOverview']);
+    });
+
+    // ── Calendar ──────────────────────────────────────────────────────────────
+    Route::prefix('calendar')->group(function () {
+        Route::get('/mine',                    [CalendarController::class, 'getMyCalendar'])
+            ->middleware('role:student,teacher,admin');
+        Route::post('/connect',                [CalendarController::class, 'connectCalendarProvider'])
+            ->middleware('role:teacher');
+        Route::delete('/connect/{provider}',   [CalendarController::class, 'disconnectCalendarProvider'])
+            ->middleware('role:teacher');
+    });
+
+    // ── Availability ──────────────────────────────────────────────────────────
+    Route::prefix('availability')->group(function () {
+        Route::get('/open',  [AvailabilityController::class, 'getOpenAvailability'])
+            ->middleware('role:student,admin');
+        Route::get('/mine',  [AvailabilityController::class, 'getMyAvailability'])
+            ->middleware('role:teacher');
+        Route::put('/mine',  [AvailabilityController::class, 'updateMyAvailability'])
+            ->middleware('role:teacher');
+    });
+
+    // ── Chat ──────────────────────────────────────────────────────────────────
+    Route::prefix('chat')->middleware('role:student,teacher')->group(function () {
+        Route::get('/threads',                     [ChatController::class, 'listChatThreads']);
+        Route::get('/peers/{peerId}/messages',     [ChatController::class, 'listMessagesForPeer']);
+        Route::post('/peers/{peerId}/messages',    [ChatController::class, 'sendMessageForPeer']);
+    });
+
+    // ── Payment receipts ──────────────────────────────────────────────────────
+    Route::prefix('payment-receipts')->group(function () {
+        Route::post('/',     [PaymentReceiptController::class, 'createPaymentReceipt'])
+            ->middleware('role:student,admin');
+        Route::get('/mine',  [PaymentReceiptController::class, 'listMyPaymentReceipts'])
+            ->middleware('role:student');
+        Route::get('/',      [PaymentReceiptController::class, 'listPaymentReceipts'])
+            ->middleware('role:admin');
+        Route::get('/{id}',  [PaymentReceiptController::class, 'getPaymentReceipt'])
+            ->middleware('role:student,admin');
+        Route::patch('/{id}', [PaymentReceiptController::class, 'updatePaymentReceiptStatus'])
+            ->middleware('role:admin');
+    });
 });
