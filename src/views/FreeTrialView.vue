@@ -1,132 +1,9 @@
-<template>
-  <div class="trial-page">
-    <form v-if="!submitted" class="trial-panel" @submit.prevent="handleSubmit">
-      <p class="brand">LectiHub</p>
-      <h1>Free 30‑minute trial</h1>
-      <p class="lede">
-        Fill in your details and preferred slot. We’ll send it to Dolibarr and queue it in
-        LectiHub’s scheduler for confirmation.
-      </p>
-
-      <label for="trial-name">Name</label>
-      <input
-        id="trial-name"
-        v-model="name"
-        type="text"
-        required
-        maxlength="120"
-        autocomplete="name"
-        placeholder="Alex Rivera"
-      />
-
-      <label for="trial-email">Email</label>
-      <input
-        id="trial-email"
-        v-model="email"
-        type="email"
-        required
-        maxlength="180"
-        autocomplete="email"
-        placeholder="alex@email.com"
-      />
-
-      <label for="trial-phone">Phone <span class="optional">(optional)</span></label>
-      <input
-        id="trial-phone"
-        v-model="phone"
-        type="tel"
-        maxlength="40"
-        autocomplete="tel"
-        placeholder="+1 555 123 4567"
-      />
-
-      <fieldset class="entity-field">
-        <legend>Company / Individual</legend>
-        <div class="entity-options" role="radiogroup" aria-label="Company or Individual">
-          <label
-            v-for="option in TRIAL_ENTITY_OPTIONS"
-            :key="option.value"
-            class="entity-option"
-            :class="{ selected: entityType === option.value }"
-          >
-            <input
-              v-model="entityType"
-              type="radio"
-              name="entityType"
-              :value="option.value"
-              required
-            />
-            <span>{{ option.label }}</span>
-          </label>
-        </div>
-      </fieldset>
-
-      <label for="trial-program">Program</label>
-      <select id="trial-program" v-model="program" required>
-        <option disabled value="">Select a program</option>
-        <option v-for="item in TRIAL_PROGRAMS" :key="item" :value="item">
-          {{ item }}
-        </option>
-      </select>
-
-      <div class="slot-row">
-        <label for="trial-date">
-          Preferred date
-          <input id="trial-date" v-model="preferredDate" type="date" required :min="minDate" />
-        </label>
-        <label for="trial-slot">
-          Time slot (30 mins)
-          <select id="trial-slot" v-model="preferredSlot" required>
-            <option disabled value="">Select a slot</option>
-            <option v-for="slot in TRIAL_TIME_SLOTS" :key="slot" :value="slot">
-              {{ slot }}
-            </option>
-          </select>
-        </label>
-      </div>
-
-      <label for="trial-platform">Preferred video platform</label>
-      <select id="trial-platform" v-model="videoPlatform" required>
-        <option disabled value="">Select a platform</option>
-        <option
-          v-for="option in TRIAL_VIDEO_PLATFORM_OPTIONS"
-          :key="option.value"
-          :value="option.value"
-        >
-          {{ option.label }}
-        </option>
-      </select>
-
-      <button type="submit" :disabled="loading">
-        {{ loading ? 'Sending to Dolibarr…' : 'Request free trial' }}
-      </button>
-
-      <p v-if="error" class="error" role="alert">{{ error }}</p>
-
-      <p class="switch">
-        Already have an account?
-        <RouterLink to="/login">Log in</RouterLink>
-      </p>
-    </form>
-
-    <div v-else class="trial-panel success-panel" role="status">
-      <p class="brand">LectiHub</p>
-      <p class="success-kicker">Request sent</p>
-      <h1>Thanks, {{ submittedName }}</h1>
-      <p class="lede">
-        Your request was sent to Dolibarr and queued in the E-Scheduler. We’ll confirm your
-        {{ submittedSlot }} session by email.
-      </p>
-      <RouterLink class="back-link" to="/login">Back to log in</RouterLink>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import axios from 'axios'
 import api from '../api/axios'
+import AuthLayout from '../components/AuthLayout.vue'
 import {
   TRIAL_ENTITY_OPTIONS,
   TRIAL_PROGRAMS,
@@ -191,246 +68,272 @@ async function handleSubmit() {
 }
 </script>
 
+<template>
+  <AuthLayout center-name="Learning center">
+    <template v-if="!submitted">
+      <p class="step">No account needed</p>
+      <h1>Free 30-minute trial</h1>
+      <p class="lede">Tell us when suits you. We'll confirm your session by email.</p>
+
+      <form @submit.prevent="handleSubmit">
+        <div class="field">
+          <label for="trial-name">Name</label>
+          <input
+            id="trial-name"
+            v-model="name"
+            type="text"
+            required
+            maxlength="120"
+            autocomplete="name"
+            placeholder="Alex Rivera"
+          />
+        </div>
+
+        <div class="field">
+          <label for="trial-email">Email</label>
+          <input
+            id="trial-email"
+            v-model="email"
+            type="email"
+            required
+            maxlength="180"
+            autocomplete="email"
+            placeholder="alex@email.com"
+          />
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <label for="trial-phone">Phone</label>
+            <span class="optional">Optional</span>
+          </div>
+          <input
+            id="trial-phone"
+            v-model="phone"
+            type="tel"
+            maxlength="40"
+            autocomplete="tel"
+            placeholder="+1 555 123 4567"
+          />
+        </div>
+
+        <div class="field">
+          <label>Booking for</label>
+          <div class="choices" role="radiogroup" aria-label="Company or Individual">
+            <label
+              v-for="option in TRIAL_ENTITY_OPTIONS"
+              :key="option.value"
+              class="choice"
+              :class="{ selected: entityType === option.value }"
+            >
+              <input
+                v-model="entityType"
+                type="radio"
+                name="entityType"
+                :value="option.value"
+                required
+              />
+              {{ option.label }}
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="trial-program">Program</label>
+          <select id="trial-program" v-model="program" required>
+            <option disabled value="">Select a program</option>
+            <option v-for="item in TRIAL_PROGRAMS" :key="item" :value="item">{{ item }}</option>
+          </select>
+        </div>
+
+        <div class="pair">
+          <div class="field">
+            <label for="trial-date">Preferred date</label>
+            <input id="trial-date" v-model="preferredDate" type="date" required :min="minDate" />
+          </div>
+          <div class="field">
+            <label for="trial-slot">Time slot</label>
+            <select id="trial-slot" v-model="preferredSlot" required>
+              <option disabled value="">Select a slot</option>
+              <option v-for="slot in TRIAL_TIME_SLOTS" :key="slot" :value="slot">{{ slot }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="trial-platform">Preferred video platform</label>
+          <select id="trial-platform" v-model="videoPlatform" required>
+            <option disabled value="">Select a platform</option>
+            <option
+              v-for="option in TRIAL_VIDEO_PLATFORM_OPTIONS"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </option>
+          </select>
+        </div>
+
+        <p v-if="error" class="error" role="alert">{{ error }}</p>
+
+        <button type="submit" class="submit" :disabled="loading">
+          {{ loading ? 'Sending…' : 'Request free trial' }}
+        </button>
+      </form>
+
+      <p class="switch">Already have an account? <RouterLink to="/login">Log in</RouterLink></p>
+    </template>
+
+    <template v-else>
+      <p class="step">Request sent</p>
+      <h1>Thanks, {{ submittedName }}</h1>
+      <p class="lede">
+        We've queued your {{ submittedSlot }} session. You'll get an email once a teacher is
+        confirmed.
+      </p>
+      <p class="switch"><RouterLink to="/login">Back to log in</RouterLink></p>
+    </template>
+
+    <template #aside>
+      <p class="eyebrow">What a trial looks like</p>
+      <h2 class="side-title">One lesson.<br />No commitment.</h2>
+
+      <ul class="points">
+        <li>
+          <span class="marker" aria-hidden="true" />
+          <div>
+            <p class="point-title">30 minutes, one to one</p>
+            <p class="point-copy">A real lesson with a teacher matched to your program.</p>
+          </div>
+        </li>
+        <li>
+          <span class="marker" aria-hidden="true" />
+          <div>
+            <p class="point-title">We confirm by email</p>
+            <p class="point-copy">With the teacher, the time and a meeting link.</p>
+          </div>
+        </li>
+        <li>
+          <span class="marker" aria-hidden="true" />
+          <div>
+            <p class="point-title">A written report after</p>
+            <p class="point-copy">What was covered and where to go next — yours to keep.</p>
+          </div>
+        </li>
+      </ul>
+    </template>
+  </AuthLayout>
+</template>
+
 <style scoped>
-.trial-page {
-  position: relative;
-  width: 100%;
-  min-height: 100vh;
+.step {
+  margin-bottom: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lh-dim);
+}
+
+.optional {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--lh-ghost);
+}
+
+.pair {
   display: grid;
-  place-items: center;
-  padding: 2rem 1.25rem;
-  color: var(--lh-ink);
-  overflow: hidden;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }
 
-.trial-panel {
-  position: relative;
-  width: min(100%, 32rem);
+.choices {
   display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  padding: 2rem 1.75rem 1.75rem;
-  background: var(--lh-panel);
-  border: 1px solid var(--lh-line);
-  border-radius: 1.25rem;
-  animation: rise 0.55s ease both;
+  gap: 7px;
 }
 
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.brand {
-  margin: 0;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.75rem;
+.choice {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 13px;
+  border-radius: var(--lh-radius-control);
+  box-shadow: inset 0 0 0 1px var(--lh-line-inset);
+  color: var(--lh-muted);
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.03em;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  transition:
+    color var(--lh-ease),
+    box-shadow var(--lh-ease);
+}
+
+.choice.selected {
+  background: var(--lh-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--lh-accent-edge);
   color: var(--lh-accent);
 }
 
-h1 {
-  margin: 0;
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.35rem;
-  font-weight: 550;
-  line-height: 1.2;
-  color: var(--lh-ink);
-}
-
-.lede,
-label,
-legend,
-input,
-select,
-button,
-.error,
-.switch,
-.success-kicker,
-.back-link,
-.entity-option,
-.optional {
-  font-family: 'Manrope', sans-serif;
-}
-
-.optional {
-  font-weight: 500;
-  color: var(--lh-faint);
-}
-
-.lede {
-  margin: 0 0 0.55rem;
-  font-size: 0.95rem;
-  line-height: 1.45;
-  color: var(--lh-muted);
-}
-
-label,
-legend {
-  font-size: 0.82rem;
-  font-weight: 600;
-  margin-top: 0.2rem;
-  color: var(--lh-muted);
-}
-
-.entity-field {
-  margin: 0.1rem 0 0;
+.choice input {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+  height: 14px;
   padding: 0;
-  border: 0;
-}
-
-.entity-field legend {
-  padding: 0;
-  margin-bottom: 0.4rem;
-}
-
-.entity-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.55rem;
-}
-
-.entity-option {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.7rem 0.8rem;
-  border-radius: 0.7rem;
-  border: 1px solid var(--lh-line-strong);
-  background: var(--lh-input);
-  color: var(--lh-ink);
-  font-size: 0.92rem;
-  font-weight: 650;
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background 0.2s ease;
-}
-
-.entity-option.selected {
-  border-color: color-mix(in srgb, var(--lh-accent) 55%, transparent);
-  background: var(--lh-accent-soft);
-}
-
-.entity-option input {
-  accent-color: var(--lh-accent-deep);
-  width: auto;
-  margin: 0;
-  padding: 0;
+  accent-color: var(--lh-accent);
   box-shadow: none;
 }
 
-.slot-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.7rem;
-}
-
-.slot-row label {
-  display: grid;
-  gap: 0.35rem;
-}
-
-input,
-select {
-  width: 100%;
-  font-size: 0.95rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px solid var(--lh-line-strong);
-  border-radius: 0.7rem;
-  background: var(--lh-input);
-  color: var(--lh-ink);
-  color-scheme: dark;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-input:focus,
-select:focus {
-  outline: none;
-  border-color: color-mix(in srgb, var(--lh-accent) 55%, transparent);
-  box-shadow: 0 0 0 1px var(--lh-accent);
-}
-
-button {
-  margin-top: 0.65rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  padding: 0.8rem 1rem;
-  border: none;
-  border-radius: 0.75rem;
-  background: var(--lh-accent);
-  color: var(--lh-on-accent);
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    filter 0.18s ease;
-}
-
-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.04);
-}
-
-button:disabled {
-  opacity: 0.65;
-  cursor: wait;
-}
-
-.error {
-  margin: 0.15rem 0 0;
-  color: var(--lh-danger);
-  font-size: 0.88rem;
-}
-
-.switch {
-  font-size: 0.9rem;
-  margin: 0.35rem 0 0;
-  color: var(--lh-muted);
-}
-
-.switch a,
-.back-link {
-  color: var(--lh-accent);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.switch a:hover,
-.back-link:hover {
-  text-decoration: underline;
-}
-
-.success-kicker {
-  margin: 0.15rem 0 0;
-  font-size: 0.72rem;
+.eyebrow {
+  font-size: 9.5px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--lh-faint);
+  color: var(--lh-dim);
 }
 
-.success-panel .lede {
-  margin-top: 0.35rem;
+.side-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
 }
 
-.back-link {
-  margin-top: 0.75rem;
-  width: fit-content;
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  list-style: none;
 }
 
-@media (max-width: 560px) {
-  .slot-row,
-  .entity-options {
-    grid-template-columns: 1fr;
-  }
+.points li {
+  display: flex;
+  gap: 12px;
+}
+
+.marker {
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  margin-top: 7px;
+  border-radius: 50%;
+  background: var(--lh-accent);
+}
+
+.point-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+.point-copy {
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--lh-muted);
 }
 </style>
