@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Services\AvailabilityService;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -33,5 +34,7 @@ class DatabaseSeeder extends Seeder
                 ],
             );
         }
+
+        app(AvailabilityService::class)->seedAllTeachers();
     }
 }

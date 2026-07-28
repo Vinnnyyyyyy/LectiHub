@@ -27,7 +27,7 @@ class AvailabilityService
     /** Students may only book on/after today + this many calendar days. */
     public const DEFAULT_BOOKING_LEAD_DAYS = 2;
 
-    /** Mon–Fri (Carbon/PHP: 1=Mon … 7=Sun, ISO-8601). */
+    /** Mon–Fri — same as JS Date#getDay() (0=Sun … 6=Sat). */
     public const DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5];
 
     /**
@@ -49,13 +49,13 @@ class AvailabilityService
     }
 
     /**
-     * ISO weekday of a Y-m-d string: 1 (Mon) – 7 (Sun).
+     * Weekday of a Y-m-d string using JS/Express numbering: 0 (Sun) – 6 (Sat).
      * Returns null when the string is not a valid date.
      */
     public function weekdayOf(string $isoDate): ?int
     {
         try {
-            return CarbonImmutable::createFromFormat('Y-m-d', $isoDate)->dayOfWeekIso;
+            return CarbonImmutable::createFromFormat('Y-m-d', $isoDate)->dayOfWeek;
         } catch (\Throwable) {
             return null;
         }

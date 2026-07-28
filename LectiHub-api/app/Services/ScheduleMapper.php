@@ -194,10 +194,10 @@ class ScheduleMapper
     /**
      * Resolve the start/end time strings for a class row (plain array or model).
      *
-     * @param  array|\stdClass  $classRow
+     * @param  array|object  $classRow
      * @return array{startTime: string, endTime: string}
      */
-    private function classWindow(array|\stdClass $classRow): array
+    private function classWindow(array|object $classRow): array
     {
         $get = fn ($key) => is_array($classRow) ? ($classRow[$key] ?? null) : ($classRow->{$key} ?? null);
 
@@ -213,9 +213,9 @@ class ScheduleMapper
     /**
      * Determine whether a class is joinable right now (or at a given $now).
      *
-     * @param  array|\stdClass  $classRow
+     * @param  array|object  $classRow
      */
-    public function getJoinAvailability(array|\stdClass $classRow, ?Carbon $now = null): array
+    public function getJoinAvailability(array|object $classRow, ?Carbon $now = null): array
     {
         $now    = $now ?? Carbon::now();
         $status = $this->normalizeClassStatus(
@@ -277,14 +277,14 @@ class ScheduleMapper
      * Map a LectiClass DB row (Eloquent model or plain array) to a camelCase
      * presentation array.
      *
-     * @param  array|\stdClass  $row
-     * @param  array|\stdClass|null  $teacher
-     * @param  array|\stdClass|null  $student
+     * @param  array|object  $row
+     * @param  array|object|null  $teacher
+     * @param  array|object|null  $student
      */
     public function mapClassRow(
-        array|\stdClass $row,
-        array|\stdClass|null $teacher = null,
-        array|\stdClass|null $student = null
+        array|object $row,
+        array|object|null $teacher = null,
+        array|object|null $student = null
     ): array {
         $get = fn ($key) => is_array($row) ? ($row[$key] ?? null) : ($row->{$key} ?? null);
 
@@ -345,17 +345,17 @@ class ScheduleMapper
     /**
      * Map a LessonReport row to a camelCase presentation array.
      *
-     * @param  array|\stdClass  $row
-     * @param  array|\stdClass|null  $teacher
-     * @param  array|\stdClass|null  $student
-     * @param  array|\stdClass|null  $classRow
+     * @param  array|object  $row
+     * @param  array|object|null  $teacher
+     * @param  array|object|null  $student
+     * @param  array|object|null  $classRow
      * @param  array{hasFeedback?: bool, feedbackId?: int|null}|null  $feedbackMeta
      */
     public function mapLessonReport(
-        array|\stdClass $row,
-        array|\stdClass|null $teacher = null,
-        array|\stdClass|null $student = null,
-        array|\stdClass|null $classRow = null,
+        array|object $row,
+        array|object|null $teacher = null,
+        array|object|null $student = null,
+        array|object|null $classRow = null,
         ?array $feedbackMeta = null
     ): array {
         $get  = fn ($key) => is_array($row)      ? ($row[$key]      ?? null) : ($row->{$key}      ?? null);
@@ -399,16 +399,16 @@ class ScheduleMapper
     /**
      * Map a StudentFeedback row to a camelCase presentation array.
      *
-     * @param  array|\stdClass  $row
-     * @param  array|\stdClass|null  $teacher
-     * @param  array|\stdClass|null  $student
-     * @param  array|\stdClass|null  $report
+     * @param  array|object  $row
+     * @param  array|object|null  $teacher
+     * @param  array|object|null  $student
+     * @param  array|object|null  $report
      */
     public function mapStudentFeedback(
-        array|\stdClass $row,
-        array|\stdClass|null $teacher = null,
-        array|\stdClass|null $student = null,
-        array|\stdClass|null $report = null
+        array|object $row,
+        array|object|null $teacher = null,
+        array|object|null $student = null,
+        array|object|null $report = null
     ): array {
         $get  = fn ($key) => is_array($row)    ? ($row[$key]    ?? null) : ($row->{$key}    ?? null);
         $rGet = fn ($key) => $report === null  ? null
@@ -478,9 +478,9 @@ class ScheduleMapper
     // -----------------------------------------------------------------------
 
     /**
-     * @param  array|\stdClass  $user
+     * @param  array|object  $user
      */
-    private function mapUserBrief(array|\stdClass $user, bool $isTeacher): array
+    private function mapUserBrief(array|object $user, bool $isTeacher): array
     {
         $get = fn ($key) => is_array($user) ? ($user[$key] ?? null) : ($user->{$key} ?? null);
 

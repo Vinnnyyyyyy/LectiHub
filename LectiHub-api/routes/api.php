@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminMonitoringController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvailabilityController;
 use App\Http\Controllers\Api\CalendarController;
@@ -104,9 +104,9 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('role:student,teacher,admin');
 
         // /{reportId}/feedback before /{reportId} to avoid parameter capture
-        Route::post('/{reportId}/feedback', [LessonReportController::class, 'submitFeedbackForReport'])
+        Route::post('/{reportId}/feedback', [StudentFeedbackController::class, 'submitFeedbackForReport'])
             ->middleware('role:student');
-        Route::get('/{reportId}/feedback',  [LessonReportController::class, 'getFeedbackForReport'])
+        Route::get('/{reportId}/feedback',  [StudentFeedbackController::class, 'getFeedbackForReport'])
             ->middleware('role:student,teacher,admin');
         Route::get('/{reportId}',           [LessonReportController::class, 'getLessonReportById'])
             ->middleware('role:student,teacher,admin');
@@ -118,7 +118,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // ── Admin monitoring ──────────────────────────────────────────────────────
     Route::prefix('admin')->middleware('role:admin')->group(function () {
-        Route::get('/monitoring', [AdminController::class, 'getMonitoringOverview']);
+        Route::get('/monitoring', [AdminMonitoringController::class, 'getMonitoringOverview']);
     });
 
     // ── Calendar ──────────────────────────────────────────────────────────────
