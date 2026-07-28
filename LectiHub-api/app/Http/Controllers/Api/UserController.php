@@ -4,12 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AvailabilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
+    public function __construct(
+        private readonly AvailabilityService $availability,
+    ) {}
+
     // -----------------------------------------------------------------------
     // Mapper
     // -----------------------------------------------------------------------
@@ -81,7 +86,7 @@ class UserController extends Controller
             /** @var User $authUser */
             $authUser = $request->user();
 
-            User::create([
+            $teacher = User::create([
                 'username'             => $username,
                 'email'                => $email ?: null,
                 'password'             => $password,
@@ -91,6 +96,8 @@ class UserController extends Controller
                 'subject_expertise'    => $subjectExpertise ?: null,
                 'must_change_password' => true,
             ]);
+
+            $this->availability->ensureDefaultTeacherAvailability($teacher->id);
 
             return response()->json([
                 'message'      => 'Teacher account created',
@@ -143,6 +150,10 @@ class UserController extends Controller
                 DB::table('calendar_events')->where('user_id', $userId)->delete();
                 DB::table('calendar_connections')->where('user_id', $userId)->delete();
                 DB::table('teacher_availability')->where('teacher_id', $userId)->delete();
+                DB::table('payment_receipts')
+                    ->where('student_id', $userId)
+                    ->orWhere('recorded_by', $userId)
+                    ->delete();
 
                 DB::table('student_feedback')
                     ->where('student_id', $userId)
