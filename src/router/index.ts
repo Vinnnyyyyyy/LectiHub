@@ -116,19 +116,21 @@ const router = createRouter({
           path: 'session',
           name: 'teacher-session',
           component: () => import('../views/teacher/SessionView.vue'),
-          meta: {
-            title: 'In session',
-            intro: 'Conduct the live lesson on the left. File the post-lesson report on the right.',
-          },
+          // Eyebrow and title are set live by the view (the class in session).
+          meta: { title: 'In session' },
+        },
+        {
+          path: 'report',
+          name: 'teacher-report',
+          component: () => import('../views/teacher/ReportView.vue'),
+          meta: { title: 'Lesson report' },
         },
         {
           path: 'records',
           name: 'teacher-records',
           component: () => import('../views/teacher/RecordsView.vue'),
-          meta: {
-            title: 'Records',
-            intro: 'Submitted reports, past classes, and archived teaching history.',
-          },
+          // Eyebrow is set live by the view.
+          meta: { title: 'Records' },
         },
         {
           path: 'hours',

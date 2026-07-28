@@ -29,6 +29,7 @@ const items = computed<RailItem[]>(() => [
     icon: 'clock',
     badge: classesStore.inProgress.length > 0,
   },
+  { to: '/teacher/report', label: 'Lesson report', icon: 'list' },
   { to: '/teacher/records', label: 'Records', icon: 'book' },
   { to: '/teacher/hours', label: 'Open hours & calendar', icon: 'gear' },
 ])
