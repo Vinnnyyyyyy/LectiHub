@@ -89,6 +89,7 @@ onBeforeUnmount(() => {
         aria-hidden="true"
         v-html="ICONS[item.icon]"
       />
+      <span class="rail-label">{{ item.label }}</span>
       <span v-if="item.badge" class="dot" aria-hidden="true" />
     </RouterLink>
 
@@ -238,5 +239,80 @@ onBeforeUnmount(() => {
 .menu button:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 1px var(--lh-accent);
+}
+
+/* Desktop hides the labels; the icons carry title/aria-label. */
+.rail-label {
+  display: none;
+}
+
+/* ── Mobile: the rail becomes a bottom tab bar ──────────── */
+
+@media (max-width: 820px) {
+  .rail {
+    position: fixed;
+    z-index: 50;
+    inset: auto 0 0 0;
+    width: 100%;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    padding: 0 6px calc(6px + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--lh-line);
+  }
+
+  .wordmark {
+    display: none;
+  }
+
+  .rail-item {
+    flex: 1;
+    width: auto;
+    /* 44px touch target per the design. */
+    height: 44px;
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    border-radius: var(--lh-radius-control);
+  }
+
+  .rail-item.active {
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .rail-label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .dot {
+    top: 2px;
+    right: calc(50% - 16px);
+  }
+
+  .account {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px 0 10px;
+  }
+
+  .menu {
+    bottom: calc(100% + 9px);
+    left: auto;
+    right: 0;
+  }
 }
 </style>

@@ -124,12 +124,22 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 }
 
 @media (max-width: 820px) {
+  /* The rail is a fixed bottom tab bar at this width. */
+  .frame {
+    flex-direction: column;
+  }
+
   .header {
     padding: 14px 14px 12px;
   }
 
+  .title {
+    font-size: 24px;
+  }
+
   .pane {
-    padding: 18px 14px 44px;
+    /* Clear the 56px bar plus the safe area. */
+    padding: 18px 14px calc(74px + env(safe-area-inset-bottom));
   }
 }
 </style>
