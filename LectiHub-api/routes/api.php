@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AvailabilityController;
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ClassController;
+use App\Http\Controllers\Api\CourseController;
 use App\Http\Controllers\Api\LessonReportController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentReceiptController;
@@ -115,6 +116,34 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Student feedback ──────────────────────────────────────────────────────
     Route::get('/student-feedback', [StudentFeedbackController::class, 'listStudentFeedback'])
         ->middleware('role:student,teacher,admin');
+
+    // ── Courses & materials ───────────────────────────────────────────────────
+    Route::prefix('courses')->group(function () {
+        // Students see only what they are enrolled in; staff see everything.
+        Route::get('/', [CourseController::class, 'listCourses'])
+            ->middleware('role:student,teacher,admin');
+
+        Route::post('/',        [CourseController::class, 'createCourse'])->middleware('role:admin');
+        Route::patch('/{id}',   [CourseController::class, 'updateCourse'])->middleware('role:admin');
+        Route::delete('/{id}',  [CourseController::class, 'deleteCourse'])->middleware('role:admin');
+
+        Route::get('/{id}/materials', [CourseController::class, 'listMaterials'])
+            ->middleware('role:student,teacher,admin');
+        Route::post('/{id}/materials', [CourseController::class, 'uploadMaterial'])
+            ->middleware('role:teacher,admin');
+
+        Route::get('/{id}/enrolments', [CourseController::class, 'listEnrolments'])
+            ->middleware('role:admin');
+        Route::put('/{id}/enrolments', [CourseController::class, 'updateEnrolments'])
+            ->middleware('role:admin');
+    });
+
+    Route::prefix('materials')->group(function () {
+        Route::get('/{id}/download', [CourseController::class, 'downloadMaterial'])
+            ->middleware('role:student,teacher,admin');
+        Route::delete('/{id}', [CourseController::class, 'deleteMaterial'])
+            ->middleware('role:teacher,admin');
+    });
 
     // ── Admin monitoring ──────────────────────────────────────────────────────
     Route::prefix('admin')->middleware('role:admin')->group(function () {
