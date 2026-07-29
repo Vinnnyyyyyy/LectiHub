@@ -17,10 +17,11 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       proxy: {
-        // Target must match PORT in LectiHub-server/.env. Set
-        // VITE_API_PROXY_TARGET in .env.local when 3000 is already taken.
+        // Laravel 12 API (php artisan serve --port=8000). Set
+        // VITE_API_PROXY_TARGET in .env.local to fall back to the legacy
+        // Express server on :3000 during the migration.
         '/api': {
-          target: env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
+          target: env.VITE_API_PROXY_TARGET || 'http://localhost:8000',
           changeOrigin: true,
         },
       },

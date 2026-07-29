@@ -155,6 +155,9 @@ async function deleteUser(req, res) {
       db.prepare(`DELETE FROM calendar_events WHERE user_id = ?`).run(userId);
       db.prepare(`DELETE FROM calendar_connections WHERE user_id = ?`).run(userId);
       db.prepare(`DELETE FROM teacher_availability WHERE teacher_id = ?`).run(userId);
+      db.prepare(
+        `DELETE FROM payment_receipts WHERE student_id = ? OR recorded_by = ?`,
+      ).run(userId, userId);
 
       db.prepare(`DELETE FROM student_feedback WHERE student_id = ? OR teacher_id = ?`).run(
         userId,
