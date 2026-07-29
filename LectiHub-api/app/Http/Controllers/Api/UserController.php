@@ -22,13 +22,53 @@ class UserController extends Controller
     private function mapUser(User $user): array
     {
         return [
-            'id'        => $user->id,
-            'username'  => $user->username,
-            'email'     => $user->email ?? '',
-            'fullName'  => $user->full_name ?? $user->username,
-            'role'      => $user->role,
-            'createdAt' => $user->created_at,
+            'id'               => $user->id,
+            'username'         => $user->username,
+            'email'            => $user->email ?? '',
+            'fullName'         => $user->full_name ?? $user->username,
+            'role'             => $user->role,
+            'createdAt'        => $user->created_at,
+            'subjectExpertise' => $user->subject_expertise ?? '',
+            // Directory roll-ups; only present on list responses.
+            'weeklyMinutes'    => isset($user->weekly_minutes) ? (int) $user->weekly_minutes : null,
+            'studentCount'     => isset($user->student_count) ? (int) $user->student_count : null,
+            'calendarProvider' => $user->calendar_provider ?? null,
         ];
+    }
+
+    /**
+     * Directory roll-ups for the admin People table. Teacher-oriented: the
+     * subqueries key off classes.teacher_id, so they read 0 / null for students.
+     *
+     * strftime('%w') is 0=Sunday, so (%w + 6) % 7 is days elapsed since Monday.
+     */
+    private function withDirectoryRollups(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        $weekStart = "date('now', '-' || ((strftime('%w','now') + 6) % 7) || ' days')";
+        $weekEnd   = "date('now', '-' || ((strftime('%w','now') + 6) % 7) || ' days', '+7 days')";
+
+        return $query->select('users.*')
+            ->selectSub(
+                "SELECT COALESCE(SUM(COALESCE(c.duration_minutes, 30)), 0)
+                   FROM classes c
+                  WHERE c.teacher_id = users.id
+                    AND c.class_date >= {$weekStart}
+                    AND c.class_date <  {$weekEnd}",
+                'weekly_minutes',
+            )
+            ->selectSub(
+                "SELECT COUNT(DISTINCT c.student_id)
+                   FROM classes c
+                  WHERE c.teacher_id = users.id AND c.student_id IS NOT NULL",
+                'student_count',
+            )
+            ->selectSub(
+                "SELECT cc.provider
+                   FROM calendar_connections cc
+                  WHERE cc.user_id = users.id AND cc.is_active = 1
+                  LIMIT 1",
+                'calendar_provider',
+            );
     }
 
     // -----------------------------------------------------------------------
@@ -42,12 +82,14 @@ class UserController extends Controller
             $validRoles = ['admin', 'teacher', 'student'];
 
             if ($role && in_array($role, $validRoles, true)) {
-                $users = User::where('role', $role)
+                $users = $this->withDirectoryRollups(User::query())
+                    ->where('role', $role)
                     ->orderBy('full_name')
                     ->orderBy('username')
                     ->get();
             } else {
-                $users = User::orderByRaw("CASE role WHEN 'admin' THEN 0 WHEN 'teacher' THEN 1 ELSE 2 END")
+                $users = $this->withDirectoryRollups(User::query())
+                    ->orderByRaw("CASE role WHEN 'admin' THEN 0 WHEN 'teacher' THEN 1 ELSE 2 END")
                     ->orderBy('full_name')
                     ->orderBy('username')
                     ->get();
