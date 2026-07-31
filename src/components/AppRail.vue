@@ -128,15 +128,21 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .rail {
+  position: sticky;
+  top: 0;
   width: var(--lh-rail-w);
-  align-self: stretch;
+  align-self: flex-start;
   flex: 0 0 var(--lh-rail-w);
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   padding: 1.35rem 0.9rem 1rem;
   background: var(--lh-rail);
   border-right: 1px solid var(--lh-line);
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .brand {
@@ -207,8 +213,7 @@ onBeforeUnmount(() => {
   flex: 1;
   font-family: 'Manrope', sans-serif;
   font-size: 0.92rem;
-  /* Keep weight constant so active tab clicks don't nudge labels. */
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: -0.01em;
   line-height: 1.2;
   white-space: nowrap;
@@ -306,7 +311,7 @@ onBeforeUnmount(() => {
 .account-label {
   font-family: 'Manrope', sans-serif;
   font-size: 0.88rem;
-  font-weight: 700;
+  font-weight: 400;
   color: inherit;
 }
 
@@ -338,7 +343,7 @@ onBeforeUnmount(() => {
   color: var(--lh-ink);
   font: inherit;
   font-size: 0.84rem;
-  font-weight: 700;
+  font-weight: 400;
   text-align: left;
   cursor: pointer;
   transition: background var(--lh-ease);
@@ -405,7 +410,7 @@ onBeforeUnmount(() => {
   .rail-label {
     max-width: 100%;
     font-size: 0.62rem;
-    font-weight: 700;
+    font-weight: 400;
   }
 
   .dot {
