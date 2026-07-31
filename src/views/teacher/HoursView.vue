@@ -9,9 +9,15 @@ import { useAvailabilityStore } from '../../stores/availability'
 import { TIME_SLOTS } from '../../constants/timeSlots'
 import { usePageEyebrow } from '../../composables/usePageMeta'
 import CalendarConnectionsPanel from '../../components/CalendarConnectionsPanel.vue'
+import CalendarPanel from '../../components/CalendarPanel.vue'
+import { useCalendarStore } from '../../stores/calendar'
 
 const availabilityStore = useAvailabilityStore()
+const calendarStore = useCalendarStore()
 const { mySlots, loadingMine, savingMine, error } = storeToRefs(availabilityStore)
+const { loading: loadingCalendar } = storeToRefs(calendarStore)
+
+const calendarUpcoming = computed(() => calendarStore.upcoming)
 
 /** Mon–Fri; the center is closed at weekends. */
 const WEEKDAYS = [
@@ -199,6 +205,14 @@ onMounted(() => {
         </div>
       </aside>
     </div>
+
+    <CalendarPanel
+      title="My calendar"
+      subtitle="Gold days mark your scheduled classes."
+      empty-text="Nothing on this day yet."
+      :events="calendarUpcoming"
+      :loading="loadingCalendar"
+    />
   </section>
 </template>
 
