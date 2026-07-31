@@ -29,12 +29,12 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 </script>
 
 <template>
-  <div class="frame">
-    <AppRail :items="items" :initials="initials" @logout="emit('logout')" />
+  <div class="shell">
+    <div class="frame">
+      <AppRail :items="items" :initials="initials" @logout="emit('logout')" />
 
-    <div class="main">
-      <header class="header">
-        <div class="content">
+      <div class="main">
+        <header class="header">
           <div class="head-copy">
             <p class="eyebrow">{{ eyebrow }}</p>
             <h1 class="title">{{ title }}</h1>
@@ -43,14 +43,12 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
           <div class="actions">
             <slot name="actions" />
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main class="pane">
-        <div class="content">
+        <main class="pane">
           <RouterView />
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
 
     <slot name="overlay" />
@@ -58,11 +56,21 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 </template>
 
 <style scoped>
-.frame {
-  display: flex;
+/* Full-viewport backdrop; frame (rail + dashboard) is one middle unit. */
+.shell {
   min-height: 100vh;
+  display: grid;
+  justify-items: center;
   background: var(--lh-bg);
   color: var(--lh-ink);
+}
+
+.frame {
+  display: flex;
+  width: min(100%, 76rem);
+  min-height: 100vh;
+  border-inline: 1px solid var(--lh-line);
+  background: var(--lh-bg);
 }
 
 .main {
@@ -72,27 +80,17 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
   flex-direction: column;
 }
 
-/* Shared width so header + pane sit as one middle column. */
-.content {
-  width: min(100%, 72rem);
-  margin-inline: auto;
-  min-width: 0;
-}
-
 .header {
   position: sticky;
   top: 0;
   z-index: 20;
   flex: 0 0 auto;
-  padding: 18px 24px 14px;
-  border-bottom: 1px solid var(--lh-line);
-  background: var(--lh-bg);
-}
-
-.header .content {
   display: flex;
   align-items: flex-end;
   gap: 22px;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--lh-line);
+  background: var(--lh-bg);
 }
 
 .head-copy {
@@ -138,9 +136,15 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 }
 
 @media (max-width: 820px) {
+  .shell {
+    display: block;
+  }
+
   /* The rail is a fixed bottom tab bar at this width. */
   .frame {
     flex-direction: column;
+    width: 100%;
+    border-inline: 0;
   }
 
   .header {
