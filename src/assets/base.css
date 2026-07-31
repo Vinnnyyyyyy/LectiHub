@@ -5,13 +5,10 @@
 *::after {
   box-sizing: border-box;
   margin: 0;
-  padding: 0;
 }
 
 html {
   scroll-behavior: auto;
-  /* Keep layout width stable when tall pages show a scrollbar. */
-  scrollbar-gutter: stable;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -20,17 +17,12 @@ html {
   }
 }
 
-html,
-body {
-  font-variant-numeric: tabular-nums;
-}
-
 body {
   min-height: 100vh;
   margin: 0;
   color: var(--lh-ink);
-  background: var(--lh-void);
-  line-height: 1.55;
+  background: var(--lh-bg);
+  line-height: 1.6;
   font-family: 'Manrope', sans-serif;
   font-size: 15px;
   text-rendering: optimizeLegibility;
@@ -40,6 +32,6 @@ body {
 }
 
 ::selection {
-  background: var(--lh-accent-soft);
+  background: rgba(126, 184, 164, 0.28);
   color: var(--lh-ink);
 }
