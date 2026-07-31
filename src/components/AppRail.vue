@@ -128,15 +128,21 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .rail {
+  position: sticky;
+  top: 0;
   width: var(--lh-rail-w);
-  align-self: stretch;
+  align-self: flex-start;
   flex: 0 0 var(--lh-rail-w);
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
   padding: 1.35rem 0.9rem 1rem;
   background: var(--lh-rail);
   border-right: 1px solid var(--lh-line);
+  overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .brand {
