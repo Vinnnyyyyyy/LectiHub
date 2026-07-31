@@ -180,10 +180,11 @@ onBeforeUnmount(() => {
   position: sticky;
   top: 0;
   width: var(--lh-rail-w);
-  align-self: flex-start;
+  align-self: stretch;
   flex: 0 0 var(--lh-rail-w);
-  height: 100vh;
-  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: auto;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
