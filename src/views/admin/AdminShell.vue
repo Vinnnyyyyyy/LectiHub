@@ -34,8 +34,11 @@ const items = computed<RailItem[]>(() => [
   { to: '/admin/people', label: 'People', icon: 'people' },
   { to: '/admin/courses', label: 'Courses & materials', icon: 'book' },
   { to: '/admin/reports', label: 'Reports & feedback', icon: 'chart' },
-  { to: '/admin/announcements', label: 'Inbox & alerts', icon: 'megaphone' },
-  { to: '/admin/payments', label: 'Payments', icon: 'gear' },
+  { to: '/admin/announcements', label: 'Announcements', icon: 'megaphone' },
+  { to: '/admin/audit', label: 'Audit log', icon: 'clock' },
+  // Payments has no rail slot of its own: the design folds billing into
+  // Settings, which links through to it.
+  { to: '/admin/settings', label: 'System settings', icon: 'gear' },
 ])
 
 async function handleLogout() {

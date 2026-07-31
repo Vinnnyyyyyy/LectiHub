@@ -94,6 +94,20 @@ const router = createRouter({
           meta: { title: 'Inbox & alerts', intro: 'New scheduling requests and system alerts.' },
         },
         {
+          path: 'audit',
+          name: 'admin-audit',
+          component: () => import('../views/admin/AuditView.vue'),
+          // Eyebrow is set live by the view (event count + retention).
+          meta: { title: 'Audit log' },
+        },
+        {
+          path: 'settings',
+          name: 'admin-settings',
+          component: () => import('../views/admin/SettingsView.vue'),
+          // Eyebrow is set live by the view (centre name).
+          meta: { title: 'System settings' },
+        },
+        {
           path: 'payments',
           name: 'admin-payments',
           component: () => import('../views/admin/PaymentsView.vue'),
