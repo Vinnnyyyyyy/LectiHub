@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AdminMonitoringController;
+use App\Http\Controllers\Api\AnnouncementController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvailabilityController;
 use App\Http\Controllers\Api\CalendarController;
@@ -116,6 +117,22 @@ Route::middleware('auth:sanctum')->group(function () {
     // ── Student feedback ──────────────────────────────────────────────────────
     Route::get('/student-feedback', [StudentFeedbackController::class, 'listStudentFeedback'])
         ->middleware('role:student,teacher,admin');
+
+    // ── Announcements ─────────────────────────────────────────────────────────
+    Route::prefix('announcements')->group(function () {
+        // Static /mine before /{id} so it isn't swallowed.
+        Route::get('/mine', [AnnouncementController::class, 'listMine'])
+            ->middleware('role:student,teacher,admin');
+        Route::patch('/{id}/read', [AnnouncementController::class, 'markRead'])
+            ->middleware('role:student,teacher,admin');
+
+        Route::get('/',             [AnnouncementController::class, 'listAnnouncements'])->middleware('role:admin');
+        Route::post('/',            [AnnouncementController::class, 'createAnnouncement'])->middleware('role:admin');
+        Route::post('/preview',     [AnnouncementController::class, 'previewAudience'])->middleware('role:admin');
+        Route::post('/{id}/send',   [AnnouncementController::class, 'sendAnnouncement'])->middleware('role:admin');
+        Route::patch('/{id}',       [AnnouncementController::class, 'updateAnnouncement'])->middleware('role:admin');
+        Route::delete('/{id}',      [AnnouncementController::class, 'deleteAnnouncement'])->middleware('role:admin');
+    });
 
     // ── Courses & materials ───────────────────────────────────────────────────
     Route::prefix('courses')->group(function () {
