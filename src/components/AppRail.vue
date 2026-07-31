@@ -4,7 +4,7 @@
  * Supports route links (`to`) or in-page sections (`id` + activeId / select).
  * Mobile: bottom tab bar.
  */
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 
 const ICONS = {
@@ -75,6 +75,18 @@ function onSelect(item: RailItem) {
   emit('select', item.id)
 }
 
+/** Child tabs stay hidden until their parent group is selected. */
+const visibleItems = computed(() =>
+  props.items.filter((item) => {
+    if (!item.child) return true
+    const group = props.items.find(
+      (entry) => entry.group && entry.childIds?.includes(item.id),
+    )
+    if (!group?.childIds?.length) return true
+    return Boolean(props.activeId && group.childIds.includes(props.activeId))
+  }),
+)
+
 const menuOpen = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
 
@@ -110,7 +122,7 @@ onBeforeUnmount(() => {
     <nav class="nav">
       <component
         :is="item.to ? 'RouterLink' : 'button'"
-        v-for="item in items"
+        v-for="item in visibleItems"
         :key="item.id"
         v-bind="item.to ? { to: item.to } : { type: 'button' }"
         class="rail-item"
@@ -121,6 +133,7 @@ onBeforeUnmount(() => {
         }"
         :aria-label="item.label"
         :aria-current="isActive(item) && !item.group ? 'page' : undefined"
+        :aria-expanded="item.group ? isActive(item) : undefined"
         @click="onSelect(item)"
       >
         <span class="icon-wrap" aria-hidden="true">
@@ -453,10 +466,6 @@ onBeforeUnmount(() => {
     flex-direction: row;
     overflow-x: auto;
     gap: 0;
-  }
-
-  .rail-item.group {
-    display: none;
   }
 
   .rail-item {
