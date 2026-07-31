@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Announcement;
 use App\Models\AnnouncementRecipient;
 use App\Models\User;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,10 @@ use Throwable;
 
 class AnnouncementController extends Controller
 {
+    public function __construct(
+        private readonly AuditService $audit,
+    ) {}
+
     private const AUDIENCES = ['everyone', 'students', 'teachers', 'course', 'people'];
 
     // -----------------------------------------------------------------------
@@ -278,6 +283,16 @@ class AnnouncementController extends Controller
         $announcement->status  = 'sent';
         $announcement->sent_at = $now;
         $announcement->save();
+
+        $this->audit->record(
+            'announcements',
+            'announcement.sent',
+            "Announcement sent — {$announcement->subject}",
+            $announcement->author,
+            'announcement',
+            $announcement->id,
+            ['audience' => $announcement->audience_type, 'recipients' => count($ids)],
+        );
 
         return count($ids);
     }

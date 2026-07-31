@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AdminMonitoringController;
 use App\Http\Controllers\Api\AnnouncementController;
+use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvailabilityController;
 use App\Http\Controllers\Api\CalendarController;
@@ -162,9 +163,10 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('role:teacher,admin');
     });
 
-    // ── Admin monitoring ──────────────────────────────────────────────────────
+    // ── Admin monitoring & audit ──────────────────────────────────────────────
     Route::prefix('admin')->middleware('role:admin')->group(function () {
         Route::get('/monitoring', [AdminMonitoringController::class, 'getMonitoringOverview']);
+        Route::get('/audit',      [AuditController::class, 'listEvents']);
     });
 
     // ── Calendar ──────────────────────────────────────────────────────────────

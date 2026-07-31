@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseMaterial;
 use App\Models\User;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,10 @@ use Throwable;
 
 class CourseController extends Controller
 {
+    public function __construct(
+        private readonly AuditService $audit,
+    ) {}
+
     private const ACCESS = ['enrolled', 'all'];
 
     /** Where uploaded material lives, relative to the private disk. */
@@ -296,6 +301,16 @@ class CourseController extends Controller
             ]);
 
             $material->load('uploader');
+
+            $this->audit->record(
+                'materials',
+                'material.uploaded',
+                "Material uploaded — {$material->title}",
+                $request->user(),
+                'course_material',
+                $material->id,
+                ['course' => $course->title, 'access' => $material->access],
+            );
 
             return response()->json([
                 'message'  => 'Material uploaded.',

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AuditService;
 use App\Services\AvailabilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ class UserController extends Controller
 {
     public function __construct(
         private readonly AvailabilityService $availability,
+        private readonly AuditService $audit,
     ) {}
 
     // -----------------------------------------------------------------------
@@ -141,6 +143,16 @@ class UserController extends Controller
 
             $this->availability->ensureDefaultTeacherAvailability($teacher->id);
 
+            $this->audit->record(
+                'accounts',
+                'teacher.created',
+                "Teacher account created — {$teacher->full_name}",
+                $authUser,
+                'user',
+                $teacher->id,
+                ['subjectExpertise' => $teacher->subject_expertise],
+            );
+
             return response()->json([
                 'message'      => 'Teacher account created',
                 'username'     => $username,
@@ -260,6 +272,18 @@ class UserController extends Controller
             });
 
             $displayName = $target->full_name ?? $target->username;
+
+            // Logged after the transaction: actor_name is denormalised, so this
+            // still reads correctly even though the row is gone.
+            $this->audit->record(
+                'accounts',
+                'user.deleted',
+                "Account deleted — {$displayName} (@{$target->username})",
+                $request->user(),
+                'user',
+                $userId,
+                ['role' => $target->role],
+            );
 
             return response()->json([
                 'message'       => "Deleted {$displayName} (@{$target->username}).",
