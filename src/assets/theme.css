@@ -42,7 +42,7 @@
   --lh-radius-panel: 10px;
   --lh-radius-item: 8px;
   --lh-radius-control: 7px;
-  --lh-rail-w: 64px;
+  --lh-rail-w: 15.5rem;
 
   /* ── Depth & motion ───────────────────────────── */
   --lh-shadow: 0 18px 50px rgba(0, 0, 0, 0.5); /* popovers only */
