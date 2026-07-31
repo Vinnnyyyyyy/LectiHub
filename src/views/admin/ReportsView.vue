@@ -6,10 +6,8 @@ import { useStudentFeedbackStore, type StudentFeedback } from '../../stores/stud
 import { useAdminMonitoringStore } from '../../stores/adminMonitoring'
 import { formatDateTime, parseApiDate } from '../../utils/datetime'
 import { usePageEyebrow } from '../../composables/usePageMeta'
-import AdminReportsFeedbackWorkspace from '../../components/AdminReportsFeedbackWorkspace.vue'
 
 type Range = 'month' | 'quarter' | 'all'
-type Area = 'overview' | 'workspace'
 
 const lessonReportsStore = useLessonReportsStore()
 const studentFeedbackStore = useStudentFeedbackStore()
@@ -19,7 +17,6 @@ const { loading: loadingReports, reports } = storeToRefs(lessonReportsStore)
 const { loading: loadingFeedback, feedback } = storeToRefs(studentFeedbackStore)
 const { overview } = storeToRefs(monitoringStore)
 
-const area = ref<Area>('workspace')
 const range = ref<Range>('month')
 
 const RANGE_LABEL: Record<Range, string> = {
@@ -65,11 +62,7 @@ const averageRating = computed(() => {
   return (total / rated.length).toFixed(1)
 })
 
-usePageEyebrow(() =>
-  area.value === 'workspace'
-    ? 'Each lesson report and student feedback stay aligned'
-    : 'Teacher reports left · student feedback right',
-)
+usePageEyebrow(() => 'Teacher reports left · student feedback right')
 
 function reportStatus(report: LessonReport): { label: string; tone: string } {
   if (report.hasFeedback) return { label: 'Published', tone: 'accent' }
@@ -138,28 +131,6 @@ function exportCsv() {
 
 <template>
   <section class="reports">
-    <nav class="area-tabs" aria-label="Reports sections">
-      <button
-        type="button"
-        class="area-tab"
-        :class="{ active: area === 'workspace' }"
-        @click="area = 'workspace'"
-      >
-        Aligned workspace
-      </button>
-      <button
-        type="button"
-        class="area-tab"
-        :class="{ active: area === 'overview' }"
-        @click="area = 'overview'"
-      >
-        Overview &amp; export
-      </button>
-    </nav>
-
-    <AdminReportsFeedbackWorkspace v-if="area === 'workspace'" />
-
-    <template v-else>
     <div class="toolbar">
       <div class="range" role="group" aria-label="Date range">
         <button
@@ -250,7 +221,6 @@ function exportCsv() {
         </div>
       </div>
     </div>
-    </template>
   </section>
 </template>
 
@@ -260,37 +230,6 @@ function exportCsv() {
   flex-direction: column;
   gap: 18px;
   min-width: 0;
-}
-
-.area-tabs {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.area-tab {
-  height: 31px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: var(--lh-radius-control);
-  box-shadow: inset 0 0 0 1px var(--lh-line-strong);
-  background: transparent;
-  color: var(--lh-muted);
-  font: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.area-tab.active {
-  background: var(--lh-accent-soft);
-  color: var(--lh-accent);
-  box-shadow: inset 0 0 0 1px var(--lh-accent-edge);
-}
-
-.area-tab:focus-visible {
-  outline: 0;
-  box-shadow: 0 0 0 1px var(--lh-accent);
 }
 
 .toolbar {
