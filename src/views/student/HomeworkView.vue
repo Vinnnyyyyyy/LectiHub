@@ -10,7 +10,9 @@ import { useLessonReportsStore } from '../../stores/lessonReports'
 import { useCoursesStore } from '../../stores/courses'
 import { formatDate, formatDateTime } from '../../utils/datetime'
 import { usePageEyebrow } from '../../composables/usePageMeta'
+import StudentHistoryWorkspace from '../../components/StudentHistoryWorkspace.vue'
 
+type Area = 'homework' | 'history'
 type Tab = 'todo' | 'submitted' | 'graded' | 'reports'
 
 const homeworkStore = useHomeworkStore()
@@ -21,6 +23,7 @@ const { summary, loading, submittingId, error, message } = storeToRefs(homeworkS
 const { reports } = storeToRefs(lessonReportsStore)
 const { courses } = storeToRefs(coursesStore)
 
+const area = ref<Area>('homework')
 const tab = ref<Tab>('todo')
 const openId = ref<number | null>(null)
 const draft = reactive<{ body: string; file: File | null }>({ body: '', file: null })
@@ -39,6 +42,7 @@ const visible = computed<HomeworkItem[]>(() => {
 })
 
 usePageEyebrow(() => {
+  if (area.value === 'history') return 'Lesson history, reports, and your feedback'
   const due = summary.value.pending
   return due ? `${due} to do` : 'Nothing due'
 })
@@ -112,6 +116,28 @@ onMounted(async () => {
 
 <template>
   <section class="work">
+    <nav class="area-tabs" aria-label="Homework sections">
+      <button
+        type="button"
+        class="area-tab"
+        :class="{ active: area === 'homework' }"
+        @click="area = 'homework'"
+      >
+        Homework &amp; grades
+      </button>
+      <button
+        type="button"
+        class="area-tab"
+        :class="{ active: area === 'history' }"
+        @click="area = 'history'"
+      >
+        History &amp; feedback
+      </button>
+    </nav>
+
+    <StudentHistoryWorkspace v-if="area === 'history'" />
+
+    <template v-else>
     <p v-if="message" class="banner" role="status">{{ message }}</p>
     <p v-if="error" class="banner error" role="alert">{{ error }}</p>
 
@@ -305,6 +331,7 @@ onMounted(async () => {
         </div>
       </aside>
     </div>
+    </template>
   </section>
 </template>
 
@@ -314,6 +341,37 @@ onMounted(async () => {
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+}
+
+.area-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.area-tab {
+  height: 31px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--lh-radius-control);
+  box-shadow: inset 0 0 0 1px var(--lh-line-strong);
+  background: transparent;
+  color: var(--lh-muted);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.area-tab.active {
+  background: var(--lh-accent-soft);
+  color: var(--lh-accent);
+  box-shadow: inset 0 0 0 1px var(--lh-accent-edge);
+}
+
+.area-tab:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 1px var(--lh-accent);
 }
 
 .banner {
