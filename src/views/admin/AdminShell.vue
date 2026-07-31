@@ -58,5 +58,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AppShell :items="items" :initials="initials" eyebrow="Admin" @logout="handleLogout" />
+  <AppShell
+    :items="items"
+    :initials="initials"
+    :display-name="displayName"
+    role-label="Admin"
+    eyebrow="Admin"
+    @logout="handleLogout"
+  />
 </template>

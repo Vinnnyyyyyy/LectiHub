@@ -51,7 +51,14 @@ onMounted(async () => {
 </script>
 
 <template>
-  <AppShell :items="items" :initials="initials" eyebrow="Teacher" @logout="handleLogout">
+  <AppShell
+    :items="items"
+    :initials="initials"
+    :display-name="displayName"
+    role-label="Teacher"
+    eyebrow="Teacher"
+    @logout="handleLogout"
+  >
     <template #overlay>
       <ClassChatWidget />
     </template>
