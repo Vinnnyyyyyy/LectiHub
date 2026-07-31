@@ -12,8 +12,23 @@
 .dashboard {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--lh-ink);
   overflow-x: hidden;
+  background: var(--lh-bg);
+}
+
+/* #73 sidebar layout: rail + main pane */
+.dashboard.dashboard-with-rail {
+  display: flex;
+  align-items: stretch;
+}
+
+.dashboard .dashboard-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .dashboard .atmosphere {
@@ -23,74 +38,32 @@
   background: var(--lh-atmosphere);
 }
 
-.dashboard .topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  max-width: var(--lh-dash-max);
-  margin: 0 auto;
-  padding: 1.1rem 1.5rem 0.85rem;
-  animation: lh-fade-down 0.45s ease both;
-}
-
-.dashboard .topbar.dash-topbar {
+.dashboard .page-head {
   position: sticky;
   top: 0;
   z-index: 20;
-  flex-wrap: wrap;
-  row-gap: 0.75rem;
+  padding: 1.15rem 1.5rem 0.95rem;
   border-bottom: 1px solid var(--lh-line);
-  background: color-mix(in srgb, var(--lh-bg) 88%, transparent);
-  backdrop-filter: blur(14px);
-}
-
-.dashboard .topbar-brand {
-  min-width: 9rem;
-}
-
-.dashboard .brand {
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.45rem;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: var(--lh-accent);
-}
-
-.dashboard .greeting {
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.92rem;
-  color: var(--lh-muted);
-  margin-top: 0.15rem;
-}
-
-.dashboard .logout {
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.88rem;
-  font-weight: 700;
-  padding: 0.55rem 0.9rem;
-  border-radius: var(--lh-radius-control);
-  border: 1px solid var(--lh-line);
-  background: var(--lh-panel-solid);
-  color: var(--lh-ink);
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    transform 0.18s ease,
-    background 0.18s ease;
-}
-
-.dashboard .logout:hover {
-  border-color: var(--lh-line-strong);
-  transform: translateY(-1px);
+  background: var(--lh-bg);
 }
 
 .dashboard .content {
   max-width: var(--lh-dash-max);
+  width: 100%;
   margin: 0 auto;
   padding: 0.75rem 1.5rem 2.75rem;
   display: grid;
   gap: var(--lh-dash-gap);
+}
+
+@media (max-width: 820px) {
+  .dashboard.dashboard-with-rail {
+    flex-direction: column;
+  }
+
+  .dashboard .dashboard-main {
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
+  }
 }
 
 .dashboard .intro {
@@ -290,30 +263,9 @@
     grid-template-columns: 1fr;
   }
 
-  .dashboard .topbar,
+  .dashboard .page-head,
   .dashboard .content {
     padding-left: 1.1rem;
     padding-right: 1.1rem;
-  }
-
-  .dashboard .topbar.dash-topbar {
-    align-items: stretch;
-  }
-
-  .dashboard .topbar.dash-topbar .logout {
-    margin-left: auto;
-  }
-
-  .dash-nav {
-    order: 3;
-    flex-basis: 100%;
-    max-width: none;
-    margin: 0;
-  }
-
-  .dash-nav-item {
-    flex: 0 0 auto;
-    padding: 0.55rem 0.8rem;
-    font-size: 0.84rem;
   }
 }

@@ -1,42 +1,27 @@
 <template>
-  <div class="dashboard">
+  <div class="dashboard dashboard-with-rail">
     <div class="atmosphere" aria-hidden="true" />
 
-    <header class="topbar dash-topbar">
-      <div class="topbar-brand">
-        <p class="brand">LectiHub</p>
-        <p class="greeting">Welcome back, {{ displayName }}</p>
-      </div>
+    <AppRail
+      :items="railItems"
+      :active-id="activeSection"
+      :initials="initials"
+      :display-name="displayName"
+      role-label="Student"
+      @select="setSection($event as StudentSection)"
+      @logout="handleLogout"
+    />
 
-      <nav class="dash-nav" aria-label="Student dashboard sections">
-        <div class="dash-nav-track" role="tablist">
-          <button
-            v-for="item in navItems"
-            :id="`tab-${item.id}`"
-            :key="item.id"
-            type="button"
-            role="tab"
-            class="dash-nav-item"
-            :class="{ active: activeSection === item.id }"
-            :aria-selected="activeSection === item.id"
-            :aria-controls="`panel-${item.id}`"
-            :tabindex="activeSection === item.id ? 0 : -1"
-            @click="setSection(item.id)"
-          >
-            {{ item.label }}
-          </button>
-        </div>
-      </nav>
+    <div class="dashboard-main">
+      <header class="page-head">
+        <section class="intro">
+          <p class="eyebrow">Student</p>
+          <h1>Hi, {{ displayName }}</h1>
+          <p>{{ activeIntro }}</p>
+        </section>
+      </header>
 
-      <button type="button" class="logout" @click="handleLogout">Log out</button>
-    </header>
-
-    <main class="content">
-      <section class="intro">
-        <p class="eyebrow">Student</p>
-        <h1>Hi, {{ displayName }}</h1>
-        <p>{{ activeIntro }}</p>
-      </section>
+      <main class="content">
 
       <section
         v-show="activeSection === 'schedule'"
@@ -169,7 +154,8 @@
       >
         <HomeworkView />
       </section>
-    </main>
+      </main>
+    </div>
 
     <ClassChatWidget />
   </div>
@@ -180,6 +166,8 @@ import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import AppRail, { type RailItem } from '../components/AppRail.vue'
+import { initialsFrom } from '../utils/initials'
 import { useClassesStore, type ConfirmedSchedule } from '../stores/classes'
 import { useLessonReportsStore } from '../stores/lessonReports'
 import {
@@ -200,36 +188,47 @@ import HomeworkView from './student/HomeworkView.vue'
 
 type StudentSection = 'schedule' | 'now' | 'calendar' | 'history' | 'payments' | 'homework'
 
-const navItems: { id: StudentSection; label: string; intro: string }[] = [
-  {
-    id: 'schedule',
-    label: 'Schedule',
-    intro: 'Pick preferred times and track confirmation from the center.',
-  },
+const navItems: {
+  id: StudentSection
+  label: string
+  intro: string
+  icon: RailItem['icon']
+}[] = [
   {
     id: 'now',
-    label: 'Now',
+    label: 'My week',
     intro: 'Join upcoming sessions and check alerts that need a look.',
+    icon: 'calendar',
+  },
+  {
+    id: 'schedule',
+    label: 'Book a class',
+    intro: 'Pick preferred times and track confirmation from the center.',
+    icon: 'list',
   },
   {
     id: 'calendar',
     label: 'Calendar',
     intro: 'Month and year view of your classes, plus days teachers still have open.',
-  },
-  {
-    id: 'history',
-    label: 'History & feedback',
-    intro: 'Use the sidebar to open pending feedback, lessons, reports, or archived history.',
-  },
-  {
-    id: 'payments',
-    label: 'Payments',
-    intro: 'Submit a payment receipt for admin review and keep your invoice history here.',
+    icon: 'grid',
   },
   {
     id: 'homework',
     label: 'Homework & grades',
     intro: 'View assigned homework, submit work, and check grades.',
+    icon: 'book',
+  },
+  {
+    id: 'history',
+    label: 'History & feedback',
+    intro: 'Use the sidebar to open pending feedback, lessons, reports, or archived history.',
+    icon: 'clock',
+  },
+  {
+    id: 'payments',
+    label: 'Payments',
+    intro: 'Submit a payment receipt for admin review and keep your invoice history here.',
+    icon: 'chart',
   },
 ]
 
@@ -237,6 +236,14 @@ const activeSection = ref<StudentSection>('now')
 
 const activeIntro = computed(
   () => navItems.find((item) => item.id === activeSection.value)?.intro ?? '',
+)
+
+const railItems = computed<RailItem[]>(() =>
+  navItems.map((item) => ({
+    id: item.id,
+    label: item.label,
+    icon: item.icon,
+  })),
 )
 
 function setSection(section: StudentSection) {
@@ -280,6 +287,7 @@ const openHighlightDates = computed(() => openDates.value)
 const displayName = computed(
   () => authStore.fullName || authStore.username || 'student',
 )
+const initials = computed(() => initialsFrom(displayName.value))
 
 async function handleJoinClass(item: ConfirmedSchedule, meetingProvider?: string) {
   try {

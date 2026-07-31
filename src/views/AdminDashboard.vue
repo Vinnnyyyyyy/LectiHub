@@ -1,42 +1,27 @@
 <template>
-  <div class="dashboard">
+  <div class="dashboard dashboard-with-rail">
     <div class="atmosphere" aria-hidden="true" />
 
-    <header class="topbar dash-topbar">
-      <div class="topbar-brand">
-        <p class="brand">LectiHub</p>
-        <p class="greeting">Admin review workspace</p>
-      </div>
+    <AppRail
+      :items="railItems"
+      :active-id="activeSection"
+      :initials="initials"
+      :display-name="displayName"
+      role-label="Admin"
+      @select="setSection($event as AdminSection)"
+      @logout="handleLogout"
+    />
 
-      <nav class="dash-nav" aria-label="Admin dashboard sections">
-        <div class="dash-nav-track" role="tablist">
-          <button
-            v-for="item in navItems"
-            :id="`tab-${item.id}`"
-            :key="item.id"
-            type="button"
-            role="tab"
-            class="dash-nav-item"
-            :class="{ active: activeSection === item.id }"
-            :aria-selected="activeSection === item.id"
-            :aria-controls="`panel-${item.id}`"
-            :tabindex="activeSection === item.id ? 0 : -1"
-            @click="setSection(item.id)"
-          >
-            {{ item.label }}
-          </button>
-        </div>
-      </nav>
+    <div class="dashboard-main">
+      <header class="page-head">
+        <section class="intro">
+          <p class="eyebrow">Admin</p>
+          <h1>Center operations</h1>
+          <p>{{ activeIntro }}</p>
+        </section>
+      </header>
 
-      <button type="button" class="logout" @click="handleLogout">Log out</button>
-    </header>
-
-    <main class="content">
-      <section class="intro">
-        <p class="eyebrow">Admin</p>
-        <h1>Center operations</h1>
-        <p>{{ activeIntro }}</p>
-      </section>
+      <main class="content">
 
       <section
         v-show="activeSection === 'review'"
@@ -504,7 +489,8 @@
       >
         <SettingsView />
       </section>
-    </main>
+      </main>
+    </div>
   </div>
 </template>
 
@@ -514,6 +500,8 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
+import AppRail, { type RailItem } from '../components/AppRail.vue'
+import { initialsFrom } from '../utils/initials'
 import { useAdminScheduleStore } from '../stores/adminSchedule'
 import {
   useNotificationsStore,
@@ -595,56 +583,71 @@ const reviewMainCopy = computed(() => {
   return 'This booking was already reviewed. Details below are read-only.'
 })
 
-const navItems: { id: AdminSection; label: string; intro: string }[] = [
+const navItems: {
+  id: AdminSection
+  label: string
+  intro: string
+  icon: RailItem['icon']
+}[] = [
+  {
+    id: 'monitoring',
+    label: 'Overview',
+    intro: 'Sidebar sections for overview, operations, teachers, and recent activity.',
+    icon: 'grid',
+  },
   {
     id: 'review',
     label: 'Review & assign',
     intro: 'Pending queue and past reviews — assign teachers, then revisit decisions.',
+    icon: 'list',
   },
   {
     id: 'inbox',
     label: 'Inbox',
     intro: 'New scheduling requests and system alerts.',
-  },
-  {
-    id: 'records',
-    label: 'Reports & feedback',
-    intro: 'Each lesson teacher report and student feedback stay aligned in the same row.',
-  },
-  {
-    id: 'monitoring',
-    label: 'Monitoring',
-    intro: 'Sidebar sections for overview, operations, teachers, and recent activity.',
-  },
-  {
-    id: 'payments',
-    label: 'Payments',
-    intro: 'Student payment invoice receipts — record, confirm, or void.',
+    icon: 'megaphone',
   },
   {
     id: 'users',
-    label: 'Users',
+    label: 'People',
     intro: 'Use the sidebar to create teachers or browse the account directory.',
+    icon: 'people',
   },
   {
     id: 'courses',
     label: 'Courses & materials',
     intro: 'Manage courses, upload materials, and enrol students.',
+    icon: 'book',
+  },
+  {
+    id: 'records',
+    label: 'Reports & feedback',
+    intro: 'Each lesson teacher report and student feedback stay aligned in the same row.',
+    icon: 'chart',
   },
   {
     id: 'announcements',
     label: 'Announcements',
     intro: 'Compose centre-wide or targeted announcements.',
+    icon: 'megaphone',
   },
   {
     id: 'audit',
     label: 'Audit log',
     intro: 'Review recent admin and system activity.',
+    icon: 'clock',
+  },
+  {
+    id: 'payments',
+    label: 'Payments',
+    intro: 'Student payment invoice receipts — record, confirm, or void.',
+    icon: 'chart',
   },
   {
     id: 'settings',
     label: 'System settings',
     intro: 'Centre name, contact details, and operational defaults.',
+    icon: 'gear',
   },
 ]
 
@@ -652,6 +655,18 @@ const activeSection = ref<AdminSection>('review')
 
 const activeIntro = computed(
   () => navItems.find((item) => item.id === activeSection.value)?.intro ?? '',
+)
+
+const displayName = computed(() => authStore.fullName || authStore.username || 'admin')
+const initials = computed(() => initialsFrom(displayName.value))
+
+const railItems = computed<RailItem[]>(() =>
+  navItems.map((item) => ({
+    id: item.id,
+    label: item.label,
+    icon: item.icon,
+    badge: item.id === 'review' && requests.value.length > 0,
+  })),
 )
 
 function setSection(section: AdminSection) {
