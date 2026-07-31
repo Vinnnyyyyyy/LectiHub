@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\LessonReportController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentReceiptController;
 use App\Http\Controllers\Api\ScheduleRequestController;
+use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\StudentFeedbackController;
 use App\Http\Controllers\Api\TrialRequestController;
 use App\Http\Controllers\Api\UserController;
@@ -163,10 +164,16 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('role:teacher,admin');
     });
 
-    // ── Admin monitoring & audit ──────────────────────────────────────────────
+    // Centre settings any signed-in user may read (slot length, hours, notice).
+    Route::get('/settings', [SettingsController::class, 'publicSettings'])
+        ->middleware('role:student,teacher,admin');
+
+    // ── Admin monitoring, audit & settings ────────────────────────────────────
     Route::prefix('admin')->middleware('role:admin')->group(function () {
         Route::get('/monitoring', [AdminMonitoringController::class, 'getMonitoringOverview']);
         Route::get('/audit',      [AuditController::class, 'listEvents']);
+        Route::get('/settings',   [SettingsController::class, 'show']);
+        Route::put('/settings',   [SettingsController::class, 'update']);
     });
 
     // ── Calendar ──────────────────────────────────────────────────────────────
