@@ -32,9 +32,10 @@ const items = computed<RailItem[]>(() => [
     badge: adminStore.requests.length > 0,
   },
   { to: '/admin/people', label: 'People', icon: 'people' },
-  { to: '/admin/reports', label: 'Reports & feedback', icon: 'book' },
+  { to: '/admin/courses', label: 'Courses & materials', icon: 'book' },
+  { to: '/admin/reports', label: 'Reports & feedback', icon: 'chart' },
   { to: '/admin/announcements', label: 'Inbox & alerts', icon: 'megaphone' },
-  { to: '/admin/payments', label: 'Payments', icon: 'chart' },
+  { to: '/admin/payments', label: 'Payments', icon: 'gear' },
 ])
 
 async function handleLogout() {

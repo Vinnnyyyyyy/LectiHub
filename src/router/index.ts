@@ -74,6 +74,13 @@ const router = createRouter({
           meta: { title: 'People' },
         },
         {
+          path: 'courses',
+          name: 'admin-courses',
+          component: () => import('../views/admin/CoursesView.vue'),
+          // Eyebrow is set live by the view (course/material counts).
+          meta: { title: 'Courses & materials' },
+        },
+        {
           path: 'reports',
           name: 'admin-reports',
           component: () => import('../views/admin/ReportsView.vue'),
