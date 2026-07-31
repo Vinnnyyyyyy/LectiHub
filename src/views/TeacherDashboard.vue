@@ -2,6 +2,7 @@
   <div class="dashboard dashboard-with-rail">
     <div class="atmosphere" aria-hidden="true" />
 
+    <div class="dashboard-frame">
     <AppRail
       :items="railItems"
       :active-id="activeSection"
@@ -194,6 +195,7 @@
         <TeacherAvailabilityPanel />
       </section>
       </main>
+    </div>
     </div>
 
     <ClassChatWidget />
