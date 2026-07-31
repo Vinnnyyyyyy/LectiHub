@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * LectiHub labeled sidebar — icon + text nav for each role.
- * Desktop: vertical list with account pinned at the bottom.
- * Mobile: bottom tab bar (compact labels).
+ * LectiHub labeled sidebar — icon + text nav for each role (#73 design).
+ * Supports route links (`to`) or in-page sections (`id` + activeId / select).
+ * Mobile: bottom tab bar.
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -22,28 +22,43 @@ const ICONS = {
 } as const
 
 export type RailItem = {
-  /** route path, e.g. '/admin/requests' */
-  to: string
-  /** accessible label + tooltip */
+  /** Stable id for section mode (and key). */
+  id: string
+  /** Optional route path; when set, item navigates instead of emitting select. */
+  to?: string
   label: string
   icon: keyof typeof ICONS
-  /** show the amber attention dot */
   badge?: boolean
 }
 
-defineProps<{
+const props = defineProps<{
   items: RailItem[]
   initials: string
-  /** Signed-in person's name */
   displayName: string
-  /** Role label shown under the name: Admin | Teacher | Student */
   roleLabel: string
+  /** Active section id when using section-based nav (dashboards). */
+  activeId?: string | null
 }>()
 
-const emit = defineEmits<{ logout: [] }>()
+const emit = defineEmits<{
+  logout: []
+  select: [id: string]
+}>()
 
 const route = useRoute()
-const isActive = (to: string) => route.path === to || route.path.startsWith(to + '/')
+
+function isActive(item: RailItem) {
+  if (props.activeId != null && props.activeId !== '') {
+    return props.activeId === item.id
+  }
+  if (!item.to) return false
+  return route.path === item.to || route.path.startsWith(`${item.to}/`)
+}
+
+function onSelect(item: RailItem) {
+  if (item.to) return
+  emit('select', item.id)
+}
 
 const menuOpen = ref(false)
 const menuRoot = ref<HTMLElement | null>(null)
@@ -78,14 +93,16 @@ onBeforeUnmount(() => {
     </div>
 
     <nav class="nav">
-      <RouterLink
+      <component
+        :is="item.to ? 'RouterLink' : 'button'"
         v-for="item in items"
-        :key="item.to"
-        :to="item.to"
+        :key="item.id"
+        v-bind="item.to ? { to: item.to } : { type: 'button' }"
         class="rail-item"
-        :class="{ active: isActive(item.to) }"
+        :class="{ active: isActive(item) }"
         :aria-label="item.label"
-        :aria-current="isActive(item.to) ? 'page' : undefined"
+        :aria-current="isActive(item) ? 'page' : undefined"
+        @click="onSelect(item)"
       >
         <span class="icon-wrap" aria-hidden="true">
           <svg
@@ -100,7 +117,7 @@ onBeforeUnmount(() => {
         </span>
         <span class="rail-label">{{ item.label }}</span>
         <span v-if="item.badge" class="dot" aria-hidden="true" />
-      </RouterLink>
+      </component>
     </nav>
 
     <div ref="menuRoot" class="account">
@@ -143,6 +160,7 @@ onBeforeUnmount(() => {
   border-right: 1px solid var(--lh-line);
   overflow: auto;
   scrollbar-gutter: stable;
+  z-index: 30;
 }
 
 .brand {
@@ -192,9 +210,14 @@ onBeforeUnmount(() => {
   width: 100%;
   min-height: 2.65rem;
   padding: 0.55rem 0.7rem;
+  border: 0;
   border-radius: var(--lh-radius-item);
+  background: transparent;
   color: var(--lh-faint);
+  font: inherit;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
   transition:
     background var(--lh-ease),
     color var(--lh-ease);
@@ -359,8 +382,6 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 1px var(--lh-accent);
 }
 
-/* ── Mobile: the rail becomes a bottom tab bar ──────────── */
-
 @media (max-width: 820px) {
   .rail {
     position: fixed;
@@ -374,6 +395,7 @@ onBeforeUnmount(() => {
     padding: 0 6px calc(6px + env(safe-area-inset-bottom));
     border-right: 0;
     border-top: 1px solid var(--lh-line);
+    height: auto;
   }
 
   .brand {
@@ -383,13 +405,14 @@ onBeforeUnmount(() => {
   .nav {
     flex: 1;
     flex-direction: row;
-    overflow: visible;
+    overflow-x: auto;
     gap: 0;
   }
 
   .rail-item {
-    flex: 1;
+    flex: 1 0 auto;
     width: auto;
+    min-width: 4.25rem;
     min-height: 44px;
     margin-top: 6px;
     padding: 0.25rem 0.2rem;

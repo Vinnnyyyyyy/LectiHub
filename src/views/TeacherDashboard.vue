@@ -1,42 +1,27 @@
 <template>
-  <div class="dashboard">
+  <div class="dashboard dashboard-with-rail">
     <div class="atmosphere" aria-hidden="true" />
 
-    <header class="topbar dash-topbar">
-      <div class="topbar-brand">
-        <p class="brand">LectiHub</p>
-        <p class="greeting">Welcome, {{ displayName }}</p>
-      </div>
+    <AppRail
+      :items="railItems"
+      :active-id="activeSection"
+      :initials="initials"
+      :display-name="displayName"
+      role-label="Teacher"
+      @select="setSection($event as TeacherSection)"
+      @logout="handleLogout"
+    />
 
-      <nav class="dash-nav" aria-label="Teacher dashboard sections">
-        <div class="dash-nav-track" role="tablist">
-          <button
-            v-for="item in navItems"
-            :id="`tab-${item.id}`"
-            :key="item.id"
-            type="button"
-            role="tab"
-            class="dash-nav-item"
-            :class="{ active: activeSection === item.id }"
-            :aria-selected="activeSection === item.id"
-            :aria-controls="`panel-${item.id}`"
-            :tabindex="activeSection === item.id ? 0 : -1"
-            @click="setSection(item.id)"
-          >
-            {{ item.label }}
-          </button>
-        </div>
-      </nav>
+    <div class="dashboard-main">
+      <header class="page-head">
+        <section class="intro">
+          <p class="eyebrow">Teacher</p>
+          <h1>Hi, {{ displayName }}</h1>
+          <p>{{ activeIntro }}</p>
+        </section>
+      </header>
 
-      <button type="button" class="logout" @click="handleLogout">Log out</button>
-    </header>
-
-    <main class="content">
-      <section class="intro">
-        <p class="eyebrow">Teacher</p>
-        <h1>Hi, {{ displayName }}</h1>
-        <p>{{ activeIntro }}</p>
-      </section>
+      <main class="content">
 
       <section
         v-show="activeSection === 'today'"
@@ -180,7 +165,8 @@
           <TeacherAvailabilityPanel />
         </div>
       </section>
-    </main>
+      </main>
+    </div>
 
     <ClassChatWidget />
   </div>
@@ -191,6 +177,8 @@ import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import AppRail, { type RailItem } from '../components/AppRail.vue'
+import { initialsFrom } from '../utils/initials'
 import {
   useClassesStore,
   type ConfirmedSchedule,
@@ -215,26 +203,35 @@ import ClassChatWidget from '../components/ClassChatWidget.vue'
 
 type TeacherSection = 'today' | 'conduct' | 'records' | 'calendar'
 
-const navItems: { id: TeacherSection; label: string; intro: string }[] = [
+const navItems: {
+  id: TeacherSection
+  label: string
+  intro: string
+  icon: RailItem['icon']
+}[] = [
   {
     id: 'today',
-    label: 'Today',
+    label: 'My teaching week',
     intro: 'Upcoming classes and assignment alerts.',
+    icon: 'calendar',
   },
   {
     id: 'conduct',
-    label: 'Conduct & report',
+    label: 'In session',
     intro: 'Conduct the live lesson on the left. File the post-lesson report on the right.',
+    icon: 'clock',
   },
   {
     id: 'records',
     label: 'Records',
     intro: 'Submitted reports, past classes, and archived teaching history.',
+    icon: 'book',
   },
   {
     id: 'calendar',
-    label: 'Calendar',
+    label: 'Open hours & calendar',
     intro: 'Month and year view of your classes, plus weekly open hours for booking.',
+    icon: 'gear',
   },
 ]
 
@@ -280,6 +277,16 @@ const inProgress = computed(() => classesStore.inProgress)
 const archivedHistory = computed(() => classesStore.archived)
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 const displayName = computed(() => authStore.fullName || authStore.username || 'teacher')
+const initials = computed(() => initialsFrom(displayName.value))
+
+const railItems = computed<RailItem[]>(() =>
+  navItems.map((item) => ({
+    id: item.id,
+    label: item.label,
+    icon: item.icon,
+    badge: item.id === 'conduct' && inProgress.value.length > 0,
+  })),
+)
 
 async function handleJoinClass(item: ConfirmedSchedule, meetingProvider?: string) {
   try {
