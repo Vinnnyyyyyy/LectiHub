@@ -8,6 +8,16 @@ import { storeToRefs } from 'pinia'
 import { useSettingsStore, type SettingsMap } from '../../stores/settings'
 import { usePageEyebrow } from '../../composables/usePageMeta'
 
+export type SettingsPanel = 'scheduling' | 'reminders' | 'meetings' | 'centre'
+
+const props = withDefaults(
+  defineProps<{
+    /** Which settings group to show (sidebar sub-nav). */
+    panel?: SettingsPanel
+  }>(),
+  { panel: 'scheduling' },
+)
+
 const settingsStore = useSettingsStore()
 const { settings, loading, saving, error, message, ignored } = storeToRefs(settingsStore)
 
@@ -27,6 +37,8 @@ const dirty = computed(() =>
     (key) => JSON.stringify(draft[key]) !== JSON.stringify(settings.value[key]),
   ),
 )
+
+const emit = defineEmits<{ 'open-payments': [] }>()
 
 usePageEyebrow(() => (draft['center.name'] as string) || 'Learning centre')
 
@@ -141,7 +153,7 @@ onMounted(async () => {
 
     <div v-else class="groups">
       <!-- Scheduling -->
-      <section class="group">
+      <section v-show="panel === 'scheduling'" class="group">
         <div class="group-head">
           <h2>Scheduling rules</h2>
           <p class="group-note">Governs which slots students can request.</p>
@@ -198,7 +210,7 @@ onMounted(async () => {
       </section>
 
       <!-- Reminders -->
-      <section class="group">
+      <section v-show="panel === 'reminders'" class="group">
         <div class="group-head">
           <h2>Reminders &amp; notifications</h2>
           <p class="group-note">When the system contacts students and teachers.</p>
@@ -232,7 +244,7 @@ onMounted(async () => {
       </section>
 
       <!-- Meetings -->
-      <section class="group">
+      <section v-show="panel === 'meetings'" class="group">
         <div class="group-head">
           <h2>Meeting providers</h2>
           <p class="group-note">Default platform for new classes.</p>
@@ -263,7 +275,7 @@ onMounted(async () => {
       </section>
 
       <!-- Centre -->
-      <section class="group">
+      <section v-show="panel === 'centre'" class="group">
         <div class="group-head">
           <h2>Centre profile &amp; records</h2>
           <p class="group-note">Applies to announcements, reports and exports.</p>
@@ -304,7 +316,9 @@ onMounted(async () => {
               <p class="row-label">Billing &amp; receipts</p>
               <p class="row-note">Record payments and confirm student receipts.</p>
             </div>
-            <RouterLink class="btn-ghost link" to="/admin/payments">Open payments</RouterLink>
+            <button type="button" class="btn-ghost link" @click="emit('open-payments')">
+              Open payments
+            </button>
           </div>
         </div>
       </section>

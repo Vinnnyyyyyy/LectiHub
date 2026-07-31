@@ -482,13 +482,22 @@
       </section>
 
       <section
-        v-show="activeSection === 'settings'"
+        v-show="isSettingsSection"
         id="panel-settings"
         class="dash-section"
         role="tabpanel"
         aria-labelledby="tab-settings"
       >
-        <SettingsView />
+        <div class="dash-section-label">
+          <div>
+            <h2 id="tab-settings">{{ activeSettingsLabel }}</h2>
+            <p>{{ activeIntro }}</p>
+          </div>
+        </div>
+        <SettingsView
+          :panel="settingsPanel"
+          @open-payments="setSection('payments')"
+        />
       </section>
       </main>
     </div>
@@ -520,7 +529,7 @@ import AdminPaymentReceiptsPanel from '../components/AdminPaymentReceiptsPanel.v
 import AnnouncementsView from './admin/AnnouncementsView.vue'
 import AuditView from './admin/AuditView.vue'
 import CoursesView from './admin/CoursesView.vue'
-import SettingsView from './admin/SettingsView.vue'
+import SettingsView, { type SettingsPanel } from './admin/SettingsView.vue'
 
 const authStore = useAuthStore()
 const adminStore = useAdminScheduleStore()
@@ -562,7 +571,24 @@ type AdminSection =
   | 'courses'
   | 'announcements'
   | 'audit'
-  | 'settings'
+  | 'settings-scheduling'
+  | 'settings-reminders'
+  | 'settings-meetings'
+  | 'settings-centre'
+
+const SETTINGS_CHILD_IDS: AdminSection[] = [
+  'settings-scheduling',
+  'settings-reminders',
+  'settings-meetings',
+  'settings-centre',
+]
+
+const SETTINGS_PANEL_BY_SECTION: Record<(typeof SETTINGS_CHILD_IDS)[number], SettingsPanel> = {
+  'settings-scheduling': 'scheduling',
+  'settings-reminders': 'reminders',
+  'settings-meetings': 'meetings',
+  'settings-centre': 'centre',
+}
 
 const reviewMainKicker = computed(() => {
   if (!selected.value) return reviewView.value === 'queue' ? 'Queue' : 'History'
@@ -646,14 +672,44 @@ const navItems: {
     icon: 'chart',
   },
   {
-    id: 'settings',
-    label: 'System settings',
-    intro: 'Centre name, contact details, and operational defaults.',
-    icon: 'gear',
+    id: 'settings-scheduling',
+    label: 'Scheduling rules',
+    intro: 'Slot length, opening hours, lunch gap, and booking notice.',
+    icon: 'calendar',
+  },
+  {
+    id: 'settings-reminders',
+    label: 'Reminders & notifications',
+    intro: 'Class reminders and who gets notified when decisions happen.',
+    icon: 'megaphone',
+  },
+  {
+    id: 'settings-meetings',
+    label: 'Meeting providers',
+    intro: 'Enable platforms and choose the default for new classes.',
+    icon: 'people',
+  },
+  {
+    id: 'settings-centre',
+    label: 'Centre profile & records',
+    intro: 'Centre name, time zone, term dates, and audit retention.',
+    icon: 'book',
   },
 ]
 
 const activeSection = ref<AdminSection>('review')
+
+const isSettingsSection = computed(() => SETTINGS_CHILD_IDS.includes(activeSection.value))
+
+const settingsPanel = computed<SettingsPanel>(() =>
+  isSettingsSection.value
+    ? SETTINGS_PANEL_BY_SECTION[activeSection.value as (typeof SETTINGS_CHILD_IDS)[number]]
+    : 'scheduling',
+)
+
+const activeSettingsLabel = computed(
+  () => navItems.find((item) => item.id === activeSection.value)?.label ?? 'System settings',
+)
 
 const activeIntro = computed(
   () => navItems.find((item) => item.id === activeSection.value)?.intro ?? '',
@@ -662,14 +718,33 @@ const activeIntro = computed(
 const displayName = computed(() => authStore.fullName || authStore.username || 'admin')
 const initials = computed(() => initialsFrom(displayName.value))
 
-const railItems = computed<RailItem[]>(() =>
-  navItems.map((item) => ({
-    id: item.id,
-    label: item.label,
-    icon: item.icon,
-    badge: item.id === 'review' && requests.value.length > 0,
-  })),
-)
+const railItems = computed<RailItem[]>(() => {
+  const top = navItems.filter((item) => !SETTINGS_CHILD_IDS.includes(item.id))
+  const settingsChildren = navItems.filter((item) => SETTINGS_CHILD_IDS.includes(item.id))
+
+  return [
+    ...top.map((item) => ({
+      id: item.id,
+      label: item.label,
+      icon: item.icon,
+      badge: item.id === 'review' && requests.value.length > 0,
+    })),
+    {
+      id: 'settings-group',
+      label: 'System settings',
+      icon: 'gear' as const,
+      group: true,
+      defaultChildId: 'settings-scheduling',
+      childIds: [...SETTINGS_CHILD_IDS],
+    },
+    ...settingsChildren.map((item) => ({
+      id: item.id,
+      label: item.label,
+      icon: item.icon,
+      child: true,
+    })),
+  ]
+})
 
 function setSection(section: AdminSection) {
   activeSection.value = section
