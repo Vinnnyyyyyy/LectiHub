@@ -68,9 +68,11 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 <style scoped>
 /* Full-viewport backdrop; frame (rail + dashboard) is one middle unit. */
 .shell {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: grid;
   justify-items: center;
+  overflow: hidden;
   background: var(--lh-bg);
   color: var(--lh-ink);
 }
@@ -78,16 +80,20 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 .frame {
   display: flex;
   width: min(100%, 82rem);
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   border-inline: 1px solid var(--lh-line);
   background: var(--lh-bg);
+  overflow: hidden;
 }
 
 .main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .header {
