@@ -115,6 +115,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useChatStore, type ChatPopupNotice } from '../stores/chat'
+import { initialsFrom } from '../utils/initials'
 
 const chatStore = useChatStore()
 const {
@@ -149,10 +150,7 @@ const panelCopy = computed(() => {
 })
 
 function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+  return initialsFrom(name)
 }
 
 async function togglePanel() {

@@ -163,6 +163,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '../stores/auth'
 import { useUsersStore, type ManagedUser } from '../stores/users'
+import { initialsFrom } from '../utils/initials'
 
 const filters = [
   { value: 'all', label: 'All accounts' },
@@ -225,13 +226,7 @@ function openDirectory(value: FilterValue) {
 }
 
 function initials(name: string) {
-  const parts = String(name || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-  if (!parts.length) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+  return initialsFrom(name)
 }
 
 async function handleCreateTeacher() {

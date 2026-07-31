@@ -296,6 +296,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { AdminMonitoringOverview } from '../stores/adminMonitoring'
+import { initialsFrom } from '../utils/initials'
 
 type MonitorSection = 'overview' | 'operations' | 'teachers' | 'activity'
 
@@ -380,13 +381,7 @@ const summaryItems = computed(() => {
 })
 
 function initials(name: string) {
-  const parts = String(name || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-  if (!parts.length) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+  return initialsFrom(name)
 }
 
 function formatDate(value: string) {
