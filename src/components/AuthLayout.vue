@@ -11,54 +11,38 @@ defineProps<{
 </script>
 
 <template>
-  <div class="auth-shell">
-    <div class="auth">
-      <div class="form-col">
-        <header class="brandblock">
-          <p class="brand">LectiHub</p>
-          <p v-if="centerName" class="center">{{ centerName }}</p>
-        </header>
+  <div class="auth">
+    <div class="form-col">
+      <header class="brandblock">
+        <p class="brand">LectiHub</p>
+        <p v-if="centerName" class="center">{{ centerName }}</p>
+      </header>
 
-        <div class="form-body">
-          <slot />
-        </div>
+      <div class="form-body">
+        <slot />
       </div>
-
-      <aside class="side">
-        <slot name="aside" />
-      </aside>
     </div>
+
+    <aside class="side">
+      <slot name="aside" />
+    </aside>
   </div>
 </template>
 
 <style scoped>
-.auth-shell {
+.auth {
+  display: flex;
   min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 2rem 1.25rem;
-  background:
-    radial-gradient(ellipse 70% 55% at 50% 40%, rgba(126, 184, 164, 0.08), transparent 60%),
-    var(--lh-bg);
+  background: var(--lh-bg);
   color: var(--lh-ink);
 }
 
-.auth {
-  display: flex;
-  width: min(100%, 64rem);
-  min-height: min(40rem, calc(100vh - 4rem));
-  border: 1px solid var(--lh-line);
-  border-radius: var(--lh-radius-frame);
-  overflow: hidden;
-  background: var(--lh-bg);
-}
-
 .form-col {
-  width: min(100%, 28rem);
-  flex: 0 1 28rem;
+  width: 560px;
+  flex: 0 0 560px;
   display: flex;
   flex-direction: column;
-  padding: 2.5rem 2.75rem;
+  padding: 52px 60px;
 }
 
 .brandblock {
@@ -86,7 +70,7 @@ defineProps<{
   flex-direction: column;
   justify-content: center;
   min-height: 0;
-  padding: 1.5rem 0 0;
+  padding: 32px 0;
 }
 
 .side {
@@ -96,7 +80,7 @@ defineProps<{
   flex-direction: column;
   justify-content: center;
   gap: 26px;
-  padding: 2.5rem 2.75rem;
+  padding: 52px 56px;
   border-left: 1px solid var(--lh-line);
   background: var(--lh-rail);
 }
@@ -258,28 +242,21 @@ defineProps<{
 }
 
 @media (max-width: 940px) {
-  .auth-shell {
-    padding: 1rem;
-    place-items: stretch;
-  }
-
   .auth {
     flex-direction: column;
-    min-height: calc(100vh - 2rem);
-    width: 100%;
   }
 
   .form-col {
     width: 100%;
     flex: 1 1 auto;
-    padding: 1.75rem 1.35rem;
+    padding: 32px 22px;
   }
 
   .side {
     flex: 0 0 auto;
     border-left: 0;
     border-top: 1px solid var(--lh-line);
-    padding: 1.75rem 1.35rem;
+    padding: 32px 22px;
   }
 }
 </style>
