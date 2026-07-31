@@ -468,10 +468,6 @@ onBeforeUnmount(() => {
     gap: 0;
   }
 
-  .rail-item.group {
-    display: none;
-  }
-
   .rail-item {
     flex: 1 0 auto;
     width: auto;
