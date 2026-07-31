@@ -141,29 +141,57 @@
       </section>
 
       <section
-        v-show="activeSection === 'calendar'"
-        id="panel-calendar"
+        v-show="activeSection === 'calendar-connections'"
+        id="panel-calendar-connections"
         class="dash-section"
         role="tabpanel"
-        aria-labelledby="tab-calendar"
+        aria-labelledby="tab-calendar-connections"
       >
         <div class="dash-section-label">
           <div>
-            <h2 id="teacher-calendar">Calendar</h2>
-            <p>Month and year view of your classes. Set weekly open hours for student booking.</p>
+            <h2 id="tab-calendar-connections">Calendar connections</h2>
+            <p>Connect Google or Calendly so busy times block your open hours.</p>
           </div>
         </div>
-        <div class="dash-stack">
-          <CalendarConnectionsPanel />
-          <CalendarPanel
-            title="My calendar"
-            subtitle="Gold days mark your scheduled classes."
-            empty-text="Nothing on this day yet."
-            :events="calendarUpcoming"
-            :loading="loadingCalendar"
-          />
-          <TeacherAvailabilityPanel />
+        <CalendarConnectionsPanel />
+      </section>
+
+      <section
+        v-show="activeSection === 'my-calendar'"
+        id="panel-my-calendar"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-my-calendar"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="tab-my-calendar">My calendar</h2>
+            <p>Month and year view of your scheduled classes.</p>
+          </div>
         </div>
+        <CalendarPanel
+          title="My calendar"
+          subtitle="Gold days mark your scheduled classes."
+          empty-text="Nothing on this day yet."
+          :events="calendarUpcoming"
+          :loading="loadingCalendar"
+        />
+      </section>
+
+      <section
+        v-show="activeSection === 'weekly-availability'"
+        id="panel-weekly-availability"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-weekly-availability"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="tab-weekly-availability">My weekly availability</h2>
+            <p>Set the weekly open hours students can book against.</p>
+          </div>
+        </div>
+        <TeacherAvailabilityPanel />
       </section>
       </main>
     </div>
@@ -201,7 +229,19 @@ import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue
 import TeacherAvailabilityPanel from '../components/TeacherAvailabilityPanel.vue'
 import ClassChatWidget from '../components/ClassChatWidget.vue'
 
-type TeacherSection = 'today' | 'conduct' | 'records' | 'calendar'
+type TeacherSection =
+  | 'today'
+  | 'conduct'
+  | 'records'
+  | 'calendar-connections'
+  | 'my-calendar'
+  | 'weekly-availability'
+
+const CALENDAR_CHILD_IDS: TeacherSection[] = [
+  'calendar-connections',
+  'my-calendar',
+  'weekly-availability',
+]
 
 const navItems: {
   id: TeacherSection
@@ -228,10 +268,22 @@ const navItems: {
     icon: 'book',
   },
   {
-    id: 'calendar',
-    label: 'Open hours & calendar',
-    intro: 'Month and year view of your classes, plus weekly open hours for booking.',
-    icon: 'gear',
+    id: 'calendar-connections',
+    label: 'Calendar connections',
+    intro: 'Connect Google or Calendly so busy times block your open hours.',
+    icon: 'people',
+  },
+  {
+    id: 'my-calendar',
+    label: 'My calendar',
+    intro: 'Month and year view of your scheduled classes.',
+    icon: 'grid',
+  },
+  {
+    id: 'weekly-availability',
+    label: 'My weekly availability',
+    intro: 'Set the weekly open hours students can book against.',
+    icon: 'list',
   },
 ]
 
@@ -279,14 +331,33 @@ const calendarUpcoming = computed(() => calendarStore.upcoming)
 const displayName = computed(() => authStore.fullName || authStore.username || 'teacher')
 const initials = computed(() => initialsFrom(displayName.value))
 
-const railItems = computed<RailItem[]>(() =>
-  navItems.map((item) => ({
-    id: item.id,
-    label: item.label,
-    icon: item.icon,
-    badge: item.id === 'conduct' && inProgress.value.length > 0,
-  })),
-)
+const railItems = computed<RailItem[]>(() => {
+  const top = navItems.filter((item) => !CALENDAR_CHILD_IDS.includes(item.id))
+  const calendarChildren = navItems.filter((item) => CALENDAR_CHILD_IDS.includes(item.id))
+
+  return [
+    ...top.map((item) => ({
+      id: item.id,
+      label: item.label,
+      icon: item.icon,
+      badge: item.id === 'conduct' && inProgress.value.length > 0,
+    })),
+    {
+      id: 'calendar-group',
+      label: 'Open hours & calendar',
+      icon: 'gear' as const,
+      group: true,
+      defaultChildId: 'calendar-connections',
+      childIds: [...CALENDAR_CHILD_IDS],
+    },
+    ...calendarChildren.map((item) => ({
+      id: item.id,
+      label: item.label,
+      icon: item.icon,
+      child: true,
+    })),
+  ]
+})
 
 async function handleJoinClass(item: ConfirmedSchedule, meetingProvider?: string) {
   try {

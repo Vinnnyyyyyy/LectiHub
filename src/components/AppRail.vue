@@ -29,6 +29,14 @@ export type RailItem = {
   label: string
   icon: keyof typeof ICONS
   badge?: boolean
+  /** Non-selectable group header (e.g. "Open hours & calendar"). */
+  group?: boolean
+  /** Indented child under a group. */
+  child?: boolean
+  /** When this group is clicked, select this child id. */
+  defaultChildId?: string
+  /** Child ids that mark this group as active. */
+  childIds?: string[]
 }
 
 const props = defineProps<{
@@ -48,6 +56,9 @@ const emit = defineEmits<{
 const route = useRoute()
 
 function isActive(item: RailItem) {
+  if (item.group && item.childIds?.length && props.activeId) {
+    return item.childIds.includes(props.activeId)
+  }
   if (props.activeId != null && props.activeId !== '') {
     return props.activeId === item.id
   }
@@ -57,6 +68,10 @@ function isActive(item: RailItem) {
 
 function onSelect(item: RailItem) {
   if (item.to) return
+  if (item.group) {
+    emit('select', item.defaultChildId || item.childIds?.[0] || item.id)
+    return
+  }
   emit('select', item.id)
 }
 
@@ -99,9 +114,13 @@ onBeforeUnmount(() => {
         :key="item.id"
         v-bind="item.to ? { to: item.to } : { type: 'button' }"
         class="rail-item"
-        :class="{ active: isActive(item) }"
+        :class="{
+          active: isActive(item),
+          child: item.child,
+          group: item.group,
+        }"
         :aria-label="item.label"
-        :aria-current="isActive(item) ? 'page' : undefined"
+        :aria-current="isActive(item) && !item.group ? 'page' : undefined"
         @click="onSelect(item)"
       >
         <span class="icon-wrap" aria-hidden="true">
@@ -262,6 +281,33 @@ onBeforeUnmount(() => {
   color: var(--lh-ink);
 }
 
+.rail-item.group {
+  margin-top: 0.35rem;
+  color: var(--lh-muted);
+}
+
+.rail-item.group.active {
+  background: transparent;
+  color: var(--lh-accent);
+}
+
+.rail-item.group.active .icon-wrap,
+.rail-item.group.active .rail-label {
+  color: var(--lh-accent);
+}
+
+.rail-item.child {
+  min-height: 2.25rem;
+  margin-left: 0.55rem;
+  padding-left: 0.85rem;
+  border-left: 1px solid var(--lh-line);
+  border-radius: 0 var(--lh-radius-item) var(--lh-radius-item) 0;
+}
+
+.rail-item.child .rail-label {
+  font-size: 0.86rem;
+}
+
 .rail-item:focus-visible {
   outline: 0;
   box-shadow: inset 0 0 0 1px var(--lh-accent);
@@ -409,6 +455,10 @@ onBeforeUnmount(() => {
     gap: 0;
   }
 
+  .rail-item.group {
+    display: none;
+  }
+
   .rail-item {
     flex: 1 0 auto;
     width: auto;
@@ -419,6 +469,13 @@ onBeforeUnmount(() => {
     flex-direction: column;
     justify-content: center;
     gap: 0.2rem;
+    border-radius: var(--lh-radius-control);
+  }
+
+  .rail-item.child {
+    margin-left: 0;
+    padding-left: 0.2rem;
+    border-left: 0;
     border-radius: var(--lh-radius-control);
   }
 
