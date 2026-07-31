@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ClassController;
 use App\Http\Controllers\Api\CourseController;
+use App\Http\Controllers\Api\HomeworkController;
 use App\Http\Controllers\Api\LessonReportController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentReceiptController;
@@ -134,6 +135,23 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/send',   [AnnouncementController::class, 'sendAnnouncement'])->middleware('role:admin');
         Route::patch('/{id}',       [AnnouncementController::class, 'updateAnnouncement'])->middleware('role:admin');
         Route::delete('/{id}',      [AnnouncementController::class, 'deleteAnnouncement'])->middleware('role:admin');
+    });
+
+    // ── Homework & grades ─────────────────────────────────────────────────────
+    Route::prefix('homework')->group(function () {
+        Route::get('/', [HomeworkController::class, 'listHomework'])
+            ->middleware('role:student,teacher,admin');
+        Route::post('/', [HomeworkController::class, 'createHomework'])
+            ->middleware('role:teacher,admin');
+
+        Route::post('/{id}/submit', [HomeworkController::class, 'submitHomework'])
+            ->middleware('role:student');
+        Route::post('/{id}/grade', [HomeworkController::class, 'gradeHomework'])
+            ->middleware('role:teacher,admin');
+        Route::get('/{id}/file', [HomeworkController::class, 'downloadSubmission'])
+            ->middleware('role:student,teacher,admin');
+        Route::delete('/{id}', [HomeworkController::class, 'deleteHomework'])
+            ->middleware('role:teacher,admin');
     });
 
     // ── Courses & materials ───────────────────────────────────────────────────
