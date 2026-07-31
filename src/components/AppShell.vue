@@ -12,10 +12,6 @@ import { usePageMeta } from '../composables/usePageMeta'
 const props = defineProps<{
   items: RailItem[]
   initials: string
-  /** Signed-in display name for the sidebar account block */
-  displayName: string
-  /** Role label shown in the sidebar: Admin | Teacher | Student */
-  roleLabel: string
   /** fallback eyebrow when neither the view nor the route supplies one */
   eyebrow: string
 }>()
@@ -33,32 +29,24 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 </script>
 
 <template>
-  <div class="shell">
-    <div class="frame">
-      <AppRail
-        :items="items"
-        :initials="initials"
-        :display-name="displayName"
-        :role-label="roleLabel"
-        @logout="emit('logout')"
-      />
+  <div class="frame">
+    <AppRail :items="items" :initials="initials" @logout="emit('logout')" />
 
-      <div class="main">
-        <header class="header">
-          <div class="head-copy">
-            <p class="eyebrow">{{ eyebrow }}</p>
-            <h1 class="title">{{ title }}</h1>
-            <p v-if="intro" class="intro">{{ intro }}</p>
-          </div>
-          <div class="actions">
-            <slot name="actions" />
-          </div>
-        </header>
+    <div class="main">
+      <header class="header">
+        <div class="head-copy">
+          <p class="eyebrow">{{ eyebrow }}</p>
+          <h1 class="title">{{ title }}</h1>
+          <p v-if="intro" class="intro">{{ intro }}</p>
+        </div>
+        <div class="actions">
+          <slot name="actions" />
+        </div>
+      </header>
 
-        <main class="pane">
-          <RouterView />
-        </main>
-      </div>
+      <main class="pane">
+        <RouterView />
+      </main>
     </div>
 
     <slot name="overlay" />
@@ -66,23 +54,11 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 </template>
 
 <style scoped>
-/* Full-viewport backdrop; frame (rail + dashboard) is one middle unit. */
-.shell {
-  min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  justify-content: center;
-  background: var(--lh-bg);
-  color: var(--lh-ink);
-}
-
 .frame {
   display: flex;
-  width: min(100%, 82rem);
   min-height: 100vh;
-  min-height: 100dvh;
-  border-inline: 1px solid var(--lh-line);
   background: var(--lh-bg);
+  color: var(--lh-ink);
 }
 
 .main {
@@ -148,22 +124,9 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 }
 
 @media (max-width: 820px) {
-  .shell {
-    display: block;
-  }
-
   /* The rail is a fixed bottom tab bar at this width. */
   .frame {
     flex-direction: column;
-    width: 100%;
-    border-inline: 0;
-  }
-
-  .frame :deep(.rail) {
-    position: fixed;
-    height: auto;
-    align-self: auto;
-    overflow: visible;
   }
 
   .header {

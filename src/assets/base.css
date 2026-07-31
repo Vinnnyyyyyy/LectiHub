@@ -10,8 +10,6 @@
 
 html {
   scroll-behavior: auto;
-  /* Keep layout width stable when tall pages show a scrollbar. */
-  scrollbar-gutter: stable;
 }
 
 @media (prefers-reduced-motion: reduce) {

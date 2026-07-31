@@ -1,8 +1,7 @@
 <script setup lang="ts">
 /**
- * LectiHub labeled sidebar — icon + text nav for each role.
- * Desktop: vertical list with account pinned at the bottom.
- * Mobile: bottom tab bar (compact labels).
+ * LectiHub icon rail — 64px, one per role.
+ * Icons are inline 16px-grid strokes; paths lifted verbatim from the design reference.
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -34,10 +33,6 @@ export type RailItem = {
 defineProps<{
   items: RailItem[]
   initials: string
-  /** Signed-in person's name */
-  displayName: string
-  /** Role label shown under the name: Admin | Teacher | Student */
-  roleLabel: string
 }>()
 
 const emit = defineEmits<{ logout: [] }>()
@@ -71,52 +66,43 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <aside class="rail" aria-label="Main navigation">
-    <div class="brand">
-      <p class="wordmark">LectiHub</p>
-      <p class="role-chip">{{ roleLabel }}</p>
-    </div>
+  <aside class="rail">
+    <p class="wordmark">L</p>
 
-    <nav class="nav">
-      <RouterLink
-        v-for="item in items"
-        :key="item.to"
-        :to="item.to"
-        class="rail-item"
-        :class="{ active: isActive(item.to) }"
-        :aria-label="item.label"
-        :aria-current="isActive(item.to) ? 'page' : undefined"
-      >
-        <span class="icon-wrap" aria-hidden="true">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.4"
-            v-html="ICONS[item.icon]"
-          />
-        </span>
-        <span class="rail-label">{{ item.label }}</span>
-        <span v-if="item.badge" class="dot" aria-hidden="true" />
-      </RouterLink>
-    </nav>
+    <RouterLink
+      v-for="item in items"
+      :key="item.to"
+      :to="item.to"
+      class="rail-item"
+      :class="{ active: isActive(item.to) }"
+      :title="item.label"
+      :aria-label="item.label"
+      :aria-current="isActive(item.to) ? 'page' : undefined"
+    >
+      <svg
+        width="17"
+        height="17"
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.4"
+        aria-hidden="true"
+        v-html="ICONS[item.icon]"
+      />
+      <span class="rail-label">{{ item.label }}</span>
+      <span v-if="item.badge" class="dot" aria-hidden="true" />
+    </RouterLink>
 
     <div ref="menuRoot" class="account">
       <button
         type="button"
-        class="account-btn"
-        :aria-label="`${displayName}, ${roleLabel}. Account menu`"
+        class="avatar"
+        aria-label="Account menu"
         aria-haspopup="menu"
         :aria-expanded="menuOpen"
         @click="menuOpen = !menuOpen"
       >
-        <span class="avatar">{{ initials }}</span>
-        <span class="account-copy">
-          <span class="account-label">{{ displayName }}</span>
-          <span class="account-hint">{{ roleLabel }} · Log out</span>
-        </span>
+        {{ initials }}
       </button>
 
       <div v-if="menuOpen" class="menu" role="menu">
@@ -128,97 +114,42 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .rail {
-  position: sticky;
-  top: 0;
   width: var(--lh-rail-w);
-  align-self: flex-start;
+  align-self: stretch;
   flex: 0 0 var(--lh-rail-w);
-  height: 100vh;
-  height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 1.35rem 0.9rem 1rem;
+  align-items: center;
+  gap: 5px;
+  padding: 18px 0 14px;
   background: var(--lh-rail);
   border-right: 1px solid var(--lh-line);
-  overflow: auto;
-  scrollbar-gutter: stable;
-}
-
-.brand {
-  padding: 0 0.55rem 1.1rem;
 }
 
 .wordmark {
-  margin: 0;
+  height: 26px;
+  margin: 0 0 14px;
+  display: grid;
+  place-items: center;
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.35rem;
+  font-size: 24px;
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1;
   color: var(--lh-accent);
 }
 
-.role-chip {
-  margin: 0.45rem 0 0;
-  display: inline-flex;
-  align-items: center;
-  padding: 0.2rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid var(--lh-accent-edge);
-  background: var(--lh-accent-soft);
-  color: var(--lh-accent);
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  min-height: 0;
-  overflow: auto;
-  scrollbar-gutter: stable;
-}
-
 .rail-item {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  min-height: 2.65rem;
-  padding: 0.55rem 0.7rem;
+  width: 38px;
+  height: 38px;
   border-radius: var(--lh-radius-item);
+  display: grid;
+  place-items: center;
   color: var(--lh-faint);
-  text-decoration: none;
   transition:
     background var(--lh-ease),
     color var(--lh-ease);
-}
-
-.icon-wrap {
-  flex: 0 0 auto;
-  display: grid;
-  place-items: center;
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.rail-label {
-  min-width: 0;
-  flex: 1;
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.92rem;
-  font-weight: 400;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .rail-item:hover {
@@ -227,16 +158,9 @@ onBeforeUnmount(() => {
 }
 
 .rail-item.active {
-  color: var(--lh-ink);
   background: var(--lh-accent-soft);
-}
-
-.rail-item.active .icon-wrap {
   color: var(--lh-accent);
-}
-
-.rail-item.active .rail-label {
-  color: var(--lh-ink);
+  box-shadow: inset 0 0 0 1px var(--lh-accent-edge);
 }
 
 .rail-item:focus-visible {
@@ -246,8 +170,8 @@ onBeforeUnmount(() => {
 
 .dot {
   position: absolute;
-  top: 0.7rem;
-  right: 0.7rem;
+  top: 5px;
+  right: 5px;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -257,77 +181,35 @@ onBeforeUnmount(() => {
 .account {
   position: relative;
   margin-top: auto;
-  padding-top: 1.1rem;
-  border-top: 1px solid var(--lh-line);
-}
-
-.account-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  width: 100%;
-  padding: 0.55rem 0.55rem;
-  border: 0;
-  border-radius: var(--lh-radius-item);
-  background: transparent;
-  color: var(--lh-muted);
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background var(--lh-ease),
-    color var(--lh-ease);
-}
-
-.account-btn:hover {
-  background: var(--lh-bg-elevated);
-  color: var(--lh-ink);
-}
-
-.account-btn:focus-visible {
-  outline: 0;
-  box-shadow: inset 0 0 0 1px var(--lh-accent);
 }
 
 .avatar {
-  flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 2rem;
-  height: 2rem;
+  width: 30px;
+  height: 30px;
+  border: 0;
   border-radius: 50%;
   background: var(--lh-chip);
   color: var(--lh-accent);
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.72rem;
+  font: inherit;
+  font-size: 11px;
   font-weight: 800;
+  cursor: pointer;
 }
 
-.account-copy {
-  min-width: 0;
-  display: grid;
-  gap: 0.1rem;
-}
-
-.account-label {
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.88rem;
-  font-weight: 400;
-  color: inherit;
-}
-
-.account-hint {
-  font-family: 'Manrope', sans-serif;
-  font-size: 0.72rem;
-  color: var(--lh-dim);
+.avatar:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 1px var(--lh-accent);
 }
 
 .menu {
   position: absolute;
-  bottom: calc(100% + 0.45rem);
-  left: 0;
-  right: 0;
+  bottom: 0;
+  left: calc(100% + 9px);
   z-index: 40;
-  padding: 0.3rem;
+  min-width: 8.5rem;
+  padding: 5px;
   border: 1px solid var(--lh-line-strong);
   border-radius: var(--lh-radius-item);
   background: var(--lh-bg-elevated);
@@ -336,14 +218,14 @@ onBeforeUnmount(() => {
 
 .menu button {
   width: 100%;
-  padding: 0.55rem 0.65rem;
+  padding: 7px 9px;
   border: 0;
   border-radius: var(--lh-radius-control);
   background: transparent;
   color: var(--lh-ink);
   font: inherit;
-  font-size: 0.84rem;
-  font-weight: 400;
+  font-size: 12.5px;
+  font-weight: 700;
   text-align: left;
   cursor: pointer;
   transition: background var(--lh-ease);
@@ -357,6 +239,11 @@ onBeforeUnmount(() => {
 .menu button:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 1px var(--lh-accent);
+}
+
+/* Desktop hides the labels; the icons carry title/aria-label. */
+.rail-label {
+  display: none;
 }
 
 /* ── Mobile: the rail becomes a bottom tab bar ──────────── */
@@ -376,41 +263,38 @@ onBeforeUnmount(() => {
     border-top: 1px solid var(--lh-line);
   }
 
-  .brand {
+  .wordmark {
     display: none;
-  }
-
-  .nav {
-    flex: 1;
-    flex-direction: row;
-    overflow: visible;
-    gap: 0;
   }
 
   .rail-item {
     flex: 1;
     width: auto;
-    min-height: 44px;
+    /* 44px touch target per the design. */
+    height: 44px;
     margin-top: 6px;
-    padding: 0.25rem 0.2rem;
+    display: flex;
     flex-direction: column;
+    align-items: center;
     justify-content: center;
-    gap: 0.2rem;
+    gap: 3px;
     border-radius: var(--lh-radius-control);
   }
 
   .rail-item.active {
+    box-shadow: none;
     background: transparent;
   }
 
-  .rail-item.active .rail-label {
-    color: var(--lh-accent);
-  }
-
   .rail-label {
+    display: block;
     max-width: 100%;
-    font-size: 0.62rem;
-    font-weight: 400;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
   }
 
   .dot {
@@ -420,26 +304,15 @@ onBeforeUnmount(() => {
 
   .account {
     margin-top: 6px;
-    padding: 0 6px 0 10px;
-    border-top: 0;
     display: flex;
     align-items: center;
-  }
-
-  .account-copy {
-    display: none;
-  }
-
-  .account-btn {
-    width: auto;
-    padding: 0;
+    padding: 0 6px 0 10px;
   }
 
   .menu {
     bottom: calc(100% + 9px);
     left: auto;
     right: 0;
-    width: 9rem;
   }
 }
 </style>
