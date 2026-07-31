@@ -67,7 +67,7 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 
 .frame {
   display: flex;
-  width: min(100%, 76rem);
+  width: min(100%, 82rem);
   min-height: 100vh;
   border-inline: 1px solid var(--lh-line);
   background: var(--lh-bg);

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * LectiHub icon rail — 64px, one per role.
- * Icons are inline 16px-grid strokes; paths lifted verbatim from the design reference.
+ * LectiHub labeled sidebar — icon + text nav for each role.
+ * Desktop: vertical list with account pinned at the bottom.
+ * Mobile: bottom tab bar (compact labels).
  */
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -66,43 +67,51 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <aside class="rail">
-    <p class="wordmark">L</p>
+  <aside class="rail" aria-label="Main navigation">
+    <div class="brand">
+      <p class="wordmark">LectiHub</p>
+    </div>
 
-    <RouterLink
-      v-for="item in items"
-      :key="item.to"
-      :to="item.to"
-      class="rail-item"
-      :class="{ active: isActive(item.to) }"
-      :title="item.label"
-      :aria-label="item.label"
-      :aria-current="isActive(item.to) ? 'page' : undefined"
-    >
-      <svg
-        width="17"
-        height="17"
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.4"
-        aria-hidden="true"
-        v-html="ICONS[item.icon]"
-      />
-      <span class="rail-label">{{ item.label }}</span>
-      <span v-if="item.badge" class="dot" aria-hidden="true" />
-    </RouterLink>
+    <nav class="nav">
+      <RouterLink
+        v-for="item in items"
+        :key="item.to"
+        :to="item.to"
+        class="rail-item"
+        :class="{ active: isActive(item.to) }"
+        :aria-label="item.label"
+        :aria-current="isActive(item.to) ? 'page' : undefined"
+      >
+        <span class="icon-wrap" aria-hidden="true">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            v-html="ICONS[item.icon]"
+          />
+        </span>
+        <span class="rail-label">{{ item.label }}</span>
+        <span v-if="item.badge" class="dot" aria-hidden="true" />
+      </RouterLink>
+    </nav>
 
     <div ref="menuRoot" class="account">
       <button
         type="button"
-        class="avatar"
+        class="account-btn"
         aria-label="Account menu"
         aria-haspopup="menu"
         :aria-expanded="menuOpen"
         @click="menuOpen = !menuOpen"
       >
-        {{ initials }}
+        <span class="avatar">{{ initials }}</span>
+        <span class="account-copy">
+          <span class="account-label">Account</span>
+          <span class="account-hint">Sign out &amp; profile</span>
+        </span>
       </button>
 
       <div v-if="menuOpen" class="menu" role="menu">
@@ -119,37 +128,68 @@ onBeforeUnmount(() => {
   flex: 0 0 var(--lh-rail-w);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  padding: 18px 0 14px;
+  gap: 0.35rem;
+  padding: 1.35rem 0.9rem 1rem;
   background: var(--lh-rail);
   border-right: 1px solid var(--lh-line);
 }
 
+.brand {
+  padding: 0 0.55rem 1.1rem;
+}
+
 .wordmark {
-  height: 26px;
-  margin: 0 0 14px;
-  display: grid;
-  place-items: center;
+  margin: 0;
   font-family: 'Fraunces', Georgia, serif;
-  font-size: 24px;
+  font-size: 1.35rem;
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1;
   color: var(--lh-accent);
 }
 
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 0;
+  overflow: auto;
+}
+
 .rail-item {
   position: relative;
-  width: 38px;
-  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.55rem 0.7rem;
   border-radius: var(--lh-radius-item);
-  display: grid;
-  place-items: center;
   color: var(--lh-faint);
+  text-decoration: none;
   transition:
     background var(--lh-ease),
     color var(--lh-ease);
+}
+
+.icon-wrap {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.rail-label {
+  min-width: 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rail-item:hover {
@@ -158,9 +198,17 @@ onBeforeUnmount(() => {
 }
 
 .rail-item.active {
+  color: var(--lh-ink);
   background: var(--lh-accent-soft);
+}
+
+.rail-item.active .icon-wrap {
   color: var(--lh-accent);
-  box-shadow: inset 0 0 0 1px var(--lh-accent-edge);
+}
+
+.rail-item.active .rail-label {
+  font-weight: 750;
+  color: var(--lh-ink);
 }
 
 .rail-item:focus-visible {
@@ -170,8 +218,8 @@ onBeforeUnmount(() => {
 
 .dot {
   position: absolute;
-  top: 5px;
-  right: 5px;
+  top: 0.7rem;
+  right: 0.7rem;
   width: 6px;
   height: 6px;
   border-radius: 50%;
@@ -181,35 +229,77 @@ onBeforeUnmount(() => {
 .account {
   position: relative;
   margin-top: auto;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--lh-line);
+}
+
+.account-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  width: 100%;
+  padding: 0.55rem 0.55rem;
+  border: 0;
+  border-radius: var(--lh-radius-item);
+  background: transparent;
+  color: var(--lh-muted);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--lh-ease),
+    color var(--lh-ease);
+}
+
+.account-btn:hover {
+  background: var(--lh-bg-elevated);
+  color: var(--lh-ink);
+}
+
+.account-btn:focus-visible {
+  outline: 0;
+  box-shadow: inset 0 0 0 1px var(--lh-accent);
 }
 
 .avatar {
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 0;
+  width: 2rem;
+  height: 2rem;
   border-radius: 50%;
   background: var(--lh-chip);
   color: var(--lh-accent);
-  font: inherit;
-  font-size: 11px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.72rem;
   font-weight: 800;
-  cursor: pointer;
 }
 
-.avatar:focus-visible {
-  outline: 0;
-  box-shadow: 0 0 0 1px var(--lh-accent);
+.account-copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.account-label {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.account-hint {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.72rem;
+  color: var(--lh-dim);
 }
 
 .menu {
   position: absolute;
-  bottom: 0;
-  left: calc(100% + 9px);
+  bottom: calc(100% + 0.45rem);
+  left: 0;
+  right: 0;
   z-index: 40;
-  min-width: 8.5rem;
-  padding: 5px;
+  padding: 0.3rem;
   border: 1px solid var(--lh-line-strong);
   border-radius: var(--lh-radius-item);
   background: var(--lh-bg-elevated);
@@ -218,13 +308,13 @@ onBeforeUnmount(() => {
 
 .menu button {
   width: 100%;
-  padding: 7px 9px;
+  padding: 0.55rem 0.65rem;
   border: 0;
   border-radius: var(--lh-radius-control);
   background: transparent;
   color: var(--lh-ink);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 0.84rem;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
@@ -239,11 +329,6 @@ onBeforeUnmount(() => {
 .menu button:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 1px var(--lh-accent);
-}
-
-/* Desktop hides the labels; the icons carry title/aria-label. */
-.rail-label {
-  display: none;
 }
 
 /* ── Mobile: the rail becomes a bottom tab bar ──────────── */
@@ -263,38 +348,41 @@ onBeforeUnmount(() => {
     border-top: 1px solid var(--lh-line);
   }
 
-  .wordmark {
+  .brand {
     display: none;
+  }
+
+  .nav {
+    flex: 1;
+    flex-direction: row;
+    overflow: visible;
+    gap: 0;
   }
 
   .rail-item {
     flex: 1;
     width: auto;
-    /* 44px touch target per the design. */
-    height: 44px;
+    min-height: 44px;
     margin-top: 6px;
-    display: flex;
+    padding: 0.25rem 0.2rem;
     flex-direction: column;
-    align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 0.2rem;
     border-radius: var(--lh-radius-control);
   }
 
   .rail-item.active {
-    box-shadow: none;
     background: transparent;
   }
 
+  .rail-item.active .rail-label {
+    color: var(--lh-accent);
+  }
+
   .rail-label {
-    display: block;
     max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 9.5px;
+    font-size: 0.62rem;
     font-weight: 700;
-    letter-spacing: 0.01em;
   }
 
   .dot {
@@ -304,15 +392,26 @@ onBeforeUnmount(() => {
 
   .account {
     margin-top: 6px;
+    padding: 0 6px 0 10px;
+    border-top: 0;
     display: flex;
     align-items: center;
-    padding: 0 6px 0 10px;
+  }
+
+  .account-copy {
+    display: none;
+  }
+
+  .account-btn {
+    width: auto;
+    padding: 0;
   }
 
   .menu {
     bottom: calc(100% + 9px);
     left: auto;
     right: 0;
+    width: 9rem;
   }
 }
 </style>
