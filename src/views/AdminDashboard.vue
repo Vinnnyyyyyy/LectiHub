@@ -605,7 +605,7 @@ const navItems: {
     id: 'inbox',
     label: 'Inbox',
     intro: 'New scheduling requests and system alerts.',
-    icon: 'megaphone',
+    icon: 'calendar',
   },
   {
     id: 'users',
