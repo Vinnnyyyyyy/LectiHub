@@ -34,6 +34,10 @@ export type RailItem = {
 defineProps<{
   items: RailItem[]
   initials: string
+  /** Signed-in person's name */
+  displayName: string
+  /** Role label shown under the name: Admin | Teacher | Student */
+  roleLabel: string
 }>()
 
 const emit = defineEmits<{ logout: [] }>()
@@ -70,6 +74,7 @@ onBeforeUnmount(() => {
   <aside class="rail" aria-label="Main navigation">
     <div class="brand">
       <p class="wordmark">LectiHub</p>
+      <p class="role-chip">{{ roleLabel }}</p>
     </div>
 
     <nav class="nav">
@@ -102,15 +107,15 @@ onBeforeUnmount(() => {
       <button
         type="button"
         class="account-btn"
-        aria-label="Account menu"
+        :aria-label="`${displayName}, ${roleLabel}. Account menu`"
         aria-haspopup="menu"
         :aria-expanded="menuOpen"
         @click="menuOpen = !menuOpen"
       >
         <span class="avatar">{{ initials }}</span>
         <span class="account-copy">
-          <span class="account-label">Account</span>
-          <span class="account-hint">Sign out &amp; profile</span>
+          <span class="account-label">{{ displayName }}</span>
+          <span class="account-hint">{{ roleLabel }} · Log out</span>
         </span>
       </button>
 
@@ -146,6 +151,22 @@ onBeforeUnmount(() => {
   letter-spacing: -0.03em;
   line-height: 1;
   color: var(--lh-accent);
+}
+
+.role-chip {
+  margin: 0.45rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--lh-accent-edge);
+  background: var(--lh-accent-soft);
+  color: var(--lh-accent);
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .nav {
