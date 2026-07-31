@@ -293,9 +293,17 @@ const activeIntro = computed(
   () => navItems.find((item) => item.id === activeSection.value)?.intro ?? '',
 )
 
-function setSection(section: TeacherSection) {
+async function setSection(section: TeacherSection) {
   activeSection.value = section
   window.scrollTo({ top: 0, behavior: 'smooth' })
+
+  // Clear the My calendar assignment dot once the teacher opens that view.
+  if (section === 'my-calendar') {
+    const unreadAssignments = notificationsStore.notifications.filter(
+      (item) => !item.isRead && item.type === 'schedule_confirmed',
+    )
+    await Promise.allSettled(unreadAssignments.map((item) => notificationsStore.markRead(item.id)))
+  }
 }
 
 const authStore = useAuthStore()
@@ -304,6 +312,13 @@ const lessonReportsStore = useLessonReportsStore()
 const notificationsStore = useNotificationsStore()
 const calendarStore = useCalendarStore()
 const router = useRouter()
+
+const { notifications } = storeToRefs(notificationsStore)
+
+/** Unread "admin assigned you a class" alerts — drives the My calendar dot. */
+const hasUnreadAssignment = computed(() =>
+  notifications.value.some((item) => !item.isRead && item.type === 'schedule_confirmed'),
+)
 
 const {
   loading,
@@ -347,14 +362,17 @@ const railItems = computed<RailItem[]>(() => {
       label: 'Open hours & calendar',
       icon: 'gear' as const,
       group: true,
-      defaultChildId: 'calendar-connections',
+      // Jump straight to My calendar when an assignment is waiting.
+      defaultChildId: hasUnreadAssignment.value ? 'my-calendar' : 'calendar-connections',
       childIds: [...CALENDAR_CHILD_IDS],
+      badge: hasUnreadAssignment.value,
     },
     ...calendarChildren.map((item) => ({
       id: item.id,
       label: item.label,
       icon: item.icon,
       child: true,
+      badge: item.id === 'my-calendar' && hasUnreadAssignment.value,
     })),
   ]
 })
