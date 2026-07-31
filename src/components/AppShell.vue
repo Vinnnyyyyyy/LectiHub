@@ -34,18 +34,22 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 
     <div class="main">
       <header class="header">
-        <div class="head-copy">
-          <p class="eyebrow">{{ eyebrow }}</p>
-          <h1 class="title">{{ title }}</h1>
-          <p v-if="intro" class="intro">{{ intro }}</p>
-        </div>
-        <div class="actions">
-          <slot name="actions" />
+        <div class="content">
+          <div class="head-copy">
+            <p class="eyebrow">{{ eyebrow }}</p>
+            <h1 class="title">{{ title }}</h1>
+            <p v-if="intro" class="intro">{{ intro }}</p>
+          </div>
+          <div class="actions">
+            <slot name="actions" />
+          </div>
         </div>
       </header>
 
       <main class="pane">
-        <RouterView />
+        <div class="content">
+          <RouterView />
+        </div>
       </main>
     </div>
 
@@ -68,17 +72,27 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
   flex-direction: column;
 }
 
+/* Shared width so header + pane sit as one middle column. */
+.content {
+  width: min(100%, 72rem);
+  margin-inline: auto;
+  min-width: 0;
+}
+
 .header {
   position: sticky;
   top: 0;
   z-index: 20;
   flex: 0 0 auto;
-  display: flex;
-  align-items: flex-end;
-  gap: 22px;
   padding: 18px 24px 14px;
   border-bottom: 1px solid var(--lh-line);
   background: var(--lh-bg);
+}
+
+.header .content {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
 }
 
 .head-copy {
