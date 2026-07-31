@@ -175,6 +175,7 @@ onBeforeUnmount(() => {
   gap: 0.3rem;
   min-height: 0;
   overflow: auto;
+  scrollbar-gutter: stable;
 }
 
 .rail-item {
@@ -203,9 +204,11 @@ onBeforeUnmount(() => {
 
 .rail-label {
   min-width: 0;
+  flex: 1;
   font-family: 'Manrope', sans-serif;
   font-size: 0.92rem;
-  font-weight: 650;
+  /* Keep weight constant so active tab clicks don't nudge labels. */
+  font-weight: 700;
   letter-spacing: -0.01em;
   line-height: 1.2;
   white-space: nowrap;
@@ -228,7 +231,6 @@ onBeforeUnmount(() => {
 }
 
 .rail-item.active .rail-label {
-  font-weight: 750;
   color: var(--lh-ink);
 }
 
