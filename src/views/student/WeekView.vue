@@ -9,14 +9,18 @@ import { storeToRefs } from 'pinia'
 import { useClassesStore, type ConfirmedSchedule } from '../../stores/classes'
 import { useScheduleStore } from '../../stores/schedule'
 import { useLessonReportsStore } from '../../stores/lessonReports'
+import { useHomeworkStore } from '../../stores/homework'
 import { useAuthStore } from '../../stores/auth'
-import { formatDateTime } from '../../utils/datetime'
+import { formatDate, formatDateTime } from '../../utils/datetime'
 import { usePageEyebrow, usePageTitle } from '../../composables/usePageMeta'
 
 const classesStore = useClassesStore()
 const scheduleStore = useScheduleStore()
 const lessonReportsStore = useLessonReportsStore()
+const homeworkStore = useHomeworkStore()
 const authStore = useAuthStore()
+
+const { summary: homeworkSummary } = storeToRefs(homeworkStore)
 
 const { loading, joiningId, joinMessage, error: joinError } = storeToRefs(classesStore)
 const { requests } = storeToRefs(scheduleStore)
@@ -88,6 +92,7 @@ onMounted(async () => {
     classesStore.fetchMine(),
     scheduleStore.fetchMine(),
     lessonReportsStore.fetchMine(),
+    homeworkStore.fetchMine(),
   ])
 })
 </script>
@@ -185,6 +190,52 @@ onMounted(async () => {
 
       <!-- Side -->
       <aside class="side">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="eyebrow">Homework due</p>
+            <RouterLink v-if="homeworkSummary.pending" class="panel-link" to="/student/homework">
+              {{ homeworkSummary.pending }}
+            </RouterLink>
+          </div>
+
+          <p v-if="!homeworkStore.dueSoon.length" class="empty small">Nothing due.</p>
+          <RouterLink
+            v-for="item in homeworkStore.dueSoon.slice(0, 3)"
+            v-else
+            :key="item.id"
+            class="hwrow"
+            to="/student/homework"
+          >
+            <span class="hw-title">{{ item.title }}</span>
+            <span class="hw-due">
+              {{
+                item.dueAt ? `Due ${formatDate(String(item.dueAt).slice(0, 10))}` : 'No due date'
+              }}
+            </span>
+          </RouterLink>
+        </div>
+
+        <div v-if="homeworkStore.graded.length" class="panel">
+          <div class="panel-head">
+            <p class="eyebrow">Recent grades</p>
+            <span v-if="homeworkSummary.average != null" class="panel-link">
+              {{ Math.round(homeworkSummary.average) }} avg
+            </span>
+          </div>
+
+          <RouterLink
+            v-for="item in homeworkStore.graded.slice(0, 3)"
+            :key="item.id"
+            class="graderow"
+            to="/student/homework"
+          >
+            <span class="grade-score">
+              {{ Math.round(((item.submission?.score ?? 0) / Math.max(1, item.maxScore)) * 100) }}
+            </span>
+            <span class="grade-title">{{ item.title }}</span>
+          </RouterLink>
+        </div>
+
         <div class="panel">
           <p class="eyebrow">From your teacher</p>
           <div v-if="teacherNote" class="note">
@@ -487,6 +538,72 @@ onMounted(async () => {
   margin-top: 9px;
   font-size: 11px;
   color: var(--lh-dim);
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.panel-link {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--lh-accent);
+  text-decoration: none;
+}
+
+.hwrow {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--lh-line);
+  color: inherit;
+  text-decoration: none;
+}
+
+.hwrow:first-of-type,
+.graderow:first-of-type {
+  margin-top: 6px;
+  border-top: 1px solid var(--lh-line);
+}
+
+.hw-title {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.hw-due {
+  font-size: 11px;
+  color: var(--lh-dim);
+}
+
+.graderow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--lh-line);
+  color: inherit;
+  text-decoration: none;
+}
+
+.grade-score {
+  flex: 0 0 2rem;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 17px;
+  color: var(--lh-accent);
+}
+
+.grade-title {
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .reqrow {
