@@ -13,7 +13,6 @@ import { useHomeworkStore } from '../../stores/homework'
 import { useAuthStore } from '../../stores/auth'
 import { formatDate, formatDateTime } from '../../utils/datetime'
 import { usePageEyebrow, usePageTitle } from '../../composables/usePageMeta'
-import NotificationsPanel from '../../components/NotificationsPanel.vue'
 
 const classesStore = useClassesStore()
 const scheduleStore = useScheduleStore()
@@ -191,17 +190,6 @@ onMounted(async () => {
 
       <!-- Side -->
       <aside class="side">
-        <div class="panel">
-          <p class="eyebrow">Alerts</p>
-          <div class="alerts">
-            <NotificationsPanel
-              subtitle="Confirmations, meeting info, and reminders before class."
-              empty-text="You're all caught up."
-              show-pending-reminders
-            />
-          </div>
-        </div>
-
         <div class="panel">
           <div class="panel-head">
             <p class="eyebrow">Homework due</p>
@@ -516,10 +504,6 @@ onMounted(async () => {
 }
 
 /* ── Side ───────────────────────────────────────────────── */
-
-.alerts {
-  margin-top: 8px;
-}
 
 .side {
   display: flex;

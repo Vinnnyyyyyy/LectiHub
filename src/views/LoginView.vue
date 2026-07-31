@@ -1,13 +1,49 @@
+<template>
+  <div class="auth-page">
+    <div class="auth-atmosphere" aria-hidden="true" />
+    <form class="auth-panel" @submit.prevent="handleLogin">
+      <p class="brand">LectiHub</p>
+      <h1>Welcome</h1>
+      <p class="lede">Log in with your registered credentials to open your dashboard.</p>
+
+      <label for="username">Username</label>
+      <input id="username" v-model="username" type="text" required autocomplete="username" />
+
+      <label for="password">Password</label>
+      <input
+        id="password"
+        v-model="password"
+        type="password"
+        required
+        autocomplete="current-password"
+      />
+
+      <button type="submit" :disabled="loading">
+        {{ loading ? 'Logging in...' : 'Log in' }}
+      </button>
+
+      <p v-if="error" class="error" role="alert">{{ error }}</p>
+
+      <p class="switch">
+        New student?
+        <RouterLink to="/register">Create an account</RouterLink>
+      </p>
+      <p class="switch">
+        Want a taste first?
+        <RouterLink to="/free-trial">Book a free 30‑min trial</RouterLink>
+      </p>
+    </form>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import axios from 'axios'
 import { useAuthStore } from '../stores/auth'
-import AuthLayout from '../components/AuthLayout.vue'
 
 const username = ref('')
 const password = ref('')
-const keepSignedIn = ref(true)
 const error = ref('')
 const loading = ref(false)
 
@@ -29,7 +65,8 @@ async function handleLogin() {
   } catch (err) {
     if (axios.isAxiosError(err)) {
       if (!err.response) {
-        error.value = 'Cannot reach the LectiHub API. Make sure the backend server is running.'
+        error.value =
+          'Cannot reach the LectiHub API. Make sure the server is running on port 3000.'
       } else {
         error.value = err.response.data?.message || 'Login failed'
       }
@@ -42,131 +79,163 @@ async function handleLogin() {
 }
 </script>
 
-<template>
-  <AuthLayout center-name="Learning center">
-    <h1>Welcome back</h1>
-    <p class="lede">Sign in to see your week.</p>
-
-    <form @submit.prevent="handleLogin">
-      <div class="field">
-        <label for="username">Username</label>
-        <input id="username" v-model="username" type="text" required autocomplete="username" />
-      </div>
-
-      <div class="field">
-        <label for="password">Password</label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          required
-          autocomplete="current-password"
-        />
-      </div>
-
-      <label class="checkline">
-        <input v-model="keepSignedIn" type="checkbox" />
-        Keep me signed in on this device
-      </label>
-
-      <p v-if="error" class="error" role="alert">{{ error }}</p>
-
-      <button type="submit" class="submit" :disabled="loading">
-        {{ loading ? 'Signing in…' : 'Log in' }}
-      </button>
-    </form>
-
-    <p class="switch">New student? <RouterLink to="/register">Create an account</RouterLink></p>
-    <p class="switch trial">
-      Want a taste first? <RouterLink to="/free-trial">Book a free 30-minute trial</RouterLink>
-    </p>
-    <p class="note">
-      Teachers and admins are given accounts by the center. Ask your coordinator if you can't get
-      in.
-    </p>
-
-    <template #aside>
-      <p class="eyebrow">Your week, in one place</p>
-      <h2 class="side-title">Classes, reports and feedback —<br />all where you left them.</h2>
-
-      <ul class="points">
-        <li>
-          <span class="marker" aria-hidden="true" />
-          <div>
-            <p class="point-title">Book around your teachers</p>
-            <p class="point-copy">Pick from the times they've left open, up to three choices.</p>
-          </div>
-        </li>
-        <li>
-          <span class="marker" aria-hidden="true" />
-          <div>
-            <p class="point-title">Join in one tap</p>
-            <p class="point-copy">Meeting links land on the class, with reminders before it.</p>
-          </div>
-        </li>
-        <li>
-          <span class="marker" aria-hidden="true" />
-          <div>
-            <p class="point-title">See how it went</p>
-            <p class="point-copy">Your teacher files a report; you say how the session felt.</p>
-          </div>
-        </li>
-      </ul>
-    </template>
-  </AuthLayout>
-</template>
-
 <style scoped>
-.trial {
-  margin-top: 7px;
+.auth-page {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  justify-items: center;
+  padding: 2rem 1.25rem;
+  color: var(--lh-ink);
+  overflow: hidden;
 }
 
-.eyebrow {
-  font-size: 9.5px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--lh-dim);
+.auth-atmosphere {
+  position: absolute;
+  inset: 0;
+  background: var(--lh-atmosphere);
+  animation: drift 16s ease-in-out infinite alternate;
 }
 
-.side-title {
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 30px;
-  font-weight: 400;
-  letter-spacing: -0.03em;
-  line-height: 1.25;
+@keyframes drift {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.03) translate3d(-1%, 0.8%, 0);
+  }
 }
 
-.points {
+.auth-panel {
+  position: relative;
+  width: min(100%, 26rem);
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  list-style: none;
+  gap: 0.55rem;
+  padding: 2rem 1.75rem 1.75rem;
+  background: var(--lh-panel);
+  border: 1px solid var(--lh-line);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(14px);
+  box-shadow: var(--lh-shadow);
+  animation: rise 0.55s ease both;
 }
 
-.points li {
-  display: flex;
-  gap: 12px;
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.marker {
-  flex: 0 0 6px;
-  width: 6px;
-  height: 6px;
-  margin-top: 7px;
-  border-radius: 50%;
-  background: var(--lh-accent);
+.brand {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.65rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--lh-accent);
 }
 
-.point-title {
-  font-size: 13.5px;
-  font-weight: 700;
+h1 {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 550;
+  line-height: 1.2;
+  margin-bottom: 0.15rem;
+  color: var(--lh-ink);
 }
 
-.point-copy {
-  margin-top: 3px;
-  font-size: 12.5px;
-  line-height: 1.5;
+.lede {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.95rem;
+  line-height: 1.45;
   color: var(--lh-muted);
+  margin-bottom: 0.65rem;
+}
+
+label {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 0.25rem;
+  color: var(--lh-muted);
+}
+
+input {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.95rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--lh-line-strong);
+  border-radius: 0.7rem;
+  background: var(--lh-input);
+  color: var(--lh-ink);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+input::placeholder {
+  color: var(--lh-faint);
+}
+
+input:focus {
+  outline: none;
+  border-color: rgba(126, 184, 164, 0.55);
+  box-shadow: 0 0 0 3px rgba(126, 184, 164, 0.12);
+}
+
+button {
+  margin-top: 0.65rem;
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 0.8rem 1rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
+  color: #0d1512;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    filter 0.18s ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.error {
+  font-family: 'Manrope', sans-serif;
+  color: var(--lh-danger);
+  font-size: 0.88rem;
+}
+
+.switch {
+  font-family: 'Manrope', sans-serif;
+  font-size: 0.9rem;
+  margin-top: 0.4rem;
+  color: var(--lh-muted);
+}
+
+.switch a {
+  color: var(--lh-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.switch a:hover {
+  text-decoration: underline;
 }
 </style>
