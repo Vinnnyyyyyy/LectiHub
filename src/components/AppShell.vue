@@ -12,10 +12,6 @@ import { usePageMeta } from '../composables/usePageMeta'
 const props = defineProps<{
   items: RailItem[]
   initials: string
-  /** Signed-in display name for the sidebar account block */
-  displayName: string
-  /** Role label shown in the sidebar: Admin | Teacher | Student */
-  roleLabel: string
   /** fallback eyebrow when neither the view nor the route supplies one */
   eyebrow: string
 }>()
@@ -35,13 +31,7 @@ const intro = computed(() => (route.meta.intro as string | undefined) ?? '')
 <template>
   <div class="shell">
     <div class="frame">
-      <AppRail
-        :items="items"
-        :initials="initials"
-        :display-name="displayName"
-        :role-label="roleLabel"
-        @logout="emit('logout')"
-      />
+      <AppRail :items="items" :initials="initials" @logout="emit('logout')" />
 
       <div class="main">
         <header class="header">
