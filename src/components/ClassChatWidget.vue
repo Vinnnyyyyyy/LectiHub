@@ -25,12 +25,7 @@
             <p class="copy">{{ panelCopy }}</p>
           </div>
           <div class="head-actions">
-            <button
-              v-if="activePeerId"
-              type="button"
-              class="text-btn"
-              @click="backToContacts"
-            >
+            <button v-if="activePeerId" type="button" class="text-btn" @click="backToContacts">
               Contacts
             </button>
             <button type="button" class="icon-btn" aria-label="Close chat" @click="closePanel">
@@ -120,6 +115,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useChatStore, type ChatPopupNotice } from '../stores/chat'
+import { initialsFrom } from '../utils/initials'
 
 const chatStore = useChatStore()
 const {
@@ -139,7 +135,7 @@ const open = ref(false)
 const draft = ref('')
 const messageListEl = ref<HTMLElement | null>(null)
 let pollTimer: number | null = null
-let noticeTimers = new Map<string, number>()
+const noticeTimers = new Map<string, number>()
 
 const panelTitle = computed(() => {
   if (!activePeerId.value) return 'Contacts'
@@ -154,10 +150,7 @@ const panelCopy = computed(() => {
 })
 
 function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return '?'
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+  return initialsFrom(name)
 }
 
 async function togglePanel() {
@@ -302,12 +295,10 @@ onUnmounted(() => {
   display: grid;
   gap: 0.15rem;
   text-align: left;
-  border: 1px solid rgba(126, 184, 164, 0.35);
+  border: 1px solid color-mix(in srgb, var(--lh-accent) 35%, transparent);
   border-radius: 0.85rem;
   padding: 0.7rem 0.8rem;
-  background:
-    linear-gradient(135deg, rgba(126, 184, 164, 0.16), transparent 55%),
-    rgba(16, 20, 26, 0.92);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 92%, transparent);
   color: var(--lh-ink);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
   cursor: pointer;
@@ -345,9 +336,7 @@ onUnmounted(() => {
   padding: 0;
   border: 1px solid var(--lh-line-strong);
   border-radius: 1rem;
-  background:
-    linear-gradient(165deg, rgba(126, 184, 164, 0.12), transparent 42%),
-    var(--lh-panel-solid);
+  background: var(--lh-panel-solid);
   box-shadow: var(--lh-shadow);
   cursor: pointer;
   overflow: visible;
@@ -364,7 +353,7 @@ onUnmounted(() => {
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  background: radial-gradient(circle at 30% 20%, rgba(126, 184, 164, 0.22), transparent 58%);
+  background: var(--lh-bg-elevated);
   opacity: 0.75;
   pointer-events: none;
 }
@@ -389,27 +378,25 @@ onUnmounted(() => {
 }
 
 .launcher:hover {
-  border-color: rgba(126, 184, 164, 0.45);
+  border-color: color-mix(in srgb, var(--lh-accent) 45%, transparent);
   transform: translateY(-1px);
   box-shadow:
     0 16px 36px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(126, 184, 164, 0.12);
+    0 0 0 1px color-mix(in srgb, var(--lh-accent) 12%, transparent);
 }
 
 .launcher:focus-visible {
-  outline: 2px solid rgba(126, 184, 164, 0.55);
+  outline: 2px solid color-mix(in srgb, var(--lh-accent) 55%, transparent);
   outline-offset: 3px;
 }
 
 .launcher.open {
-  border-color: rgba(126, 184, 164, 0.5);
-  background:
-    linear-gradient(165deg, rgba(126, 184, 164, 0.2), transparent 50%),
-    var(--lh-panel-solid);
+  border-color: color-mix(in srgb, var(--lh-accent) 50%, transparent);
+  background: var(--lh-panel-solid);
 }
 
 .launcher.unread {
-  border-color: rgba(126, 184, 164, 0.4);
+  border-color: color-mix(in srgb, var(--lh-accent) 40%, transparent);
 }
 
 .launcher-badge {
@@ -422,14 +409,13 @@ onUnmounted(() => {
   padding: 0 0.32rem;
   border-radius: 999px;
   border: 2px solid var(--lh-bg);
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
   font-family: 'Manrope', sans-serif;
   font-size: 0.68rem;
   font-weight: 800;
   display: inline-grid;
   place-items: center;
-  box-shadow: 0 4px 12px rgba(79, 143, 123, 0.35);
 }
 
 .chat-panel {
@@ -439,11 +425,7 @@ onUnmounted(() => {
   grid-template-rows: auto 1fr auto;
   border: 1px solid var(--lh-line);
   border-radius: 1.15rem;
-  background:
-    radial-gradient(ellipse 70% 45% at 0% 0%, rgba(126, 184, 164, 0.1), transparent 55%),
-    linear-gradient(165deg, rgba(36, 44, 54, 0.55), transparent 42%),
-    var(--lh-panel);
-  backdrop-filter: blur(14px);
+  background: var(--lh-panel);
   box-shadow: var(--lh-shadow);
   overflow: hidden;
 }
@@ -502,7 +484,7 @@ textarea,
 .text-btn,
 .icon-btn {
   border: 1px solid var(--lh-line);
-  background: rgba(16, 20, 26, 0.55);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 55%, transparent);
   color: var(--lh-ink);
   cursor: pointer;
 }
@@ -559,7 +541,7 @@ textarea,
   border: 1px solid var(--lh-line);
   border-radius: 0.85rem;
   padding: 0.7rem 0.75rem;
-  background: rgba(16, 20, 26, 0.42);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 42%, transparent);
   color: var(--lh-ink);
   cursor: pointer;
   transition:
@@ -568,7 +550,7 @@ textarea,
 }
 
 .thread-btn:hover {
-  border-color: rgba(126, 184, 164, 0.35);
+  border-color: color-mix(in srgb, var(--lh-accent) 35%, transparent);
   background: var(--lh-accent-soft);
 }
 
@@ -578,10 +560,8 @@ textarea,
   border-radius: 999px;
   display: inline-grid;
   place-items: center;
-  border: 1px solid rgba(126, 184, 164, 0.22);
-  background:
-    linear-gradient(160deg, rgba(126, 184, 164, 0.2), transparent 70%),
-    rgba(20, 25, 31, 0.8);
+  border: 1px solid color-mix(in srgb, var(--lh-accent) 22%, transparent);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 80%, transparent);
   color: var(--lh-accent);
   font-size: 0.72rem;
   font-weight: 800;
@@ -597,7 +577,7 @@ textarea,
   padding: 0.1rem 0.35rem;
   border-radius: 999px;
   background: var(--lh-accent);
-  color: #0d1512;
+  color: var(--lh-on-accent);
   font-size: 0.68rem;
   font-weight: 800;
   text-align: center;
@@ -630,7 +610,7 @@ textarea,
   justify-self: start;
   padding: 0.55rem 0.7rem;
   border-radius: 0.8rem 0.8rem 0.8rem 0.25rem;
-  background: rgba(16, 20, 26, 0.65);
+  background: color-mix(in srgb, var(--lh-bg-elevated) 65%, transparent);
   border: 1px solid var(--lh-line);
 }
 
@@ -638,7 +618,7 @@ textarea,
   justify-self: end;
   border-radius: 0.8rem 0.8rem 0.25rem 0.8rem;
   background: var(--lh-accent-soft);
-  border-color: rgba(126, 184, 164, 0.3);
+  border-color: color-mix(in srgb, var(--lh-accent) 30%, transparent);
 }
 
 .bubble-body {
@@ -663,7 +643,7 @@ time {
   gap: 0.45rem;
   padding: 0.7rem;
   border-top: 1px solid var(--lh-line);
-  background: rgba(10, 14, 18, 0.45);
+  background: color-mix(in srgb, var(--lh-rail) 45%, transparent);
 }
 
 .composer textarea {
@@ -683,8 +663,8 @@ time {
   border-radius: 0.7rem;
   padding: 0.55rem 0.85rem;
   font-weight: 750;
-  background: linear-gradient(135deg, var(--lh-accent) 0%, var(--lh-accent-deep) 100%);
-  color: #0d1512;
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
   cursor: pointer;
   align-self: end;
 }

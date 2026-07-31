@@ -9,6 +9,11 @@ function mapUser(row) {
     fullName: row.full_name || row.username,
     role: row.role,
     createdAt: row.created_at,
+    subjectExpertise: row.subject_expertise || '',
+    // Directory roll-ups; present on list responses, absent elsewhere.
+    weeklyMinutes: row.weekly_minutes != null ? Number(row.weekly_minutes) : null,
+    studentCount: row.student_count != null ? Number(row.student_count) : null,
+    calendarProvider: row.calendar_provider || null,
   };
 }
 
@@ -55,6 +60,32 @@ async function createUser(req, res) {
   }
 }
 
+// Monday of the current week / the Monday after, in SQLite date() arithmetic.
+// strftime('%w') is 0=Sunday, so (%w + 6) % 7 is days elapsed since Monday.
+const WEEK_START = `date('now', '-' || ((strftime('%w','now') + 6) % 7) || ' days')`;
+const WEEK_END = `date('now', '-' || ((strftime('%w','now') + 6) % 7) || ' days', '+7 days')`;
+
+// Directory roll-ups for the admin People table. Teacher-oriented: the
+// subqueries key off classes.teacher_id, so they read 0 / NULL for students.
+const USER_LIST_COLUMNS = `
+  u.id, u.username, u.email, u.full_name, u.role, u.created_at, u.subject_expertise,
+  (SELECT COALESCE(SUM(COALESCE(c.duration_minutes, 30)), 0)
+     FROM classes c
+    WHERE c.teacher_id = u.id
+      AND c.class_date >= ${WEEK_START}
+      AND c.class_date < ${WEEK_END}
+  ) AS weekly_minutes,
+  (SELECT COUNT(DISTINCT c.student_id)
+     FROM classes c
+    WHERE c.teacher_id = u.id AND c.student_id IS NOT NULL
+  ) AS student_count,
+  (SELECT cc.provider
+     FROM calendar_connections cc
+    WHERE cc.user_id = u.id AND cc.is_active = 1
+    LIMIT 1
+  ) AS calendar_provider
+`;
+
 async function listUsers(req, res) {
   try {
     const role = String(req.query.role || '').toLowerCase().trim();
@@ -62,25 +93,25 @@ async function listUsers(req, res) {
     if (role && ['admin', 'teacher', 'student'].includes(role)) {
       rows = db
         .prepare(
-          `SELECT id, username, email, full_name, role, created_at
-           FROM users
-           WHERE role = ?
-           ORDER BY full_name ASC, username ASC`,
+          `SELECT ${USER_LIST_COLUMNS}
+           FROM users u
+           WHERE u.role = ?
+           ORDER BY u.full_name ASC, u.username ASC`,
         )
         .all(role);
     } else {
       rows = db
         .prepare(
-          `SELECT id, username, email, full_name, role, created_at
-           FROM users
+          `SELECT ${USER_LIST_COLUMNS}
+           FROM users u
            ORDER BY
-             CASE role
+             CASE u.role
                WHEN 'admin' THEN 0
                WHEN 'teacher' THEN 1
                ELSE 2
              END,
-             full_name ASC,
-             username ASC`,
+             u.full_name ASC,
+             u.username ASC`,
         )
         .all();
     }

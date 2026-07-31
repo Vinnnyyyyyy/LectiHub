@@ -8,6 +8,11 @@ export interface ManagedUser {
   fullName: string
   role: 'admin' | 'teacher' | 'student'
   createdAt: string
+  subjectExpertise: string
+  /** Directory roll-ups — teacher-oriented, null outside list responses. */
+  weeklyMinutes: number | null
+  studentCount: number | null
+  calendarProvider: 'google' | 'calendly' | null
 }
 
 interface UsersState {

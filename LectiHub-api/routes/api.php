@@ -1,15 +1,20 @@
 <?php
 
 use App\Http\Controllers\Api\AdminMonitoringController;
+use App\Http\Controllers\Api\AnnouncementController;
+use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvailabilityController;
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ClassController;
+use App\Http\Controllers\Api\CourseController;
+use App\Http\Controllers\Api\HomeworkController;
 use App\Http\Controllers\Api\LessonReportController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentReceiptController;
 use App\Http\Controllers\Api\ScheduleRequestController;
+use App\Http\Controllers\Api\SettingsController;
 use App\Http\Controllers\Api\StudentFeedbackController;
 use App\Http\Controllers\Api\TrialRequestController;
 use App\Http\Controllers\Api\UserController;
@@ -116,9 +121,77 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/student-feedback', [StudentFeedbackController::class, 'listStudentFeedback'])
         ->middleware('role:student,teacher,admin');
 
-    // ── Admin monitoring ──────────────────────────────────────────────────────
+    // ── Announcements ─────────────────────────────────────────────────────────
+    Route::prefix('announcements')->group(function () {
+        // Static /mine before /{id} so it isn't swallowed.
+        Route::get('/mine', [AnnouncementController::class, 'listMine'])
+            ->middleware('role:student,teacher,admin');
+        Route::patch('/{id}/read', [AnnouncementController::class, 'markRead'])
+            ->middleware('role:student,teacher,admin');
+
+        Route::get('/',             [AnnouncementController::class, 'listAnnouncements'])->middleware('role:admin');
+        Route::post('/',            [AnnouncementController::class, 'createAnnouncement'])->middleware('role:admin');
+        Route::post('/preview',     [AnnouncementController::class, 'previewAudience'])->middleware('role:admin');
+        Route::post('/{id}/send',   [AnnouncementController::class, 'sendAnnouncement'])->middleware('role:admin');
+        Route::patch('/{id}',       [AnnouncementController::class, 'updateAnnouncement'])->middleware('role:admin');
+        Route::delete('/{id}',      [AnnouncementController::class, 'deleteAnnouncement'])->middleware('role:admin');
+    });
+
+    // ── Homework & grades ─────────────────────────────────────────────────────
+    Route::prefix('homework')->group(function () {
+        Route::get('/', [HomeworkController::class, 'listHomework'])
+            ->middleware('role:student,teacher,admin');
+        Route::post('/', [HomeworkController::class, 'createHomework'])
+            ->middleware('role:teacher,admin');
+
+        Route::post('/{id}/submit', [HomeworkController::class, 'submitHomework'])
+            ->middleware('role:student');
+        Route::post('/{id}/grade', [HomeworkController::class, 'gradeHomework'])
+            ->middleware('role:teacher,admin');
+        Route::get('/{id}/file', [HomeworkController::class, 'downloadSubmission'])
+            ->middleware('role:student,teacher,admin');
+        Route::delete('/{id}', [HomeworkController::class, 'deleteHomework'])
+            ->middleware('role:teacher,admin');
+    });
+
+    // ── Courses & materials ───────────────────────────────────────────────────
+    Route::prefix('courses')->group(function () {
+        // Students see only what they are enrolled in; staff see everything.
+        Route::get('/', [CourseController::class, 'listCourses'])
+            ->middleware('role:student,teacher,admin');
+
+        Route::post('/',        [CourseController::class, 'createCourse'])->middleware('role:admin');
+        Route::patch('/{id}',   [CourseController::class, 'updateCourse'])->middleware('role:admin');
+        Route::delete('/{id}',  [CourseController::class, 'deleteCourse'])->middleware('role:admin');
+
+        Route::get('/{id}/materials', [CourseController::class, 'listMaterials'])
+            ->middleware('role:student,teacher,admin');
+        Route::post('/{id}/materials', [CourseController::class, 'uploadMaterial'])
+            ->middleware('role:teacher,admin');
+
+        Route::get('/{id}/enrolments', [CourseController::class, 'listEnrolments'])
+            ->middleware('role:admin');
+        Route::put('/{id}/enrolments', [CourseController::class, 'updateEnrolments'])
+            ->middleware('role:admin');
+    });
+
+    Route::prefix('materials')->group(function () {
+        Route::get('/{id}/download', [CourseController::class, 'downloadMaterial'])
+            ->middleware('role:student,teacher,admin');
+        Route::delete('/{id}', [CourseController::class, 'deleteMaterial'])
+            ->middleware('role:teacher,admin');
+    });
+
+    // Centre settings any signed-in user may read (slot length, hours, notice).
+    Route::get('/settings', [SettingsController::class, 'publicSettings'])
+        ->middleware('role:student,teacher,admin');
+
+    // ── Admin monitoring, audit & settings ────────────────────────────────────
     Route::prefix('admin')->middleware('role:admin')->group(function () {
         Route::get('/monitoring', [AdminMonitoringController::class, 'getMonitoringOverview']);
+        Route::get('/audit',      [AuditController::class, 'listEvents']);
+        Route::get('/settings',   [SettingsController::class, 'show']);
+        Route::put('/settings',   [SettingsController::class, 'update']);
     });
 
     // ── Calendar ──────────────────────────────────────────────────────────────

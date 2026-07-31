@@ -44,3 +44,6 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Claude Code — per-developer permission grants
+.claude/settings.local.json
