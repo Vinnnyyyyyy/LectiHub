@@ -68,7 +68,7 @@ async function preparePreview() {
       htmlBody.value = await docxBlobToHtml(typed)
     } catch {
       convertError.value =
-        'Could not render this Word file in the browser. Ask admin to also upload a PDF for discussion.'
+        'Could not render this Word file. Run npm install in the project folder, restart the app, or ask admin to upload a PDF.'
     } finally {
       converting.value = false
     }
