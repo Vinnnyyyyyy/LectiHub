@@ -23,6 +23,22 @@ const bookableSlots = computed(() =>
   storeTimeSlots.value?.length ? storeTimeSlots.value : [...TIME_SLOTS],
 )
 
+function slotDurationMinutes(slot: string): number {
+  const [start, end] = slot.split('-')
+  if (!start || !end) return 30
+  const toMins = (hm: string) => {
+    const [h, m] = hm.split(':').map(Number)
+    return (h || 0) * 60 + (m || 0)
+  }
+  return Math.max(1, toMins(end) - toMins(start))
+}
+
+const slotLengthLabel = computed(() => {
+  const first = bookableSlots.value[0]
+  const minutes = first ? slotDurationMinutes(first) : 30
+  return `${minutes}-minute`
+})
+
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 
 /** Mon–Fri; the center is closed at weekends. */
@@ -135,7 +151,9 @@ onMounted(() => {
           <div class="card-head">
             <div>
               <p class="card-label">Weekly pattern</p>
-              <p class="card-note">Click a cell to toggle · 30-minute slots</p>
+              <p class="card-note">
+                Click a cell to toggle · {{ slotLengthLabel }} slots
+              </p>
             </div>
             <button
               type="button"
