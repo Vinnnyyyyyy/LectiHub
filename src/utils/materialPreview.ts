@@ -6,25 +6,22 @@ type MammothModule = {
   convertToHtml: (
     input: { arrayBuffer: ArrayBuffer },
     options?: {
-      convertImage?: {
-        // mammoth image converter factory
-        (element: {
-          read: (encoding: string) => Promise<string>
-          contentType: string
-        }) => Promise<{ src: string }>
-      }
+      convertImage?: (element: {
+        read: (encoding: string) => Promise<string>
+        contentType: string
+      }) => Promise<{ src: string }>
     },
   ) => Promise<{ value: string }>
   images?: {
-    imgElement: (fn: (element: {
-      read: (encoding: string) => Promise<string>
-      contentType: string
-    }) => Promise<{ src: string }>) => {
-      (element: {
+    imgElement: (
+      fn: (element: {
         read: (encoding: string) => Promise<string>
         contentType: string
-      }): Promise<{ src: string }>
-    }
+      }) => Promise<{ src: string }>,
+    ) => (element: {
+      read: (encoding: string) => Promise<string>
+      contentType: string
+    }) => Promise<{ src: string }>
   }
   default?: MammothModule
 }
@@ -72,7 +69,7 @@ async function loadMammoth(): Promise<MammothModule> {
   }
 }
 
-/** Convert a .docx blob to HTML (text + inline images) for on-screen reading. */
+/** Convert a .docx blob to HTML for on-screen reading (view only — no copy UI). */
 export async function docxBlobToHtml(blob: Blob): Promise<string> {
   const mammothMod = await loadMammoth()
   const mammoth = mammothMod.default?.convertToHtml ? mammothMod.default : mammothMod
@@ -94,10 +91,4 @@ export async function docxBlobToHtml(blob: Blob): Promise<string> {
 
   const result = await convert({ arrayBuffer: buffer }, options)
   return result.value || '<p><em>No readable text in this document.</em></p>'
-}
-
-/** Plain text from HTML (for Copy text). */
-export function htmlToPlainText(html: string): string {
-  const doc = new DOMParser().parseFromString(html, 'text/html')
-  return (doc.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim()
 }
