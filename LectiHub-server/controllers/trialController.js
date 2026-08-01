@@ -1,25 +1,10 @@
 const { submitFreeTrialToDolibarr, isDolibarrEnabled, getDolibarrMode } =
   require('../utils/dolibarrClient');
 const { createTrialScheduleRequest } = require('../utils/trialScheduler');
+const { standardTimeSlotsFor } = require('../utils/availabilityHelpers');
 
-const TIME_SLOTS = [
-  '09:00-09:30',
-  '09:30-10:00',
-  '10:00-10:30',
-  '10:30-11:00',
-  '11:00-11:30',
-  '11:30-12:00',
-  '13:00-13:30',
-  '13:30-14:00',
-  '14:00-14:30',
-  '14:30-15:00',
-  '15:00-15:30',
-  '15:30-16:00',
-  '16:00-16:30',
-  '16:30-17:00',
-  '17:00-17:30',
-  '17:30-18:00',
-];
+const SLOT_MINUTES = Number(process.env.SCHEDULING_SLOT_MINUTES) === 60 ? 60 : 30;
+const TIME_SLOTS = standardTimeSlotsFor(SLOT_MINUTES);
 
 const PROGRAMS = [
   'Data Analytics',
@@ -53,7 +38,7 @@ function getTrialConfig(req, res) {
       enabled: true,
       dolibarrEnabled: isDolibarrEnabled(),
       dolibarrMode: isDolibarrEnabled() ? getDolibarrMode() : null,
-      durationMinutes: 30,
+      durationMinutes: SLOT_MINUTES,
       programs: PROGRAMS,
       timeSlots: TIME_SLOTS,
       videoPlatforms: Object.entries(VIDEO_PLATFORMS).map(([value, label]) => ({
@@ -106,7 +91,7 @@ async function createFreeTrialRequest(req, res) {
       return res.status(400).json({ message: 'Choose a valid preferred date.' });
     }
     if (!TIME_SLOTS.includes(preferredSlot)) {
-      return res.status(400).json({ message: 'Choose a valid 30-minute time slot.' });
+      return res.status(400).json({ message: 'Choose a valid time slot.' });
     }
     if (!VIDEO_PLATFORMS[videoPlatform]) {
       return res.status(400).json({

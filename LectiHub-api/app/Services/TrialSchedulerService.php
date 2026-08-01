@@ -22,7 +22,8 @@ use RuntimeException;
 class TrialSchedulerService
 {
     public function __construct(
-        private readonly NotificationService $notifications
+        private readonly NotificationService $notifications,
+        private readonly SettingsService $settings,
     ) {}
 
     // -----------------------------------------------------------------------
@@ -161,8 +162,12 @@ class TrialSchedulerService
         ['student' => $student] = $this->findOrCreateTrialStudent($trial);
 
         $entityLabel = ($trial['entityType'] ?? '') === 'company' ? 'Company' : 'Individual';
+        $slotMinutes = (int) $this->settings->get('scheduling.slot_minutes', 30);
+        if (! in_array($slotMinutes, [30, 60], true)) {
+            $slotMinutes = 30;
+        }
         $remarks     = implode(' · ', array_filter([
-            'Free trial (30 minutes)',
+            "Free trial ({$slotMinutes} minutes)",
             'Program: ' . ($trial['program'] ?? ''),
             "Company / Individual: {$entityLabel}",
             'Preferred platform: ' . ($trial['videoPlatformLabel'] ?? $trial['videoPlatform'] ?? ''),

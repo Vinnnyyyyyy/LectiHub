@@ -21,7 +21,12 @@ const router = useRouter()
 
 const { schedules, loading, joiningId } = storeToRefs(classesStore)
 const { reports } = storeToRefs(lessonReportsStore)
-const { mySlots } = storeToRefs(availabilityStore)
+const { mySlots, timeSlots: storeTimeSlots } = storeToRefs(availabilityStore)
+
+/** Prefer API slot grid from centre settings; fall back to 30-min defaults. */
+const TIME_SLOT_ROWS = computed(() =>
+  storeTimeSlots.value?.length ? storeTimeSlots.value : [...TIME_SLOTS],
+)
 
 const weekOffset = ref(0)
 
@@ -234,7 +239,7 @@ onMounted(async () => {
             <p class="daynum">{{ day.dayNumber }}</p>
           </div>
 
-          <template v-for="slot in TIME_SLOTS" :key="slot">
+          <template v-for="slot in TIME_SLOT_ROWS" :key="slot">
             <div class="gutter">
               <span v-if="isHourStart(slot)">{{ slot.split('-')[0] }}</span>
             </div>

@@ -23,6 +23,10 @@ use RuntimeException;
  */
 class DolibarrClient
 {
+    public function __construct(
+        private readonly SettingsService $settings,
+    ) {}
+
     // -----------------------------------------------------------------------
     // Configuration helpers
     // -----------------------------------------------------------------------
@@ -87,8 +91,13 @@ class DolibarrClient
         $timeSlot      = $trial['preferredSlot']     ?? '';
         $platform      = $trial['videoPlatformLabel'] ?? $trial['videoPlatform'] ?? '';
 
+        $slotMinutes = (int) $this->settings->get('scheduling.slot_minutes', 30);
+        if (! in_array($slotMinutes, [30, 60], true)) {
+            $slotMinutes = 30;
+        }
+
         $noteLines = array_filter([
-            'LectiHub free trial (30 minutes)',
+            "LectiHub free trial ({$slotMinutes} minutes)",
             'Name: ' . ($trial['name']  ?? ''),
             'Email: ' . ($trial['email'] ?? ''),
             !empty($trial['phone']) ? 'Phone: ' . $trial['phone'] : null,
