@@ -122,7 +122,7 @@
             <span>Action</span>
           </div>
           <ul class="user-list">
-            <li v-for="user in filteredUsers" :key="user.id">
+            <li v-for="user in filteredUsers" :key="user.id" class="user-row">
               <div class="person">
                 <span class="avatar" :data-role="user.role" aria-hidden="true">{{
                   initials(user.fullName)
@@ -137,14 +137,45 @@
                 </div>
               </div>
               <span class="role" :data-role="user.role">{{ user.role }}</span>
-              <button
-                type="button"
-                class="delete"
-                :disabled="deletingId === user.id || user.username === currentUsername"
-                @click="confirmDelete(user)"
+              <div class="row-actions">
+                <button
+                  type="button"
+                  class="password"
+                  :aria-expanded="passwordUserId === user.id"
+                  @click="togglePasswordForm(user)"
+                >
+                  {{ passwordUserId === user.id ? 'Cancel' : 'Password' }}
+                </button>
+                <button
+                  type="button"
+                  class="delete"
+                  :disabled="deletingId === user.id || user.username === currentUsername"
+                  @click="confirmDelete(user)"
+                >
+                  {{ deletingId === user.id ? 'Deleting…' : 'Delete' }}
+                </button>
+              </div>
+
+              <form
+                v-if="passwordUserId === user.id"
+                class="password-form"
+                @submit.prevent="submitPassword(user)"
               >
-                {{ deletingId === user.id ? 'Deleting…' : 'Delete' }}
-              </button>
+                <label :for="`pwd-${user.id}`">New password</label>
+                <input
+                  :id="`pwd-${user.id}`"
+                  v-model="passwordDraft"
+                  type="text"
+                  required
+                  minlength="6"
+                  maxlength="80"
+                  autocomplete="new-password"
+                  placeholder="At least 6 characters"
+                />
+                <button type="submit" class="save-password" :disabled="passwordSavingId === user.id">
+                  {{ passwordSavingId === user.id ? 'Saving…' : 'Save password' }}
+                </button>
+              </form>
             </li>
           </ul>
         </div>
@@ -177,11 +208,15 @@ type UsersView = 'create' | 'directory'
 
 const usersStore = useUsersStore()
 const authStore = useAuthStore()
-const { users, loading, deletingId, error, message } = storeToRefs(usersStore)
+const { users, loading, deletingId, passwordUserId: savingPasswordId, error, message } =
+  storeToRefs(usersStore)
 
 const activeView = ref<UsersView>('directory')
 const roleFilter = ref<FilterValue>('all')
 const creating = ref(false)
+const passwordUserId = ref<number | null>(null)
+const passwordDraft = ref('')
+const passwordSavingId = computed(() => savingPasswordId.value)
 const currentUsername = computed(() => authStore.username || '')
 
 const form = reactive({
@@ -216,7 +251,7 @@ const activeMeta = computed(() => {
   return {
     kicker: 'Directory',
     title: label,
-    copy: 'Browse accounts, filter by role, and remove users you no longer need.',
+    copy: 'Browse accounts, change passwords for any user, or remove accounts you no longer need.',
   }
 })
 
@@ -249,6 +284,28 @@ async function handleCreateTeacher() {
     // store error
   } finally {
     creating.value = false
+  }
+}
+
+function togglePasswordForm(user: ManagedUser) {
+  if (passwordUserId.value === user.id) {
+    passwordUserId.value = null
+    passwordDraft.value = ''
+    return
+  }
+  passwordUserId.value = user.id
+  passwordDraft.value = ''
+}
+
+async function submitPassword(user: ManagedUser) {
+  const next = passwordDraft.value.trim()
+  if (next.length < 6) return
+  try {
+    await usersStore.changePassword(user.id, next)
+    passwordUserId.value = null
+    passwordDraft.value = ''
+  } catch {
+    // store error
   }
 }
 
@@ -516,7 +573,7 @@ input:focus {
 
 .table-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 6.5rem 5.5rem;
+  grid-template-columns: minmax(0, 1fr) 6.5rem 10.5rem;
   gap: 0.75rem;
   padding: 0.7rem 0.35rem 0.55rem;
   border-bottom: 1px solid var(--lh-line);
@@ -533,17 +590,94 @@ input:focus {
   padding: 0;
 }
 
-.user-list li {
+.user-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 6.5rem 5.5rem;
+  grid-template-columns: minmax(0, 1fr) 6.5rem 10.5rem;
   gap: 0.75rem;
   align-items: center;
   padding: 0.85rem 0.35rem;
   border-bottom: 1px solid var(--lh-line);
 }
 
-.user-list li:last-child {
+.user-row:last-child {
   border-bottom: none;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.password-form {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+  margin-top: 0.15rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--lh-ink) 4%, transparent);
+}
+
+.password-form label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lh-faint);
+}
+
+.password-form input {
+  height: 2.15rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.55rem;
+  background: var(--lh-input);
+  color: var(--lh-ink);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.password-form input:focus {
+  outline: 0;
+  border-color: var(--lh-accent);
+}
+
+.save-password,
+.password {
+  border: 1px solid transparent;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--lh-accent);
+  padding: 0.4rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.password:hover,
+.save-password:hover:not(:disabled) {
+  background: var(--lh-accent-soft);
+  border-color: color-mix(in srgb, var(--lh-accent) 28%, transparent);
+}
+
+.save-password {
+  background: var(--lh-accent);
+  color: var(--lh-on-accent);
+}
+
+.save-password:hover:not(:disabled) {
+  background: var(--lh-accent-hover);
+  border-color: transparent;
+}
+
+.save-password:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .person {
@@ -633,7 +767,6 @@ input:focus {
 }
 
 .delete {
-  justify-self: end;
   border: 1px solid transparent;
   border-radius: 0.55rem;
   background: transparent;

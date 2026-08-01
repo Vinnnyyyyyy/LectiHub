@@ -165,6 +165,66 @@ class UserController extends Controller
     }
 
     // -----------------------------------------------------------------------
+    // PATCH /users/:id/password  (admin — set password for any account)
+    // -----------------------------------------------------------------------
+
+    public function updateUserPassword(Request $request, int $id): JsonResponse
+    {
+        if ($id < 1) {
+            return response()->json(['message' => 'Invalid user id.'], 400);
+        }
+
+        $password = (string) ($request->input('password') ?? '');
+        if (strlen($password) < 6) {
+            return response()->json(['message' => 'Password must be at least 6 characters.'], 400);
+        }
+        if (strlen($password) > 80) {
+            return response()->json(['message' => 'Password must be at most 80 characters.'], 400);
+        }
+
+        $target = User::find($id);
+        if (! $target) {
+            return response()->json(['message' => 'User not found.'], 404);
+        }
+
+        try {
+            /** @var User $authUser */
+            $authUser = $request->user();
+
+            $target->password = $password;
+            // Force a fresh sign-in after admin resets someone else's password.
+            $target->must_change_password = $authUser->id !== $target->id;
+            $target->save();
+
+            if ($authUser->id !== $target->id) {
+                $target->tokens()->delete();
+            }
+
+            $displayName = $target->full_name ?: $target->username;
+
+            $this->audit->record(
+                'accounts',
+                'user.password_changed',
+                "Password changed — {$displayName} (@{$target->username})",
+                $authUser,
+                'user',
+                $target->id,
+                ['role' => $target->role],
+            );
+
+            return response()->json([
+                'message' => "Password updated for {$displayName} (@{$target->username}).",
+                'userId'  => $target->id,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Unable to update password right now.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // DELETE /users/:id  (admin only — cascading cleanup)
     // -----------------------------------------------------------------------
 

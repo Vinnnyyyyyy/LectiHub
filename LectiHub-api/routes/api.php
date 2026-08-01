@@ -53,6 +53,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('users')->middleware('role:admin')->group(function () {
         Route::get('/',          [UserController::class, 'listUsers']);
         Route::post('/create',   [UserController::class, 'createUser']);
+        Route::patch('/{id}/password', [UserController::class, 'updateUserPassword']);
         Route::delete('/{id}',   [UserController::class, 'deleteUser']);
     });
 
