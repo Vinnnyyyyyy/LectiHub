@@ -169,7 +169,7 @@
         <div class="dash-section-label">
           <div>
             <h2 id="tab-materials">Course materials</h2>
-            <p>View materials online anytime. Each page can be downloaded up to 3 times.</p>
+            <p>Materials for courses you are enrolled in. View online; 3 downloads per page.</p>
           </div>
         </div>
         <CourseMaterialsBrowse mode="student" />
@@ -245,7 +245,7 @@ const navItems: {
   {
     id: 'materials',
     label: 'Course materials',
-    intro: 'View course materials online. Each page has 3 download chances.',
+    intro: 'View materials for your enrolled courses. Downloads use the 3-per-page quota.',
     icon: 'book',
   },
   {

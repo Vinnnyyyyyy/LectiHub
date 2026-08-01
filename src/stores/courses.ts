@@ -236,6 +236,45 @@ export const useCoursesStore = defineStore('courses', {
       }
     },
 
+    async updateMaterial(
+      materialId: number,
+      payload: { title?: string; access?: 'enrolled' | 'all'; file?: File },
+    ) {
+      this.error = null
+      this.message = null
+      try {
+        let res
+        if (payload.file) {
+          const body = new FormData()
+          if (payload.title) body.append('title', payload.title)
+          if (payload.access) body.append('access', payload.access)
+          body.append('file', payload.file)
+          // POST supports multipart file replace more reliably than PATCH.
+          res = await api.post<{ message: string; material: CourseMaterial }>(
+            `/materials/${materialId}`,
+            body,
+          )
+        } else {
+          res = await api.patch<{ message: string; material: CourseMaterial }>(
+            `/materials/${materialId}`,
+            { title: payload.title, access: payload.access },
+          )
+        }
+
+        const material = res.data.material
+        const bucket = this.materialsByCourse[material.courseId]
+        if (bucket) {
+          const index = bucket.findIndex((item) => item.id === materialId)
+          if (index >= 0) bucket[index] = material
+        }
+        this.message = res.data.message
+        return material
+      } catch (err) {
+        this.error = messageFrom(err, 'Could not update material')
+        throw err
+      }
+    },
+
     async deleteMaterial(courseId: number, materialId: number) {
       this.error = null
       this.message = null
