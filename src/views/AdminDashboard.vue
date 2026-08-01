@@ -553,11 +553,19 @@ const {
 } = storeToRefs(adminStore)
 const { loading: loadingReports, reports: lessonReports } = storeToRefs(lessonReportsStore)
 const { loading: loadingFeedback, feedback: studentFeedback } = storeToRefs(studentFeedbackStore)
+const { notifications } = storeToRefs(notificationsStore)
 const {
   overview: monitoringOverview,
   loading: loadingMonitoring,
   error: monitoringError,
 } = storeToRefs(monitoringStore)
+
+const REPORT_FEEDBACK_TYPES = new Set(['lesson_report', 'student_feedback'])
+
+/** Unread teacher reports / student feedback — gold dot on Reports & feedback. */
+const hasUnreadReportsFeedback = computed(() =>
+  notifications.value.some((item) => !item.isRead && REPORT_FEEDBACK_TYPES.has(item.type)),
+)
 
 const successMessage = ref('')
 const errorMessage = ref('')
@@ -729,7 +737,9 @@ const railItems = computed<RailItem[]>(() => {
       id: item.id,
       label: item.label,
       icon: item.icon,
-      badge: item.id === 'review' && requests.value.length > 0,
+      badge:
+        (item.id === 'review' && requests.value.length > 0) ||
+        (item.id === 'records' && hasUnreadReportsFeedback.value),
     })),
     {
       id: 'settings-group',
@@ -748,13 +758,25 @@ const railItems = computed<RailItem[]>(() => {
   ]
 })
 
-function setSection(section: AdminSection) {
+async function setSection(section: AdminSection) {
   activeSection.value = section
   const main = document.querySelector('.dashboard-main')
   if (main instanceof HTMLElement) {
     main.scrollTo({ top: 0, behavior: 'smooth' })
   } else {
     window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Clear the Reports & feedback gold dot once the admin opens that view.
+  if (section === 'records') {
+    const unread = notificationsStore.notifications.filter(
+      (item) => !item.isRead && REPORT_FEEDBACK_TYPES.has(item.type),
+    )
+    await Promise.allSettled(unread.map((item) => notificationsStore.markRead(item.id)))
+    await Promise.allSettled([
+      lessonReportsStore.fetchMine(),
+      studentFeedbackStore.fetchMine(),
+    ])
   }
 }
 
@@ -838,6 +860,10 @@ async function openRequest(id: number) {
 }
 
 async function openFromNotification(item: AppNotification) {
+  if (REPORT_FEEDBACK_TYPES.has(item.type)) {
+    await setSection('records')
+    return
+  }
   if (item.relatedRequestId) {
     activeSection.value = 'review'
     reviewView.value = 'queue'
