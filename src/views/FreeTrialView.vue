@@ -4,7 +4,7 @@
 
     <form v-if="!submitted" class="trial-panel" @submit.prevent="handleSubmit">
       <p class="brand">LectiHub</p>
-      <h1>Free 30‑minute trial</h1>
+      <h1>Free {{ durationMinutes }}‑minute trial</h1>
       <p class="lede">
         Fill in your details and preferred slot. We’ll send it to Dolibarr and queue it in LectiHub’s
         scheduler for confirmation.
@@ -77,10 +77,10 @@
           <input id="trial-date" v-model="preferredDate" type="date" required :min="minDate" />
         </label>
         <label for="trial-slot">
-          Time slot (30 mins)
+          Time slot ({{ durationMinutes }} mins)
           <select id="trial-slot" v-model="preferredSlot" required>
             <option disabled value="">Select a slot</option>
-            <option v-for="slot in TRIAL_TIME_SLOTS" :key="slot" :value="slot">
+            <option v-for="slot in timeSlots" :key="slot" :value="slot">
               {{ slot }}
             </option>
           </select>
@@ -125,10 +125,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import axios from 'axios'
 import api from '../api/axios'
+import { TIME_SLOTS } from '../constants/timeSlots'
 import {
   TRIAL_ENTITY_OPTIONS,
   TRIAL_PROGRAMS,
@@ -151,6 +152,8 @@ const error = ref('')
 const submitted = ref(false)
 const submittedName = ref('')
 const submittedSlot = ref('')
+const durationMinutes = ref(30)
+const timeSlots = ref<string[]>([...TRIAL_TIME_SLOTS])
 
 const minDate = computed(() => {
   const today = new Date()
@@ -158,6 +161,25 @@ const minDate = computed(() => {
   const m = String(today.getMonth() + 1).padStart(2, '0')
   const d = String(today.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
+})
+
+onMounted(async () => {
+  try {
+    const res = await api.get<{
+      timeSlots?: string[]
+      durationMinutes?: number
+    }>('/trial-requests/config')
+    if (res.data.timeSlots?.length) {
+      timeSlots.value = res.data.timeSlots
+    } else {
+      timeSlots.value = [...TIME_SLOTS]
+    }
+    if (res.data.durationMinutes === 30 || res.data.durationMinutes === 60) {
+      durationMinutes.value = res.data.durationMinutes
+    }
+  } catch {
+    // Keep built-in fallbacks if config cannot load.
+  }
 })
 
 async function handleSubmit() {
