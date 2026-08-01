@@ -24,19 +24,44 @@ const { settings, loading, saving, error, message, ignored } = storeToRefs(setti
 /** Working copy — nothing is written until Save. */
 const draft = reactive<SettingsMap>({})
 
+const TIME_KEYS = new Set([
+  'scheduling.opening_time',
+  'scheduling.closing_time',
+  'scheduling.lunch_start',
+  'scheduling.lunch_end',
+])
+
+/** Browsers often emit HH:MM:SS from <input type="time">; settings store HH:MM. */
+function normalizeSettingValue(key: string, value: unknown): unknown {
+  if (TIME_KEYS.has(key) && typeof value === 'string') {
+    const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(value.trim())
+    if (match) {
+      return `${match[1].padStart(2, '0')}:${match[2]}`
+    }
+  }
+  return value
+}
+
 function syncDraft() {
   for (const [key, value] of Object.entries(settings.value)) {
-    draft[key] = Array.isArray(value) ? [...value] : value
+    const normalized = normalizeSettingValue(key, value)
+    draft[key] = Array.isArray(normalized) ? [...normalized] : normalized
   }
 }
 
 watch(settings, syncDraft, { deep: true })
 
 const dirty = computed(() =>
-  Object.keys(settings.value).some(
-    (key) => JSON.stringify(draft[key]) !== JSON.stringify(settings.value[key]),
-  ),
+  Object.keys(settings.value).some((key) => {
+    const left = normalizeSettingValue(key, draft[key])
+    const right = normalizeSettingValue(key, settings.value[key])
+    return JSON.stringify(left) !== JSON.stringify(right)
+  }),
 )
+
+watch(dirty, (isDirty) => {
+  if (isDirty) settingsStore.message = null
+})
 
 const emit = defineEmits<{ 'open-payments': [] }>()
 
@@ -108,14 +133,17 @@ const TOGGLES: { key: string; label: string; note: string }[] = [
 async function save() {
   const changes: SettingsMap = {}
   for (const key of Object.keys(settings.value)) {
-    if (JSON.stringify(draft[key]) !== JSON.stringify(settings.value[key])) {
-      changes[key] = draft[key]
+    const left = normalizeSettingValue(key, draft[key])
+    const right = normalizeSettingValue(key, settings.value[key])
+    if (JSON.stringify(left) !== JSON.stringify(right)) {
+      changes[key] = left
     }
   }
   if (!Object.keys(changes).length) return
 
   try {
     await settingsStore.save(changes)
+    syncDraft()
   } catch {
     // store surfaces the error
   }

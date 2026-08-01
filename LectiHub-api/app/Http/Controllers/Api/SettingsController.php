@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\AuditService;
+use App\Services\AvailabilityService;
 use App\Services\SettingsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,9 +12,19 @@ use Throwable;
 
 class SettingsController extends Controller
 {
+    /** Keys that redefine the bookable slot grid — teachers must be re-seeded. */
+    private const SCHEDULE_SHAPE_KEYS = [
+        'scheduling.slot_minutes',
+        'scheduling.opening_time',
+        'scheduling.closing_time',
+        'scheduling.lunch_start',
+        'scheduling.lunch_end',
+    ];
+
     public function __construct(
         private readonly SettingsService $settings,
         private readonly AuditService $audit,
+        private readonly AvailabilityService $availability,
     ) {}
 
     /** GET /admin/settings */
@@ -66,6 +77,12 @@ class SettingsController extends Controller
                     null,
                     ['applied' => $applied, 'ignored' => $ignored],
                 );
+
+                // Slot length / hours changes replace the bookable grid — refresh
+                // teacher templates so students immediately see the new intervals.
+                if (array_intersect($applied, self::SCHEDULE_SHAPE_KEYS)) {
+                    $this->availability->seedAllTeachers();
+                }
             }
 
             return response()->json([

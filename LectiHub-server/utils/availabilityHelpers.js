@@ -1,25 +1,36 @@
-function buildHalfHourSlots(startHour, startMinute, endHour, endMinute) {
+function formatHm(totalMinutes) {
+  const h = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+  const m = String(totalMinutes % 60).padStart(2, '0');
+  return `${h}:${m}`;
+}
+
+function buildSlots(startMinutes, endMinutes, slotMinutes) {
   const slots = [];
-  let minutes = startHour * 60 + startMinute;
-  const end = endHour * 60 + endMinute;
-  const format = (value) => {
-    const h = String(Math.floor(value / 60)).padStart(2, '0');
-    const m = String(value % 60).padStart(2, '0');
-    return `${h}:${m}`;
-  };
-  while (minutes + 30 <= end) {
-    const next = minutes + 30;
-    slots.push(`${format(minutes)}-${format(next)}`);
+  let minutes = startMinutes;
+  const step = slotMinutes > 0 ? slotMinutes : 30;
+  while (minutes + step <= endMinutes) {
+    const next = minutes + step;
+    slots.push(`${formatHm(minutes)}-${formatHm(next)}`);
     minutes = next;
   }
   return slots;
 }
 
-/** 30-minute reservation slots (lunch gap 12:00–13:00). */
+/**
+ * Default 30-minute reservation slots (lunch gap 12:00–13:00).
+ * Laravel AvailabilityService::standardTimeSlots() is the live source of truth
+ * when using LectiHub-api; this list remains the Express fallback.
+ */
 const STANDARD_TIME_SLOTS = [
-  ...buildHalfHourSlots(9, 0, 12, 0),
-  ...buildHalfHourSlots(13, 0, 18, 0),
+  ...buildSlots(9 * 60, 12 * 60, 30),
+  ...buildSlots(13 * 60, 18 * 60, 30),
 ];
+
+/** Build a slot grid for an explicit duration (used by tests / optional config). */
+function standardTimeSlotsFor(slotMinutes = 30) {
+  const step = slotMinutes === 60 ? 60 : 30;
+  return [...buildSlots(9 * 60, 12 * 60, step), ...buildSlots(13 * 60, 18 * 60, step)];
+}
 
 /** Students may only book on/after today + this many calendar days. */
 const BOOKING_LEAD_DAYS = 2;
@@ -189,6 +200,7 @@ function buildOpenInventory(db, fromIso, toIso, teachers, hasConflict) {
 
 module.exports = {
   STANDARD_TIME_SLOTS,
+  standardTimeSlotsFor,
   BOOKING_LEAD_DAYS,
   DEFAULT_WEEKDAYS,
   ensureDefaultTeacherAvailability,

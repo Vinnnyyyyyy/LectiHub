@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\AvailabilityService;
 use App\Services\DolibarrClient;
+use App\Services\SettingsService;
 use App\Services\TrialSchedulerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -35,6 +36,8 @@ class TrialRequestController extends Controller
     public function __construct(
         private readonly DolibarrClient        $dolibarr,
         private readonly TrialSchedulerService $scheduler,
+        private readonly AvailabilityService   $availability,
+        private readonly SettingsService       $settings,
     ) {}
 
     // -----------------------------------------------------------------------
@@ -68,7 +71,11 @@ class TrialRequestController extends Controller
     public function getTrialConfig(): JsonResponse
     {
         $dolibarrEnabled = $this->dolibarr->isEnabled();
-        $timeSlots       = AvailabilityService::STANDARD_TIME_SLOTS;
+        $timeSlots   = $this->availability->standardTimeSlots();
+        $slotMinutes = (int) $this->settings->get('scheduling.slot_minutes', 30);
+        if (! in_array($slotMinutes, [30, 60], true)) {
+            $slotMinutes = 30;
+        }
 
         $videoPlatforms = array_map(
             fn ($value, $label) => ['value' => $value, 'label' => $label],
@@ -84,7 +91,7 @@ class TrialRequestController extends Controller
             'enabled'         => true,
             'dolibarrEnabled' => $dolibarrEnabled,
             'dolibarrMode'    => $dolibarrEnabled ? $this->dolibarr->getMode() : null,
-            'durationMinutes' => 30,
+            'durationMinutes' => $slotMinutes,
             'programs'        => self::PROGRAMS,
             'timeSlots'       => $timeSlots,
             'videoPlatforms'  => $videoPlatforms,
@@ -135,8 +142,8 @@ class TrialRequestController extends Controller
         if (! $this->isValidDate($preferredDate)) {
             return response()->json(['message' => 'Choose a valid preferred date.'], 400);
         }
-        if (! in_array($preferredSlot, AvailabilityService::STANDARD_TIME_SLOTS, true)) {
-            return response()->json(['message' => 'Choose a valid 30-minute time slot.'], 400);
+        if (! in_array($preferredSlot, $this->availability->standardTimeSlots(), true)) {
+            return response()->json(['message' => 'Choose a valid time slot.'], 400);
         }
         if (! isset(self::VIDEO_PLATFORMS[$videoPlatform])) {
             return response()->json([

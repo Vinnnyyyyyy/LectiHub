@@ -10,8 +10,8 @@ use Carbon\CarbonImmutable;
 class AvailabilityService
 {
     /**
-     * 30-minute reservation slots (lunch gap 12:00–13:00).
-     * Mirrors STANDARD_TIME_SLOTS in availabilityHelpers.js.
+     * Built-in 30-minute fallback (lunch gap 12:00–13:00).
+     * Prefer standardTimeSlots() which reads centre scheduling settings.
      */
     public const STANDARD_TIME_SLOTS = [
         '09:00-09:30', '09:30-10:00',
@@ -29,6 +29,10 @@ class AvailabilityService
 
     /** Mon–Fri — same as JS Date#getDay() (0=Sun … 6=Sat). */
     public const DEFAULT_WEEKDAYS = [1, 2, 3, 4, 5];
+
+    public function __construct(
+        protected SettingsService $settings,
+    ) {}
 
     /**
      * Effective booking lead from env (falls back to the constant).
@@ -49,6 +53,35 @@ class AvailabilityService
     }
 
     /**
+     * Bookable slot labels from centre settings (slot length, hours, lunch).
+     *
+     * @return list<string>
+     */
+    public function standardTimeSlots(): array
+    {
+        $slotMinutes = (int) $this->settings->get('scheduling.slot_minutes', 30);
+        if (! in_array($slotMinutes, [30, 60], true)) {
+            $slotMinutes = 30;
+        }
+
+        $opening = $this->parseHm((string) $this->settings->get('scheduling.opening_time', '09:00'), 9 * 60);
+        $closing = $this->parseHm((string) $this->settings->get('scheduling.closing_time', '18:00'), 18 * 60);
+        $lunchStart = $this->parseHm((string) $this->settings->get('scheduling.lunch_start', '12:00'), 12 * 60);
+        $lunchEnd = $this->parseHm((string) $this->settings->get('scheduling.lunch_end', '13:00'), 13 * 60);
+
+        if ($closing <= $opening || $slotMinutes <= 0) {
+            return self::STANDARD_TIME_SLOTS;
+        }
+
+        $slots = array_merge(
+            $this->buildSlots($opening, min($lunchStart, $closing), $slotMinutes),
+            $this->buildSlots(max($lunchEnd, $opening), $closing, $slotMinutes),
+        );
+
+        return $slots !== [] ? $slots : self::STANDARD_TIME_SLOTS;
+    }
+
+    /**
      * Weekday of a Y-m-d string using JS/Express numbering: 0 (Sun) – 6 (Sat).
      * Returns null when the string is not a valid date.
      */
@@ -62,13 +95,20 @@ class AvailabilityService
     }
 
     /**
-     * Seed Mon–Fri × every STANDARD_TIME_SLOT row for a teacher if missing.
-     * Safe to call repeatedly (INSERT OR IGNORE equivalent via firstOrCreate).
+     * Seed Mon–Fri × every configured time slot for a teacher if missing.
+     * Also drops rows whose time_slot is no longer in the centre schedule
+     * (e.g. after switching from 30-minute to 60-minute slots).
      */
     public function ensureDefaultTeacherAvailability(int $teacherId): void
     {
+        $slots = $this->standardTimeSlots();
+
+        TeacherAvailability::where('teacher_id', $teacherId)
+            ->whereNotIn('time_slot', $slots)
+            ->delete();
+
         foreach (self::DEFAULT_WEEKDAYS as $weekday) {
-            foreach (self::STANDARD_TIME_SLOTS as $slot) {
+            foreach ($slots as $slot) {
                 TeacherAvailability::firstOrCreate(
                     [
                         'teacher_id' => $teacherId,
@@ -166,15 +206,17 @@ class AvailabilityService
     ): array {
         $dates     = [];
         $openDates = [];
+        $timeSlots = $this->standardTimeSlots();
 
         $this->eachDateInRange($fromIso, $toIso, function (string $isoDate) use (
             $teachers,
             $hasConflict,
+            $timeSlots,
             &$dates,
             &$openDates
         ) {
             $slots = [];
-            foreach (self::STANDARD_TIME_SLOTS as $timeSlot) {
+            foreach ($timeSlots as $timeSlot) {
                 $count = 0;
                 foreach ($teachers as $teacher) {
                     if (!$this->teacherOffersSlot($teacher->id, $isoDate, $timeSlot)) {
@@ -201,7 +243,7 @@ class AvailabilityService
         return [
             'from'      => $fromIso,
             'to'        => $toIso,
-            'timeSlots' => self::STANDARD_TIME_SLOTS,
+            'timeSlots' => $timeSlots,
             'dates'     => $dates,
             'openDates' => $openDates,
         ];
@@ -227,5 +269,42 @@ class AvailabilityService
             $callback($cursor->toDateString());
             $cursor = $cursor->addDay();
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buildSlots(int $startMinutes, int $endMinutes, int $slotMinutes): array
+    {
+        $slots = [];
+        $cursor = $startMinutes;
+        while ($cursor + $slotMinutes <= $endMinutes) {
+            $next = $cursor + $slotMinutes;
+            $slots[] = $this->formatHm($cursor) . '-' . $this->formatHm($next);
+            $cursor = $next;
+        }
+
+        return $slots;
+    }
+
+    private function parseHm(string $value, int $fallback): int
+    {
+        if (preg_match('/^(\d{1,2}):(\d{2})(?::\d{2})?$/', trim($value), $m)) {
+            $hours = (int) $m[1];
+            $mins = (int) $m[2];
+            if ($hours >= 0 && $hours <= 23 && $mins >= 0 && $mins <= 59) {
+                return $hours * 60 + $mins;
+            }
+        }
+
+        return $fallback;
+    }
+
+    private function formatHm(int $minutes): string
+    {
+        $h = intdiv($minutes, 60);
+        $m = $minutes % 60;
+
+        return sprintf('%02d:%02d', $h, $m);
     }
 }

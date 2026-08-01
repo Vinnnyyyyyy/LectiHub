@@ -12,9 +12,8 @@ use Throwable;
  *
  * Every key has a default here, so a fresh install behaves sensibly with an
  * empty table and reading a key that was never written never returns null.
- * Several of these values are currently duplicated in the frontend
- * (constants/timeSlots.ts) and in AvailabilityService — this is meant to
- * become the single source.
+ * Scheduling keys (slot length, opening hours, lunch) drive
+ * AvailabilityService::standardTimeSlots() — the bookable grid students see.
  */
 class SettingsService
 {
