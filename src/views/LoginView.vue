@@ -147,6 +147,28 @@ async function handleLogin() {
 .points li {
   display: flex;
   gap: 12px;
+  animation: point-in 0.5s ease both;
+}
+
+.points li:nth-child(1) {
+  animation-delay: 0.32s;
+}
+.points li:nth-child(2) {
+  animation-delay: 0.42s;
+}
+.points li:nth-child(3) {
+  animation-delay: 0.52s;
+}
+
+@keyframes point-in {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .marker {
@@ -156,6 +178,13 @@ async function handleLogin() {
   margin-top: 7px;
   border-radius: 50%;
   background: var(--lh-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--lh-accent) 14%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .points li {
+    animation: none;
+  }
 }
 
 .point-title {
