@@ -560,13 +560,6 @@ const {
   error: monitoringError,
 } = storeToRefs(monitoringStore)
 
-const REPORT_FEEDBACK_TYPES = new Set(['lesson_report', 'student_feedback'])
-
-/** Unread teacher reports / student feedback — gold dot on Reports & feedback. */
-const hasUnreadReportsFeedback = computed(() =>
-  notifications.value.some((item) => !item.isRead && REPORT_FEEDBACK_TYPES.has(item.type)),
-)
-
 const successMessage = ref('')
 const errorMessage = ref('')
 const reviewView = ref<'queue' | 'past'>('queue')
@@ -585,6 +578,44 @@ type AdminSection =
   | 'settings-reminders'
   | 'settings-meetings'
   | 'settings-centre'
+
+/** Unread student/teacher alerts → gold dots on the matching sidebar items. */
+const SECTION_NOTIF_TYPES: Partial<Record<AdminSection, readonly string[]>> = {
+  review: ['schedule_request'],
+  inbox: [
+    'schedule_request',
+    'lesson_report',
+    'student_feedback',
+    'attendance_alert',
+    'payment_receipt',
+  ],
+  records: ['lesson_report', 'student_feedback', 'attendance_alert'],
+  payments: ['payment_receipt'],
+}
+
+function sectionHasUnread(section: AdminSection): boolean {
+  const types = SECTION_NOTIF_TYPES[section]
+  if (!types?.length) return false
+  return notifications.value.some((item) => !item.isRead && types.includes(item.type))
+}
+
+function sectionForNotification(type: string): AdminSection {
+  if (type === 'schedule_request') return 'review'
+  if (type === 'lesson_report' || type === 'student_feedback' || type === 'attendance_alert') {
+    return 'records'
+  }
+  if (type === 'payment_receipt') return 'payments'
+  return 'inbox'
+}
+
+async function clearSectionNotifications(section: AdminSection) {
+  const types = SECTION_NOTIF_TYPES[section]
+  if (!types?.length) return
+  const unread = notificationsStore.notifications.filter(
+    (item) => !item.isRead && types.includes(item.type),
+  )
+  await Promise.allSettled(unread.map((item) => notificationsStore.markRead(item.id)))
+}
 
 const SETTINGS_CHILD_IDS: AdminSection[] = [
   'settings-scheduling',
@@ -738,8 +769,10 @@ const railItems = computed<RailItem[]>(() => {
       label: item.label,
       icon: item.icon,
       badge:
-        (item.id === 'review' && requests.value.length > 0) ||
-        (item.id === 'records' && hasUnreadReportsFeedback.value),
+        (item.id === 'review' && (requests.value.length > 0 || sectionHasUnread('review'))) ||
+        (item.id === 'inbox' && sectionHasUnread('inbox')) ||
+        (item.id === 'records' && sectionHasUnread('records')) ||
+        (item.id === 'payments' && sectionHasUnread('payments')),
     })),
     {
       id: 'settings-group',
@@ -767,16 +800,18 @@ async function setSection(section: AdminSection) {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Clear the Reports & feedback gold dot once the admin opens that view.
+  // Clear gold dots for the section the admin just opened.
+  if (section === 'review' || section === 'inbox' || section === 'records' || section === 'payments') {
+    await clearSectionNotifications(section)
+  }
   if (section === 'records') {
-    const unread = notificationsStore.notifications.filter(
-      (item) => !item.isRead && REPORT_FEEDBACK_TYPES.has(item.type),
-    )
-    await Promise.allSettled(unread.map((item) => notificationsStore.markRead(item.id)))
     await Promise.allSettled([
       lessonReportsStore.fetchMine(),
       studentFeedbackStore.fetchMine(),
     ])
+  }
+  if (section === 'review') {
+    await Promise.allSettled([adminStore.fetchReviewLists()])
   }
 }
 
@@ -860,18 +895,18 @@ async function openRequest(id: number) {
 }
 
 async function openFromNotification(item: AppNotification) {
-  if (REPORT_FEEDBACK_TYPES.has(item.type)) {
-    await setSection('records')
-    return
-  }
-  if (item.relatedRequestId) {
+  const target = sectionForNotification(item.type)
+  if (target === 'review' && item.relatedRequestId) {
     activeSection.value = 'review'
     reviewView.value = 'queue'
+    await clearSectionNotifications('review')
     await openRequest(item.relatedRequestId)
     if (selected.value && selected.value.request.status !== 'pending') {
       reviewView.value = 'past'
     }
+    return
   }
+  await setSection(target)
 }
 
 async function assign(teacherId: number) {
