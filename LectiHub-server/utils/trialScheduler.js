@@ -101,7 +101,7 @@ function notifyAdminsAboutTrial(requestId, trial) {
  * Action 2 — push preferred date/slot + video platform into the E-Scheduler
  * as a pending schedule_request in the admin Review queue.
  */
-async function createTrialScheduleRequest(trial, dolibarrMeta = {}) {
+async function createTrialScheduleRequest(trial) {
   const { student } = await findOrCreateTrialStudent(trial);
 
   const remarks = [
@@ -116,9 +116,9 @@ async function createTrialScheduleRequest(trial, dolibarrMeta = {}) {
       .prepare(
         `INSERT INTO schedule_requests (
            student_id, remarks, status, source, program, entity_type,
-           preferred_meeting_provider, dolibarr_thirdparty_id, dolibarr_ticket_id
+           preferred_meeting_provider
          )
-         VALUES (?, ?, 'pending', 'free_trial', ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, 'pending', 'free_trial', ?, ?, ?)`,
       )
       .run(
         student.id,
@@ -126,8 +126,6 @@ async function createTrialScheduleRequest(trial, dolibarrMeta = {}) {
         trial.program,
         trial.entityType,
         trial.videoPlatform,
-        dolibarrMeta.thirdpartyId != null ? String(dolibarrMeta.thirdpartyId) : null,
-        dolibarrMeta.ticketId != null ? String(dolibarrMeta.ticketId) : null,
       );
 
     const requestId = Number(result.lastInsertRowid);

@@ -155,8 +155,6 @@ ensureColumn('schedule_requests', 'source', "TEXT DEFAULT 'student'");
 ensureColumn('schedule_requests', 'program', 'TEXT');
 ensureColumn('schedule_requests', 'entity_type', 'TEXT');
 ensureColumn('schedule_requests', 'preferred_meeting_provider', 'TEXT');
-ensureColumn('schedule_requests', 'dolibarr_thirdparty_id', 'TEXT');
-ensureColumn('schedule_requests', 'dolibarr_ticket_id', 'TEXT');
 ensureColumn('classes', 'schedule_request_id', 'INTEGER');
 ensureColumn('classes', 'start_time', 'TEXT');
 ensureColumn('classes', 'end_time', 'TEXT');
@@ -292,8 +290,6 @@ db.exec(`
     description TEXT,
     paid_at TEXT NOT NULL,
     receipt_number TEXT UNIQUE,
-    dolibarr_invoice_id TEXT,
-    dolibarr_thirdparty_id TEXT,
     notes TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES users(id),

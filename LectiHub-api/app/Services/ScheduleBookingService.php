@@ -605,8 +605,6 @@ class ScheduleBookingService
             'program'                  => $request->program,
             'entityType'               => $request->entity_type,
             'preferredMeetingProvider' => $request->preferred_meeting_provider,
-            'dolibarrThirdpartyId'     => $request->dolibarr_thirdparty_id,
-            'dolibarrTicketId'         => $request->dolibarr_ticket_id,
             'createdAt'                => $request->created_at,
             'assignedTeacherId'        => $request->assigned_teacher_id,
             'assignedTeacher'          => $this->mapTeacher($assignedTeacher),

@@ -1,6 +1,5 @@
 /**
- * Creates LectiHub-server/.env from .env.example if missing,
- * then applies local Dolibarr free-trial settings when placeholders are present.
+ * Creates LectiHub-server/.env from .env.example if missing.
  *
  * Usage (from LectiHub-server):
  *   node setupEnv.js
@@ -11,14 +10,6 @@ const path = require('path');
 const root = __dirname;
 const envPath = path.join(root, '.env');
 const examplePath = path.join(root, '.env.example');
-
-const DOLIBARR_DEFAULTS = {
-  DOLIBARR_ENABLED: 'true',
-  DOLIBARR_MODE: 'api',
-  DOLIBARR_API_URL:
-    'https://bloomers-anthology-giggly.ngrok-free.dev/dolibarr/api/index.php',
-  DOLIBARR_API_KEY: 'f16a979a2f394c9776bcf364d85c3ba4ba2d08f6',
-};
 
 function parseEnv(text) {
   const map = new Map();
@@ -61,7 +52,7 @@ if (!fs.existsSync(envPath)) {
   created = true;
   console.log('Created .env from .env.example');
 } else {
-  console.log('.env already exists — updating Dolibarr settings');
+  console.log('.env already exists — refreshing local defaults');
 }
 
 const current = fs.readFileSync(envPath, 'utf8');
@@ -82,7 +73,6 @@ const cleaned = current
 const updates = {
   JWT_SECRET: parsed.get('JWT_SECRET') || 'lectihub_super_secret_key_change_this_later',
   PORT: parsed.get('PORT') || '3000',
-  ...DOLIBARR_DEFAULTS,
 };
 
 const next = upsertEnv(cleaned || fs.readFileSync(examplePath, 'utf8'), updates);
@@ -91,6 +81,4 @@ fs.writeFileSync(envPath, next, 'utf8');
 const final = parseEnv(next);
 console.log(created ? 'Setup complete.' : 'Updated.');
 console.log(`JWT_SECRET: ${final.get('JWT_SECRET') ? 'set' : 'MISSING'}`);
-console.log(`DOLIBARR_ENABLED: ${final.get('DOLIBARR_ENABLED')}`);
-console.log(`DOLIBARR_API_URL: ${final.get('DOLIBARR_API_URL')}`);
 console.log('Restart the API: node server.js');

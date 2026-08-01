@@ -176,8 +176,6 @@ function mapRequest(row, slots, student = null, assignedTeacher = null) {
     program: row.program || null,
     entityType: row.entity_type || null,
     preferredMeetingProvider: row.preferred_meeting_provider || null,
-    dolibarrThirdpartyId: row.dolibarr_thirdparty_id || null,
-    dolibarrTicketId: row.dolibarr_ticket_id || null,
     createdAt: row.created_at,
     assignedTeacherId: row.assigned_teacher_id || null,
     assignedTeacher: assignedTeacher ? mapTeacher(assignedTeacher) : null,

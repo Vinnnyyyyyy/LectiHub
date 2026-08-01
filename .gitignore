@@ -14,7 +14,7 @@ dist-ssr
 coverage
 *.local
 
-# Local secrets (API keys, SMTP, Dolibarr DOLAPIKEY, etc.)
+# Local secrets (API keys, SMTP, etc.)
 .env
 .env.*
 !.env.example

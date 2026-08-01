@@ -17,8 +17,6 @@ class PaymentReceipt extends Model
         'description',
         'paid_at',
         'receipt_number',
-        'dolibarr_invoice_id',
-        'dolibarr_thirdparty_id',
         'notes',
     ];
 
