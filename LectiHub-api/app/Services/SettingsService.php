@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Database\QueryException;
+use Throwable;
 
 /**
  * Centre settings as a typed key/value store.
@@ -62,7 +64,16 @@ class SettingsService
     /** Everything, defaults overlaid with whatever has been saved. */
     public function all(): array
     {
-        $stored = Setting::pluck('value', 'key')->all();
+        try {
+            $stored = Setting::pluck('value', 'key')->all();
+        } catch (Throwable $e) {
+            // Fresh installs (or DBs that have not run the settings migration)
+            // should still open System settings with the built-in defaults.
+            if ($this->isMissingSettingsTable($e)) {
+                return self::DEFAULTS;
+            }
+            throw $e;
+        }
 
         $out = [];
         foreach (self::DEFAULTS as $key => $default) {
@@ -85,9 +96,30 @@ class SettingsService
             return $fallback;
         }
 
-        $row = Setting::where('key', $key)->first();
+        try {
+            $row = Setting::where('key', $key)->first();
+        } catch (Throwable $e) {
+            if ($this->isMissingSettingsTable($e)) {
+                return self::DEFAULTS[$key];
+            }
+            throw $e;
+        }
 
         return $row ? $this->unwrap($row->value) : self::DEFAULTS[$key];
+    }
+
+    private function isMissingSettingsTable(Throwable $e): bool
+    {
+        if (! $e instanceof QueryException) {
+            return false;
+        }
+
+        $message = $e->getMessage();
+
+        return str_contains($message, 'no such table')
+            || str_contains($message, "doesn't exist")
+            || str_contains($message, 'does not exist')
+            || str_contains($message, 'Undefined table');
     }
 
     /**
