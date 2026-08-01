@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseMaterial;
+use App\Models\MaterialPageDownload;
 use App\Models\User;
 use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
@@ -24,6 +25,9 @@ class CourseController extends Controller
 
     /** Where uploaded material lives, relative to the private disk. */
     private const MATERIAL_DIR = 'course-materials';
+
+    /** Students may download each material page this many times. */
+    public const DOWNLOADS_PER_PAGE = 3;
 
     /** Anything executable is refused regardless of the reported MIME type. */
     private const BLOCKED_EXTENSIONS = [
@@ -57,24 +61,59 @@ class CourseController extends Controller
         ];
     }
 
-    private function mapMaterial(CourseMaterial $material): array
+    private function mapMaterial(CourseMaterial $material, ?User $viewer = null, int $page = 1): array
     {
         $uploader = $material->uploader;
+        $page     = max(1, $page);
 
-        return [
-            'id'           => $material->id,
-            'courseId'     => $material->course_id,
-            'title'        => $material->title,
-            'originalName' => $material->original_name,
-            'mimeType'     => $material->mime_type ?? '',
-            'sizeBytes'    => (int) $material->size_bytes,
-            'access'       => $material->access,
-            'uploadedBy'   => $uploader ? [
+        $payload = [
+            'id'            => $material->id,
+            'courseId'      => $material->course_id,
+            'title'         => $material->title,
+            'originalName'  => $material->original_name,
+            'mimeType'      => $material->mime_type ?? '',
+            'sizeBytes'     => (int) $material->size_bytes,
+            'access'        => $material->access,
+            'pageNumber'    => $page,
+            'downloadLimit' => self::DOWNLOADS_PER_PAGE,
+            'uploadedBy'    => $uploader ? [
                 'id'       => $uploader->id,
                 'fullName' => $uploader->full_name ?: $uploader->username,
             ] : null,
-            'createdAt'    => $material->created_at,
+            'createdAt'     => $material->created_at,
         ];
+
+        if ($viewer?->role === 'student') {
+            $used = (int) MaterialPageDownload::query()
+                ->where('material_id', $material->id)
+                ->where('student_id', $viewer->id)
+                ->where('page_number', $page)
+                ->value('download_count');
+
+            $payload['downloadsUsed']      = $used;
+            $payload['downloadsRemaining'] = max(0, self::DOWNLOADS_PER_PAGE - $used);
+            $payload['canDownload']        = $used < self::DOWNLOADS_PER_PAGE;
+        } else {
+            // Admin may download freely; teachers are view-only.
+            $payload['downloadsUsed']      = 0;
+            $payload['downloadsRemaining'] = null;
+            $payload['canDownload']        = $viewer?->role === 'admin';
+        }
+
+        return $payload;
+    }
+
+    private function canAccessMaterial(?User $user, CourseMaterial $material): bool
+    {
+        if ($this->isStaff($user)) {
+            return true;
+        }
+
+        if ($material->access === 'all') {
+            return $user !== null;
+        }
+
+        return $user !== null && $this->isEnrolled($material->course_id, $user->id);
     }
 
     // -----------------------------------------------------------------------
@@ -250,8 +289,13 @@ class CourseController extends Controller
                 $query->where('access', 'all');
             }
 
+            $page = max(1, (int) $request->query('page', 1));
+
             return response()->json([
-                'materials' => $query->get()->map(fn ($m) => $this->mapMaterial($m))->all(),
+                'downloadLimit' => self::DOWNLOADS_PER_PAGE,
+                'materials'     => $query->get()
+                    ->map(fn ($m) => $this->mapMaterial($m, $user, $page))
+                    ->all(),
             ]);
         } catch (Throwable $e) {
             return response()->json(['message' => 'Unable to list materials.', 'error' => $e->getMessage()], 500);
@@ -259,7 +303,7 @@ class CourseController extends Controller
     }
 
     // -----------------------------------------------------------------------
-    // POST /courses/{id}/materials   (admin, teacher)  — multipart
+    // POST /courses/{id}/materials   (admin)  — multipart
     // -----------------------------------------------------------------------
 
     public function uploadMaterial(Request $request, int $id): JsonResponse
@@ -314,7 +358,7 @@ class CourseController extends Controller
 
             return response()->json([
                 'message'  => 'Material uploaded.',
-                'material' => $this->mapMaterial($material),
+                'material' => $this->mapMaterial($material, $request->user()),
             ], 201);
         } catch (Throwable $e) {
             return response()->json(['message' => 'Unable to upload material.', 'error' => $e->getMessage()], 500);
@@ -322,7 +366,37 @@ class CourseController extends Controller
     }
 
     // -----------------------------------------------------------------------
-    // GET /materials/{id}/download
+    // GET /materials/{id}/preview   — in-browser view (no quota)
+    // -----------------------------------------------------------------------
+
+    public function previewMaterial(Request $request, int $id): StreamedResponse|JsonResponse
+    {
+        $material = CourseMaterial::with('course')->find($id);
+        if (! $material) {
+            return response()->json(['message' => 'Material not found.'], 404);
+        }
+
+        $user = $request->user();
+        if (! $this->canAccessMaterial($user, $material)) {
+            return response()->json(['message' => 'You are not enrolled in this course.'], 403);
+        }
+
+        if (! Storage::disk('local')->exists($material->storage_path)) {
+            return response()->json(['message' => 'The stored file is missing.'], 410);
+        }
+
+        return Storage::disk('local')->response(
+            $material->storage_path,
+            $material->original_name,
+            [
+                'Content-Type'        => $material->mime_type ?: 'application/octet-stream',
+                'Content-Disposition' => 'inline; filename="' . addslashes($material->original_name) . '"',
+            ],
+        );
+    }
+
+    // -----------------------------------------------------------------------
+    // GET /materials/{id}/download   — students: 3 per page; admin: unlimited
     // -----------------------------------------------------------------------
 
     public function downloadMaterial(Request $request, int $id): StreamedResponse|JsonResponse
@@ -333,23 +407,52 @@ class CourseController extends Controller
         }
 
         $user = $request->user();
-        $allowed = $this->isStaff($user)
-            || $material->access === 'all'
-            || $this->isEnrolled($material->course_id, $user->id);
-
-        if (! $allowed) {
+        if (! $this->canAccessMaterial($user, $material)) {
             return response()->json(['message' => 'You are not enrolled in this course.'], 403);
+        }
+
+        // Teachers discuss from the preview; downloads are for students (and admin).
+        if ($user?->role === 'teacher') {
+            return response()->json([
+                'message' => 'Teachers can view materials for discussion but cannot download them.',
+            ], 403);
         }
 
         if (! Storage::disk('local')->exists($material->storage_path)) {
             return response()->json(['message' => 'The stored file is missing.'], 410);
         }
 
+        $page = max(1, (int) $request->query('page', 1));
+
+        if ($user?->role === 'student') {
+            $quota = MaterialPageDownload::query()->firstOrCreate(
+                [
+                    'material_id' => $material->id,
+                    'student_id'  => $user->id,
+                    'page_number' => $page,
+                ],
+                ['download_count' => 0],
+            );
+
+            if ($quota->download_count >= self::DOWNLOADS_PER_PAGE) {
+                return response()->json([
+                    'message'            => 'Download limit reached for this page (3 chances). You can still view the material online.',
+                    'downloadsUsed'      => $quota->download_count,
+                    'downloadsRemaining' => 0,
+                    'downloadLimit'      => self::DOWNLOADS_PER_PAGE,
+                    'pageNumber'         => $page,
+                ], 403);
+            }
+
+            $quota->download_count += 1;
+            $quota->save();
+        }
+
         return Storage::disk('local')->download($material->storage_path, $material->original_name);
     }
 
     // -----------------------------------------------------------------------
-    // DELETE /materials/{id}   (admin, teacher)
+    // DELETE /materials/{id}   (admin)
     // -----------------------------------------------------------------------
 
     public function deleteMaterial(int $id): JsonResponse

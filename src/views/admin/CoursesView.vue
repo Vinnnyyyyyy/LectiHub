@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * Courses & materials (admin 05). Course cards over a recent-uploads table.
- * Selecting a card opens its materials and roster below.
+ * Courses & materials (admin). Admin creates courses, uploads materials, and
+ * manages enrolments. Teachers view online; students view + 3 downloads/page.
  */
 import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
@@ -278,7 +278,8 @@ onMounted(async () => {
 
           <p v-if="loadingMaterials" class="empty small">Loading…</p>
           <p v-else-if="!materials.length" class="empty small">
-            Nothing uploaded yet. Students see only what you add here.
+            Nothing uploaded yet. Teachers view these for discussion; students
+            get 3 downloads per page.
           </p>
 
           <div v-else class="table">

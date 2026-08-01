@@ -158,6 +158,22 @@
       >
         <HomeworkView />
       </section>
+
+      <section
+        v-show="activeSection === 'materials'"
+        id="panel-materials"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-materials"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="tab-materials">Course materials</h2>
+            <p>View materials online anytime. Each page can be downloaded up to 3 times.</p>
+          </div>
+        </div>
+        <CourseMaterialsBrowse mode="student" />
+      </section>
       </main>
     </div>
     </div>
@@ -191,8 +207,16 @@ import StudentHistoryWorkspace from '../components/StudentHistoryWorkspace.vue'
 import ClassChatWidget from '../components/ClassChatWidget.vue'
 import StudentPaymentReceiptsPanel from '../components/StudentPaymentReceiptsPanel.vue'
 import HomeworkView from './student/HomeworkView.vue'
+import CourseMaterialsBrowse from '../components/CourseMaterialsBrowse.vue'
 
-type StudentSection = 'schedule' | 'now' | 'calendar' | 'history' | 'payments' | 'homework'
+type StudentSection =
+  | 'schedule'
+  | 'now'
+  | 'calendar'
+  | 'history'
+  | 'payments'
+  | 'homework'
+  | 'materials'
 
 const navItems: {
   id: StudentSection
@@ -219,10 +243,16 @@ const navItems: {
     icon: 'grid',
   },
   {
+    id: 'materials',
+    label: 'Course materials',
+    intro: 'View course materials online. Each page has 3 download chances.',
+    icon: 'book',
+  },
+  {
     id: 'homework',
     label: 'Homework & grades',
     intro: 'View assigned homework, submit work, and check grades.',
-    icon: 'book',
+    icon: 'list',
   },
   {
     id: 'history',

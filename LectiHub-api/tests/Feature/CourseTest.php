@@ -83,13 +83,12 @@ class CourseTest extends TestCase
         $this->getJson('/api/courses')->assertOk()->assertJsonCount(2, 'courses');
     }
 
-    public function test_teacher_can_upload_material_and_counts_update(): void
+    public function test_admin_can_upload_material_and_counts_update(): void
     {
         Storage::fake('local');
 
-        $course  = $this->makeCourse();
-        $teacher = $this->makeUser('teacher', 'teacher1');
-        Sanctum::actingAs($teacher);
+        $course = $this->makeCourse();
+        Sanctum::actingAs($this->makeUser('admin', 'admin1'));
 
         $this->post("/api/courses/{$course->id}/materials", [
             'file'   => UploadedFile::fake()->create('worksheet.pdf', 120, 'application/pdf'),
@@ -98,6 +97,30 @@ class CourseTest extends TestCase
         ])->assertCreated()->assertJsonPath('material.title', 'Worksheet 4');
 
         $this->getJson('/api/courses')->assertOk()->assertJsonPath('courses.0.materialCount', 1);
+    }
+
+    public function test_teacher_cannot_upload_or_download_materials(): void
+    {
+        Storage::fake('local');
+
+        $course = $this->makeCourse();
+        Sanctum::actingAs($this->makeUser('admin', 'admin1'));
+
+        $materialId = $this->post("/api/courses/{$course->id}/materials", [
+            'file'   => UploadedFile::fake()->create('worksheet.pdf', 120, 'application/pdf'),
+            'title'  => 'Worksheet 4',
+            'access' => 'enrolled',
+        ])->json('material.id');
+
+        Sanctum::actingAs($this->makeUser('teacher', 'teacher1'));
+
+        $this->post("/api/courses/{$course->id}/materials", [
+            'file' => UploadedFile::fake()->create('sneaky.pdf', 10, 'application/pdf'),
+        ])->assertForbidden();
+
+        $this->get("/api/materials/{$materialId}/download")->assertForbidden();
+        $this->get("/api/materials/{$materialId}/preview")->assertOk();
+        $this->deleteJson("/api/materials/{$materialId}")->assertForbidden();
     }
 
     public function test_executable_uploads_are_refused(): void
@@ -136,7 +159,7 @@ class CourseTest extends TestCase
         $this->getJson("/api/materials/{$materialId}/download")->assertForbidden();
     }
 
-    public function test_enrolled_student_can_download(): void
+    public function test_enrolled_student_can_download_three_times_per_page(): void
     {
         Storage::fake('local');
 
@@ -152,8 +175,31 @@ class CourseTest extends TestCase
         $course->students()->attach($student->id);
         Sanctum::actingAs($student);
 
-        $this->getJson("/api/courses/{$course->id}/materials")->assertOk()->assertJsonCount(1, 'materials');
-        $this->get("/api/materials/{$materialId}/download")->assertOk();
+        $list = $this->getJson("/api/courses/{$course->id}/materials")
+            ->assertOk()
+            ->assertJsonCount(1, 'materials')
+            ->assertJsonPath('materials.0.downloadsRemaining', 3)
+            ->assertJsonPath('materials.0.canDownload', true);
+
+        $this->assertSame(3, $list->json('downloadLimit'));
+
+        $this->get("/api/materials/{$materialId}/download?page=1")->assertOk();
+        $this->get("/api/materials/{$materialId}/download?page=1")->assertOk();
+        $this->get("/api/materials/{$materialId}/download?page=1")->assertOk();
+        $this->getJson("/api/materials/{$materialId}/download?page=1")
+            ->assertForbidden()
+            ->assertJsonPath('downloadsRemaining', 0);
+
+        // Viewing never consumes quota.
+        $this->get("/api/materials/{$materialId}/preview")->assertOk();
+
+        // A different page has its own 3 chances.
+        $this->get("/api/materials/{$materialId}/download?page=2")->assertOk();
+
+        $this->getJson("/api/courses/{$course->id}/materials?page=1")
+            ->assertOk()
+            ->assertJsonPath('materials.0.downloadsRemaining', 0)
+            ->assertJsonPath('materials.0.canDownload', false);
     }
 
     public function test_material_marked_all_is_readable_without_enrolment(): void

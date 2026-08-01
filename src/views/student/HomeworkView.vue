@@ -289,19 +289,18 @@ onMounted(async () => {
         <div class="panel">
           <p class="eyebrow">Course materials</p>
           <p v-if="!courses.length" class="empty small">You're not enrolled in a course yet.</p>
-          <RouterLink
-            v-for="course in courses"
-            v-else
-            :key="course.id"
-            class="crow"
-            to="/student/homework"
-          >
-            <span class="crow-title">{{ course.title }}</span>
-            <span class="crow-count">
-              {{ course.materialCount }} item{{ course.materialCount === 1 ? '' : 's' }}
-            </span>
-          </RouterLink>
-          <p class="panel-note">Only materials for courses you're enrolled in.</p>
+          <div v-else>
+            <div v-for="course in courses" :key="course.id" class="crow">
+              <span class="crow-title">{{ course.title }}</span>
+              <span class="crow-count">
+                {{ course.materialCount }} item{{ course.materialCount === 1 ? '' : 's' }}
+              </span>
+            </div>
+          </div>
+          <p class="panel-note">
+            Open <strong>Course materials</strong> in the sidebar to view online or
+            download (3 chances per page).
+          </p>
         </div>
       </aside>
     </div>
