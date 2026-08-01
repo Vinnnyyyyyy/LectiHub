@@ -19,25 +19,25 @@
   background: var(--lh-bg);
 }
 
-/* #73 sidebar layout: rail + main as one centered frame.
-   Lock the shell to the viewport so only the main column scrolls —
+/* Sidebar + main fill the viewport edge-to-edge.
+   Lock the shell so only the main column scrolls —
    the sidebar stays fixed in place when switching sections. */
 .dashboard.dashboard-with-rail {
   display: flex;
-  justify-content: center;
+  justify-content: stretch;
   align-items: stretch;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: var(--lh-void, var(--lh-bg));
+  background: var(--lh-bg);
 }
 
 .dashboard .dashboard-frame {
   display: flex;
-  width: min(100%, 82rem);
+  width: 100%;
+  max-width: none;
   height: 100%;
   min-height: 0;
-  border-inline: 1px solid var(--lh-line);
   background: var(--lh-bg);
   overflow: hidden;
 }
@@ -101,7 +101,6 @@
     flex-direction: column;
     width: 100%;
     height: auto;
-    border-inline: 0;
     min-height: 0;
     overflow: visible;
   }
