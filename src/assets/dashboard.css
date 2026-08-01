@@ -19,29 +19,39 @@
   background: var(--lh-bg);
 }
 
-/* #73 sidebar layout: rail + main as one centered frame */
+/* #73 sidebar layout: rail + main as one centered frame.
+   Lock the shell to the viewport so only the main column scrolls —
+   the sidebar stays fixed in place when switching sections. */
 .dashboard.dashboard-with-rail {
   display: flex;
   justify-content: center;
   align-items: stretch;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--lh-void, var(--lh-bg));
 }
 
 .dashboard .dashboard-frame {
   display: flex;
   width: min(100%, 82rem);
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100%;
+  min-height: 0;
   border-inline: 1px solid var(--lh-line);
   background: var(--lh-bg);
+  overflow: hidden;
 }
 
 .dashboard .dashboard-main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--lh-bg);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .dashboard .atmosphere {
@@ -81,16 +91,23 @@
 @media (max-width: 820px) {
   .dashboard.dashboard-with-rail {
     flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
   }
 
   .dashboard .dashboard-frame {
     flex-direction: column;
     width: 100%;
+    height: auto;
     border-inline: 0;
     min-height: 0;
+    overflow: visible;
   }
 
   .dashboard .dashboard-main {
+    overflow: visible;
     padding-bottom: calc(4.5rem + env(safe-area-inset-bottom));
   }
 }
