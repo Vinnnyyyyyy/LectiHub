@@ -46,7 +46,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { TIME_SLOTS } from '../constants/timeSlots'
 import { useAvailabilityStore, type WeeklyAvailabilitySlot } from '../stores/availability'
@@ -62,11 +62,15 @@ const weekdays = [
 ]
 
 const availabilityStore = useAvailabilityStore()
-const { mySlots, loadingMine, savingMine, error } = storeToRefs(availabilityStore)
+const { mySlots, loadingMine, savingMine, error, timeSlots: storeTimeSlots } =
+  storeToRefs(availabilityStore)
 
 const draft = ref<WeeklyAvailabilitySlot[]>([])
 const message = ref('')
-const timeSlots = [...TIME_SLOTS]
+/** Prefer API slot grid (respects admin slot length); fall back to 30-min defaults. */
+const timeSlots = computed(() =>
+  storeTimeSlots.value?.length ? storeTimeSlots.value : [...TIME_SLOTS],
+)
 
 function formatSlot(slot: string) {
   return slot.replace('-', ' – ')
@@ -96,7 +100,7 @@ async function save() {
   message.value = ''
   const slots: WeeklyAvailabilitySlot[] = []
   for (const day of weekdays) {
-    for (const slot of timeSlots) {
+    for (const slot of timeSlots.value) {
       slots.push({
         weekday: day.value,
         timeSlot: slot,

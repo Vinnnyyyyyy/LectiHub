@@ -93,8 +93,10 @@ class AvailabilityController extends Controller
 
             $slots = $this->availability->getTeacherWeeklyAvailability($authUser->id);
 
+            $timeSlots = $this->availability->standardTimeSlots();
+
             return response()->json([
-                'timeSlots' => AvailabilityService::STANDARD_TIME_SLOTS,
+                'timeSlots' => $timeSlots,
                 'weekdays'  => self::WEEKDAYS,
                 'slots'     => $slots,
             ]);
@@ -120,6 +122,7 @@ class AvailabilityController extends Controller
 
             /** @var \App\Models\User $authUser */
             $authUser = $request->user();
+            $timeSlots = $this->availability->standardTimeSlots();
             $cleaned  = [];
 
             foreach ($incoming as $item) {
@@ -130,8 +133,8 @@ class AvailabilityController extends Controller
                 if ($weekday === null || $weekday < 0 || $weekday > 6) {
                     return response()->json(['message' => 'weekday must be 0–6.'], 400);
                 }
-                if (!in_array($timeSlot, AvailabilityService::STANDARD_TIME_SLOTS, true)) {
-                    $valid = implode(', ', AvailabilityService::STANDARD_TIME_SLOTS);
+                if (!in_array($timeSlot, $timeSlots, true)) {
+                    $valid = implode(', ', $timeSlots);
                     return response()->json(['message' => "timeSlot must be one of: {$valid}"], 400);
                 }
 
@@ -143,7 +146,7 @@ class AvailabilityController extends Controller
 
             return response()->json([
                 'message'   => 'Availability updated.',
-                'timeSlots' => AvailabilityService::STANDARD_TIME_SLOTS,
+                'timeSlots' => $timeSlots,
                 'slots'     => $slots,
             ]);
         } catch (\Throwable $e) {

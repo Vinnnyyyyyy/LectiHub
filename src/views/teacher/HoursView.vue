@@ -14,8 +14,14 @@ import { useCalendarStore } from '../../stores/calendar'
 
 const availabilityStore = useAvailabilityStore()
 const calendarStore = useCalendarStore()
-const { mySlots, loadingMine, savingMine, error } = storeToRefs(availabilityStore)
+const { mySlots, loadingMine, savingMine, error, timeSlots: storeTimeSlots } =
+  storeToRefs(availabilityStore)
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
+
+/** Prefer API slot grid (admin slot length); fall back to 30-min defaults. */
+const bookableSlots = computed(() =>
+  storeTimeSlots.value?.length ? storeTimeSlots.value : [...TIME_SLOTS],
+)
 
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 
@@ -53,7 +59,7 @@ const dirty = computed(() => [...openSet.value].sort().join(',') !== savedSnapsh
 const rows = computed(() => {
   const out: { slot: string; closed: boolean }[] = []
   let lunchAdded = false
-  for (const slot of TIME_SLOTS) {
+  for (const slot of bookableSlots.value) {
     if (!lunchAdded && slot >= '13:00') {
       out.push({ slot: LUNCH_SLOT, closed: true })
       lunchAdded = true
@@ -98,7 +104,7 @@ function clearAll() {
 
 async function save() {
   const slots = WEEKDAYS.flatMap((day) =>
-    TIME_SLOTS.map((slot) => ({
+    bookableSlots.value.map((slot) => ({
       weekday: day.value,
       timeSlot: slot,
       isOpen: openSet.value.has(key(day.value, slot)),
