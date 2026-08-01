@@ -273,6 +273,46 @@ defineProps<{
     0 0 0 3px color-mix(in srgb, var(--lh-accent) 16%, transparent);
 }
 
+.form-body :deep(.password-field) {
+  position: relative;
+}
+
+.form-body :deep(.password-field input) {
+  width: 100%;
+  padding-right: 44px;
+}
+
+.form-body :deep(.password-toggle) {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--lh-radius-panel) - 4px);
+  background: transparent;
+  color: var(--lh-muted);
+  cursor: pointer;
+  transition:
+    color var(--lh-ease),
+    background var(--lh-ease);
+}
+
+.form-body :deep(.password-toggle:hover) {
+  color: var(--lh-ink);
+  background: color-mix(in srgb, var(--lh-ink) 6%, transparent);
+}
+
+.form-body :deep(.password-toggle:focus-visible) {
+  outline: 0;
+  color: var(--lh-ink);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--lh-accent) 40%, transparent);
+}
+
 .form-body :deep(.submit) {
   height: 48px;
   margin-top: 8px;
