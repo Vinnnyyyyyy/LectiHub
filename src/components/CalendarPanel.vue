@@ -12,14 +12,19 @@
         :event-dates="eventDates"
         :highlight-dates="highlightDates"
         :event-labels-by-date="eventLabelsByDate"
+        :day-slots="daySlotRows"
         @select-date="selectedDate = $event"
       />
 
-      <div class="legend" v-if="highlightDates.length || eventDates.length">
+      <div class="legend" v-if="highlightDates.length || eventDates.length || daySlotRows.length">
         <span v-if="eventDates.length" class="legend-item event">Scheduled</span>
-        <span v-if="highlightDates.length" class="legend-item open">{{
-          highlightLabel
-        }}</span>
+        <span v-if="highlightDates.length" class="legend-item open">{{ highlightLabel }}</span>
+        <span v-if="daySlotRows.some((s) => s.status === 'vacant')" class="legend-item vacant"
+          >Vacant</span
+        >
+        <span v-if="daySlotRows.some((s) => s.status === 'closed')" class="legend-item closed"
+          >Closed</span
+        >
       </div>
 
       <div class="day-detail">
@@ -54,7 +59,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { CalendarEvent } from '../stores/calendar'
-import CalendarGrid from './CalendarGrid.vue'
+import { TIME_SLOTS } from '../constants/timeSlots'
+import CalendarGrid, { type DaySlotRow } from './CalendarGrid.vue'
+
+export interface WeeklyOpenSlot {
+  weekday: number
+  timeSlot: string
+  isOpen: boolean
+}
 
 const props = withDefaults(
   defineProps<{
@@ -65,6 +77,12 @@ const props = withDefaults(
     loading?: boolean
     highlightDates?: string[]
     highlightLabel?: string
+    /** Centre / teacher bookable slot labels (e.g. 09:00-10:00). */
+    timeSlots?: string[]
+    /** Teacher weekly template — used for day vacant/closed rows. */
+    weeklyOpenSlots?: WeeklyOpenSlot[]
+    /** Student open inventory by date — preferred over weekly template when set. */
+    openSlotsByDate?: Record<string, string[]>
   }>(),
   {
     title: 'Calendar',
@@ -73,6 +91,9 @@ const props = withDefaults(
     loading: false,
     highlightDates: () => [],
     highlightLabel: 'Teacher availability',
+    timeSlots: () => [...TIME_SLOTS],
+    weeklyOpenSlots: () => [],
+    openSlotsByDate: () => ({}),
   },
 )
 
@@ -111,6 +132,71 @@ const detailHeading = computed(() => {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  })
+})
+
+function toMinutes(hm: string) {
+  const [h, m] = hm.split(':').map(Number)
+  return (h || 0) * 60 + (m || 0)
+}
+
+function slotBounds(slot: string) {
+  const [start, end] = slot.split('-')
+  return { start: toMinutes(start || '00:00'), end: toMinutes(end || '00:00') }
+}
+
+function overlapsEvent(slot: string, event: CalendarEvent) {
+  const bounds = slotBounds(slot)
+  const start = toMinutes(event.startTime)
+  const end = toMinutes(event.endTime)
+  return bounds.start < end && bounds.end > start
+}
+
+const daySlotRows = computed<DaySlotRow[]>(() => {
+  const date = selectedDate.value
+  if (!date) return []
+
+  const grid =
+    props.timeSlots.length > 0
+      ? props.timeSlots
+      : props.openSlotsByDate[date]?.length
+        ? props.openSlotsByDate[date]
+        : [...TIME_SLOTS]
+
+  if (!grid.length) return []
+
+  const weekday = new Date(`${date}T00:00:00`).getDay()
+  const dayEvents = selectedDayEvents.value
+  const inventory = props.openSlotsByDate[date]
+  const hasInventory = Object.keys(props.openSlotsByDate).length > 0
+  const hasWeekly = props.weeklyOpenSlots.length > 0
+
+  return grid.map((timeSlot) => {
+    const booked = dayEvents.find((event) => overlapsEvent(timeSlot, event))
+    if (booked) {
+      return {
+        timeSlot,
+        status: 'booked' as const,
+        label: booked.title,
+      }
+    }
+
+    let open = false
+    if (hasInventory) {
+      open = (inventory || []).includes(timeSlot)
+    } else if (hasWeekly) {
+      open = props.weeklyOpenSlots.some(
+        (row) => row.weekday === weekday && row.timeSlot === timeSlot && row.isOpen,
+      )
+    } else {
+      // No availability data — treat non-booked centre hours as vacant.
+      open = true
+    }
+
+    return {
+      timeSlot,
+      status: open ? ('vacant' as const) : ('closed' as const),
+    }
   })
 })
 
@@ -205,6 +291,14 @@ strong,
   margin-right: 0.35rem;
   background: var(--lh-warm);
   vertical-align: middle;
+}
+
+.legend-item.vacant::before {
+  background: var(--lh-accent);
+}
+
+.legend-item.closed::before {
+  background: var(--lh-faint);
 }
 
 .day-detail {

@@ -168,15 +168,17 @@
         <div class="dash-section-label">
           <div>
             <h2 id="tab-my-calendar">My calendar</h2>
-            <p>Month and year view of your scheduled classes.</p>
+            <p>Day, month, and year view of your classes — day shows vacant open hours.</p>
           </div>
         </div>
         <CalendarPanel
           title="My calendar"
-          subtitle="Gold days mark your scheduled classes."
+          subtitle="Use day view to see vacant open hours vs booked lessons."
           empty-text="Nothing on this day yet."
           :events="calendarUpcoming"
           :loading="loadingCalendar"
+          :time-slots="availabilityTimeSlots"
+          :weekly-open-slots="myAvailabilitySlots"
         />
       </section>
 
@@ -229,6 +231,7 @@ import LessonReportsPanel from '../components/LessonReportsPanel.vue'
 import ClassHistoryPanel from '../components/ClassHistoryPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import CalendarPanel from '../components/CalendarPanel.vue'
+import { useAvailabilityStore } from '../stores/availability'
 import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue'
 import TeacherAvailabilityPanel from '../components/TeacherAvailabilityPanel.vue'
 import ClassChatWidget from '../components/ClassChatWidget.vue'
@@ -280,7 +283,7 @@ const navItems: {
   {
     id: 'my-calendar',
     label: 'My calendar',
-    intro: 'Month and year view of your scheduled classes.',
+    intro: 'Day, month, and year view of your classes — day shows vacant open hours.',
     icon: 'grid',
   },
   {
@@ -312,6 +315,7 @@ async function setSection(section: TeacherSection) {
       (item) => !item.isRead && item.type === 'schedule_confirmed',
     )
     await Promise.allSettled(unreadAssignments.map((item) => notificationsStore.markRead(item.id)))
+    await Promise.allSettled([availabilityStore.fetchMine()])
   }
 }
 
@@ -320,9 +324,12 @@ const classesStore = useClassesStore()
 const lessonReportsStore = useLessonReportsStore()
 const notificationsStore = useNotificationsStore()
 const calendarStore = useCalendarStore()
+const availabilityStore = useAvailabilityStore()
 const router = useRouter()
 
 const { notifications } = storeToRefs(notificationsStore)
+const { mySlots: myAvailabilitySlots, timeSlots: availabilityTimeSlots } =
+  storeToRefs(availabilityStore)
 
 /** Unread "admin assigned you a class" alerts — drives the My calendar dot. */
 const hasUnreadAssignment = computed(() =>
@@ -449,6 +456,7 @@ onMounted(async () => {
     lessonReportsStore.fetchMine(),
     notificationsStore.fetchMine(),
     calendarStore.fetchMine(),
+    availabilityStore.fetchMine(),
     settingsStore.fetchPublic(),
   ])
 })
