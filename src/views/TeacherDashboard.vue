@@ -197,6 +197,22 @@
         </div>
         <TeacherAvailabilityPanel />
       </section>
+
+      <section
+        v-show="activeSection === 'materials'"
+        id="panel-materials"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-materials"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="tab-materials">Course materials</h2>
+            <p>View admin-uploaded materials for discussion. Download is for students only.</p>
+          </div>
+        </div>
+        <CourseMaterialsBrowse mode="teacher" />
+      </section>
       </main>
     </div>
     </div>
@@ -234,12 +250,14 @@ import CalendarPanel from '../components/CalendarPanel.vue'
 import { useAvailabilityStore } from '../stores/availability'
 import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue'
 import TeacherAvailabilityPanel from '../components/TeacherAvailabilityPanel.vue'
+import CourseMaterialsBrowse from '../components/CourseMaterialsBrowse.vue'
 import ClassChatWidget from '../components/ClassChatWidget.vue'
 
 type TeacherSection =
   | 'today'
   | 'conduct'
   | 'records'
+  | 'materials'
   | 'calendar-connections'
   | 'my-calendar'
   | 'weekly-availability'
@@ -272,6 +290,12 @@ const navItems: {
     id: 'records',
     label: 'Records',
     intro: 'Submitted reports, past classes, and archived teaching history.',
+    icon: 'chart',
+  },
+  {
+    id: 'materials',
+    label: 'Course materials',
+    intro: 'Open admin-uploaded materials to discuss in class. View only — no downloads.',
     icon: 'book',
   },
   {

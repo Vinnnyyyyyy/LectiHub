@@ -29,6 +29,11 @@ export interface CourseMaterial {
   mimeType: string
   sizeBytes: number
   access: 'enrolled' | 'all'
+  pageNumber?: number
+  downloadLimit?: number
+  downloadsUsed?: number
+  downloadsRemaining?: number | null
+  canDownload?: boolean
   uploadedBy: { id: number; fullName: string } | null
   createdAt: string
 }
@@ -155,17 +160,43 @@ export const useCoursesStore = defineStore('courses', {
       }
     },
 
-    async fetchMaterials(courseId: number) {
+    async fetchMaterials(courseId: number, page = 1) {
       this.loadingMaterials = true
       this.error = null
       try {
-        const res = await api.get<{ materials: CourseMaterial[] }>(`/courses/${courseId}/materials`)
+        const res = await api.get<{ materials: CourseMaterial[]; downloadLimit?: number }>(
+          `/courses/${courseId}/materials`,
+          { params: { page } },
+        )
         this.materialsByCourse[courseId] = res.data.materials || []
       } catch (err) {
         this.error = messageFrom(err, 'Could not load materials')
         throw err
       } finally {
         this.loadingMaterials = false
+      }
+    },
+
+    /** Refresh quota fields for one material on a given page without replacing the list. */
+    async refreshMaterialQuota(courseId: number, materialId: number, page = 1) {
+      try {
+        const res = await api.get<{ materials: CourseMaterial[] }>(
+          `/courses/${courseId}/materials`,
+          { params: { page } },
+        )
+        const updated = (res.data.materials || []).find((item) => item.id === materialId)
+        const bucket = this.materialsByCourse[courseId]
+        const row = bucket?.find((item) => item.id === materialId)
+        if (updated && row) {
+          row.pageNumber = updated.pageNumber
+          row.downloadLimit = updated.downloadLimit
+          row.downloadsUsed = updated.downloadsUsed
+          row.downloadsRemaining = updated.downloadsRemaining
+          row.canDownload = updated.canDownload
+        }
+      } catch (err) {
+        this.error = messageFrom(err, 'Could not load download quota')
+        throw err
       }
     },
 
@@ -223,12 +254,35 @@ export const useCoursesStore = defineStore('courses', {
       }
     },
 
-    /** Downloads stream through the API so access is checked per request. */
-    async downloadMaterial(material: CourseMaterial) {
+    /** In-browser view — does not consume student download quota. */
+    async previewMaterial(material: CourseMaterial) {
+      this.error = null
+      try {
+        const res = await api.get<Blob>(`/materials/${material.id}/preview`, {
+          responseType: 'blob',
+        })
+        const mime = material.mimeType || res.data.type || 'application/octet-stream'
+        const blob = res.data.type ? res.data : new Blob([res.data], { type: mime })
+        const url = URL.createObjectURL(blob)
+        window.open(url, '_blank', 'noopener')
+        // Revoke later so the new tab can finish loading.
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+      } catch (err) {
+        this.error = messageFrom(err, 'Could not open that material')
+        throw err
+      }
+    },
+
+    /**
+     * Downloads stream through the API so access + student quota are checked.
+     * `page` is the material page (default 1); each page has 3 student downloads.
+     */
+    async downloadMaterial(material: CourseMaterial, page = 1) {
       this.error = null
       try {
         const res = await api.get<Blob>(`/materials/${material.id}/download`, {
           responseType: 'blob',
+          params: { page },
         })
         const url = URL.createObjectURL(res.data)
         const link = document.createElement('a')
@@ -236,8 +290,27 @@ export const useCoursesStore = defineStore('courses', {
         link.download = material.originalName || material.title
         link.click()
         URL.revokeObjectURL(url)
+
+        const bucket = this.materialsByCourse[material.courseId]
+        const row = bucket?.find((item) => item.id === material.id)
+        if (row && typeof row.downloadsRemaining === 'number') {
+          row.downloadsUsed = (row.downloadsUsed ?? 0) + 1
+          row.downloadsRemaining = Math.max(0, row.downloadsRemaining - 1)
+          row.canDownload = row.downloadsRemaining > 0
+        }
       } catch (err) {
-        this.error = messageFrom(err, 'Could not download that material')
+        const axiosErr = err as { response?: { data?: Blob | { message?: string } } }
+        const data = axiosErr.response?.data
+        if (data instanceof Blob) {
+          try {
+            const body = JSON.parse(await data.text()) as { message?: string }
+            this.error = body.message || 'Download limit reached for this page'
+          } catch {
+            this.error = 'Could not download that material'
+          }
+        } else {
+          this.error = messageFrom(err, 'Could not download that material')
+        }
         throw err
       }
     },

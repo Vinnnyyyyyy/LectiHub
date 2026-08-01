@@ -654,7 +654,7 @@ const navItems: {
   {
     id: 'courses',
     label: 'Courses & materials',
-    intro: 'Manage courses, upload materials, and enrol students.',
+    intro: 'Create courses, upload materials, and enrol students. Teachers view; students get 3 downloads per page.',
     icon: 'book',
   },
   {

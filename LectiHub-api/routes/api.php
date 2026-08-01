@@ -166,8 +166,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/{id}/materials', [CourseController::class, 'listMaterials'])
             ->middleware('role:student,teacher,admin');
+        // Only admins upload course materials; teachers/students view them.
         Route::post('/{id}/materials', [CourseController::class, 'uploadMaterial'])
-            ->middleware('role:teacher,admin');
+            ->middleware('role:admin');
 
         Route::get('/{id}/enrolments', [CourseController::class, 'listEnrolments'])
             ->middleware('role:admin');
@@ -176,10 +177,14 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::prefix('materials')->group(function () {
-        Route::get('/{id}/download', [CourseController::class, 'downloadMaterial'])
+        // In-browser view (does not consume student download quota).
+        Route::get('/{id}/preview', [CourseController::class, 'previewMaterial'])
             ->middleware('role:student,teacher,admin');
+        // Students: 3 downloads per page; teachers view-only; admin unlimited.
+        Route::get('/{id}/download', [CourseController::class, 'downloadMaterial'])
+            ->middleware('role:student,admin');
         Route::delete('/{id}', [CourseController::class, 'deleteMaterial'])
-            ->middleware('role:teacher,admin');
+            ->middleware('role:admin');
     });
 
     // Centre settings any signed-in user may read (slot length, hours, notice).
