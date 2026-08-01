@@ -14,7 +14,8 @@
   min-height: 100vh;
   min-height: 100dvh;
   color: var(--lh-ink);
-  overflow-x: hidden;
+  /* clip keeps horizontal overflow contained without breaking position:sticky */
+  overflow-x: clip;
   background: var(--lh-bg);
 }
 
