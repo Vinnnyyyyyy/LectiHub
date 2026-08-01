@@ -20,6 +20,10 @@ class ScheduleMapper
         'not_recorded', 'low', 'medium', 'high',
     ];
 
+    public function __construct(
+        protected SettingsService $settings,
+    ) {}
+
     // -----------------------------------------------------------------------
     // Time-slot helpers
     // -----------------------------------------------------------------------
@@ -112,16 +116,55 @@ class ScheduleMapper
     // Meeting-provider helpers
     // -----------------------------------------------------------------------
 
+    /**
+     * Providers admins enabled in System settings (intersection with known list).
+     *
+     * @return list<string>
+     */
+    public function enabledMeetingProviders(): array
+    {
+        $configured = $this->settings->get('meetings.enabled_providers', self::VIDEO_PROVIDERS);
+        if (! is_array($configured)) {
+            $configured = self::VIDEO_PROVIDERS;
+        }
+
+        $enabled = array_values(array_filter(
+            array_map(fn ($p) => strtolower(trim((string) $p)), $configured),
+            fn ($p) => in_array($p, self::VIDEO_PROVIDERS, true)
+        ));
+
+        return $enabled !== [] ? $enabled : self::VIDEO_PROVIDERS;
+    }
+
     public function getMeetingProvider(): string
     {
-        $provider = strtolower((string) env('MEETING_PROVIDER', 'jitsi'));
-        return in_array($provider, self::VIDEO_PROVIDERS, true) ? $provider : 'jitsi';
+        $fromSettings = strtolower((string) $this->settings->get('meetings.default_provider', ''));
+        $enabled = $this->enabledMeetingProviders();
+        if ($fromSettings !== '' && in_array($fromSettings, $enabled, true)) {
+            return $fromSettings;
+        }
+
+        $fromEnv = strtolower((string) env('MEETING_PROVIDER', 'jitsi'));
+        if (in_array($fromEnv, $enabled, true)) {
+            return $fromEnv;
+        }
+
+        return $enabled[0] ?? 'jitsi';
     }
 
     public function normalizeMeetingProvider(?string $value): string
     {
         $provider = strtolower(trim((string) ($value ?? '')));
-        return in_array($provider, self::VIDEO_PROVIDERS, true) ? $provider : $this->getMeetingProvider();
+        $enabled = $this->enabledMeetingProviders();
+
+        return in_array($provider, $enabled, true) ? $provider : $this->getMeetingProvider();
+    }
+
+    public function isEnabledMeetingProvider(?string $value): bool
+    {
+        $provider = strtolower(trim((string) ($value ?? '')));
+
+        return in_array($provider, $this->enabledMeetingProviders(), true);
     }
 
     /**

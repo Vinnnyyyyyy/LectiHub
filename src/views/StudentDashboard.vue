@@ -8,6 +8,7 @@
       :active-id="activeSection"
       :initials="initials"
       :display-name="displayName"
+      :brand-name="centreName"
       role-label="Student"
       @select="setSection($event as StudentSection)"
       @logout="handleLogout"
@@ -179,6 +180,7 @@ import {
 import { useNotificationsStore } from '../stores/notifications'
 import { useCalendarStore } from '../stores/calendar'
 import { useAvailabilityStore } from '../stores/availability'
+import { useSettingsStore } from '../stores/settings'
 import ScheduleBookingSection from '../components/ScheduleBookingSection.vue'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
@@ -328,6 +330,11 @@ async function handleLogout() {
   await router.push('/login')
 }
 
+const settingsStore = useSettingsStore()
+const centreName = computed(
+  () => String(settingsStore.settings['center.name'] || 'LectiHub'),
+)
+
 onMounted(async () => {
   await Promise.allSettled([
     classesStore.fetchMine(),
@@ -337,6 +344,7 @@ onMounted(async () => {
     notificationsStore.fetchMine(),
     calendarStore.fetchMine(),
     availabilityStore.fetchOpen(),
+    settingsStore.fetchPublic(),
   ])
 })
 </script>

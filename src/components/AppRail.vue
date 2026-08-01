@@ -39,14 +39,19 @@ export type RailItem = {
   childIds?: string[]
 }
 
-const props = defineProps<{
-  items: RailItem[]
-  initials: string
-  displayName: string
-  roleLabel: string
-  /** Active section id when using section-based nav (dashboards). */
-  activeId?: string | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    items: RailItem[]
+    initials: string
+    displayName: string
+    roleLabel: string
+    /** Active section id when using section-based nav (dashboards). */
+    activeId?: string | null
+    /** Centre name from System settings (falls back to LectiHub). */
+    brandName?: string
+  }>(),
+  { brandName: 'LectiHub' },
+)
 
 const emit = defineEmits<{
   logout: []
@@ -115,7 +120,7 @@ onBeforeUnmount(() => {
 <template>
   <aside class="rail" aria-label="Main navigation">
     <div class="brand">
-      <p class="wordmark">LectiHub</p>
+      <p class="wordmark">{{ brandName }}</p>
       <p class="role-chip">{{ roleLabel }}</p>
     </div>
 

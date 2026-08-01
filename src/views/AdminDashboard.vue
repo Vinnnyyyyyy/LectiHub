@@ -8,6 +8,7 @@
       :active-id="activeSection"
       :initials="initials"
       :display-name="displayName"
+      :brand-name="centreName"
       role-label="Admin"
       @select="setSection($event as AdminSection)"
       @logout="handleLogout"
@@ -521,6 +522,7 @@ import {
 import { useLessonReportsStore } from '../stores/lessonReports'
 import { useStudentFeedbackStore } from '../stores/studentFeedback'
 import { useAdminMonitoringStore } from '../stores/adminMonitoring'
+import { useSettingsStore } from '../stores/settings'
 import NotificationsPanel from '../components/NotificationsPanel.vue'
 import AdminReportsFeedbackWorkspace from '../components/AdminReportsFeedbackWorkspace.vue'
 import AdminMonitoringPanel from '../components/AdminMonitoringPanel.vue'
@@ -881,6 +883,11 @@ async function refreshMonitoring() {
   await monitoringStore.fetchOverview()
 }
 
+const settingsStore = useSettingsStore()
+const centreName = computed(
+  () => String(settingsStore.settings['center.name'] || 'LectiHub'),
+)
+
 onMounted(async () => {
   await Promise.all([
     monitoringStore.fetchOverview(),
@@ -888,6 +895,7 @@ onMounted(async () => {
     notificationsStore.fetchMine(),
     lessonReportsStore.fetchMine(),
     studentFeedbackStore.fetchMine(),
+    settingsStore.fetchAll().catch(() => settingsStore.fetchPublic()),
   ])
 })
 </script>

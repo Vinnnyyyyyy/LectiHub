@@ -83,6 +83,10 @@ class SettingsController extends Controller
                 if (array_intersect($applied, self::SCHEDULE_SHAPE_KEYS)) {
                     $this->availability->seedAllTeachers();
                 }
+
+                if (in_array('records.audit_retention_months', $applied, true)) {
+                    $this->audit->pruneExpired();
+                }
             }
 
             return response()->json([

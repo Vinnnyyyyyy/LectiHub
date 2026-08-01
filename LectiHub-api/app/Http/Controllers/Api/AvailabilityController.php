@@ -55,6 +55,11 @@ class AvailabilityController extends Controller
                 $from = $earliest;
             }
 
+            $latest = $this->availability->latestBookableDate();
+            if ($latest !== null && $to > $latest) {
+                $to = $latest;
+            }
+
             if ($from > $to) {
                 return response()->json(['message' => 'from must be on or before to.'], 400);
             }
@@ -69,7 +74,9 @@ class AvailabilityController extends Controller
 
             return response()->json(array_merge($inventory, [
                 'earliestBookableDate' => $earliest,
+                'latestBookableDate'   => $latest,
                 'bookingLeadDays'      => $this->availability->bookingLeadDays(),
+                'minNoticeHours'       => $this->availability->minNoticeHours(),
             ]));
         } catch (\Throwable $e) {
             return response()->json([
@@ -165,6 +172,14 @@ class AvailabilityController extends Controller
     {
         $start = $this->availability->earliestBookableDate();
         $end   = Carbon::parse($start)->addDays(60)->toDateString();
+        $termEnd = $this->availability->latestBookableDate();
+        if ($termEnd !== null && $termEnd < $end) {
+            $end = $termEnd;
+        }
+        if ($end < $start) {
+            $end = $start;
+        }
+
         return ['from' => $start, 'to' => $end];
     }
 

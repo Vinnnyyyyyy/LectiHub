@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\AvailabilityService;
 use App\Services\DolibarrClient;
+use App\Services\ScheduleMapper;
 use App\Services\SettingsService;
 use App\Services\TrialSchedulerService;
 use Illuminate\Http\JsonResponse;
@@ -38,6 +39,7 @@ class TrialRequestController extends Controller
         private readonly TrialSchedulerService $scheduler,
         private readonly AvailabilityService   $availability,
         private readonly SettingsService       $settings,
+        private readonly ScheduleMapper        $mapper,
     ) {}
 
     // -----------------------------------------------------------------------
@@ -77,11 +79,20 @@ class TrialRequestController extends Controller
             $slotMinutes = 30;
         }
 
-        $videoPlatforms = array_map(
-            fn ($value, $label) => ['value' => $value, 'label' => $label],
-            array_keys(self::VIDEO_PLATFORMS),
-            array_values(self::VIDEO_PLATFORMS)
-        );
+        $enabled = $this->mapper->enabledMeetingProviders();
+        $videoPlatforms = [];
+        foreach ($enabled as $value) {
+            if (isset(self::VIDEO_PLATFORMS[$value])) {
+                $videoPlatforms[] = ['value' => $value, 'label' => self::VIDEO_PLATFORMS[$value]];
+            }
+        }
+        if ($videoPlatforms === []) {
+            $videoPlatforms = array_map(
+                fn ($value, $label) => ['value' => $value, 'label' => $label],
+                array_keys(self::VIDEO_PLATFORMS),
+                array_values(self::VIDEO_PLATFORMS)
+            );
+        }
 
         $message = $dolibarrEnabled
             ? 'Free trial posts to Dolibarr and the E-Scheduler assign queue.'
@@ -145,9 +156,22 @@ class TrialRequestController extends Controller
         if (! in_array($preferredSlot, $this->availability->standardTimeSlots(), true)) {
             return response()->json(['message' => 'Choose a valid time slot.'], 400);
         }
-        if (! isset(self::VIDEO_PLATFORMS[$videoPlatform])) {
+        if (! isset(self::VIDEO_PLATFORMS[$videoPlatform]) || ! $this->mapper->isEnabledMeetingProvider($videoPlatform)) {
             return response()->json([
-                'message' => 'Choose a video platform (Zoom, Google Meet, Digital Samba, or Jitsi).',
+                'message' => 'Choose an enabled video platform.',
+            ], 400);
+        }
+
+        $earliest = $this->availability->earliestBookableDate();
+        $latest = $this->availability->latestBookableDate();
+        if ($preferredDate < $earliest) {
+            return response()->json([
+                'message' => "Preferred date must be on or after {$earliest}.",
+            ], 400);
+        }
+        if ($latest !== null && $preferredDate > $latest) {
+            return response()->json([
+                'message' => "Preferred date must be on or before {$latest}.",
             ], 400);
         }
 

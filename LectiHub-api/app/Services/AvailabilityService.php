@@ -35,21 +35,72 @@ class AvailabilityService
     ) {}
 
     /**
-     * Effective booking lead from env (falls back to the constant).
+     * Centre timezone from settings (falls back to UTC when invalid).
+     */
+    public function centreTimezone(): string
+    {
+        $tz = trim((string) $this->settings->get('center.timezone', 'Asia/Manila'));
+        try {
+            new \DateTimeZone($tz);
+
+            return $tz !== '' ? $tz : 'UTC';
+        } catch (\Throwable) {
+            return 'UTC';
+        }
+    }
+
+    /**
+     * Minimum notice in hours from centre settings (falls back to env days × 24).
+     */
+    public function minNoticeHours(): int
+    {
+        $hours = (int) $this->settings->get('scheduling.min_notice_hours', 48);
+        if ($hours > 0) {
+            return $hours;
+        }
+
+        $days = (int) env('BOOKING_LEAD_DAYS', self::DEFAULT_BOOKING_LEAD_DAYS);
+
+        return max(1, ($days > 0 ? $days : self::DEFAULT_BOOKING_LEAD_DAYS) * 24);
+    }
+
+    /**
+     * Effective booking lead in whole calendar days (ceil of min notice hours).
      */
     public function bookingLeadDays(): int
     {
-        $val = (int) env('BOOKING_LEAD_DAYS', self::DEFAULT_BOOKING_LEAD_DAYS);
-        return $val > 0 ? $val : self::DEFAULT_BOOKING_LEAD_DAYS;
+        return max(1, (int) ceil($this->minNoticeHours() / 24));
     }
 
     /**
      * Returns the earliest date (Y-m-d) that a student may book from now.
+     * Honours min notice, centre timezone, and optional term start.
      */
     public function earliestBookableDate(?Carbon $from = null): string
     {
-        $from = ($from ?? Carbon::today())->copy()->startOfDay();
-        return $from->addDays($this->bookingLeadDays())->toDateString();
+        $tz = $this->centreTimezone();
+        $from = ($from ?? Carbon::now($tz))->copy()->timezone($tz)->startOfDay();
+        $earliest = $from->addDays($this->bookingLeadDays())->toDateString();
+
+        $termStart = $this->settings->get('center.term_start');
+        if (is_string($termStart) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $termStart) && $termStart > $earliest) {
+            return $termStart;
+        }
+
+        return $earliest;
+    }
+
+    /**
+     * Optional term end (Y-m-d), or null when the centre has no term bound.
+     */
+    public function latestBookableDate(): ?string
+    {
+        $termEnd = $this->settings->get('center.term_end');
+        if (is_string($termEnd) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $termEnd)) {
+            return $termEnd;
+        }
+
+        return null;
     }
 
     /**

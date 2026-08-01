@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\ClassLifecycleService;
 use App\Services\NotificationService;
 use App\Services\ScheduleMapper;
+use App\Services\SettingsService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class LessonReportController extends Controller
         private readonly ScheduleMapper $mapper,
         private readonly ClassLifecycleService $lifecycle,
         private readonly NotificationService $notifications,
+        private readonly SettingsService $settings,
     ) {}
 
     // -------------------------------------------------------------------------
@@ -142,15 +144,28 @@ class LessonReportController extends Controller
             'attendanceStatus' => $report->attendance_status,
         ];
 
+        $askFeedback = (bool) $this->settings->get('reminders.request_feedback_after_report', true);
+
         if ($report->student_id) {
-            $this->notifications->createNotification(
-                userId:         (int) $report->student_id,
-                type:           'lesson_report',
-                title:          'Lesson report ready — please share feedback',
-                message:        "{$teacherName} submitted a lesson report for {$topic}. Please complete the feedback form for this lesson.",
-                relatedClassId: (int) $report->class_id,
-                details:        array_merge($details, ['promptFeedback' => true]),
-            );
+            if ($askFeedback) {
+                $this->notifications->createNotification(
+                    userId:         (int) $report->student_id,
+                    type:           'lesson_report',
+                    title:          'Lesson report ready — please share feedback',
+                    message:        "{$teacherName} submitted a lesson report for {$topic}. Please complete the feedback form for this lesson.",
+                    relatedClassId: (int) $report->class_id,
+                    details:        array_merge($details, ['promptFeedback' => true]),
+                );
+            } else {
+                $this->notifications->createNotification(
+                    userId:         (int) $report->student_id,
+                    type:           'lesson_report',
+                    title:          'Lesson report ready',
+                    message:        "{$teacherName} submitted a lesson report for {$topic}.",
+                    relatedClassId: (int) $report->class_id,
+                    details:        array_merge($details, ['promptFeedback' => false]),
+                );
+            }
         }
 
         $adminIds = User::where('role', 'admin')->pluck('id')->all();
@@ -162,6 +177,20 @@ class LessonReportController extends Controller
             relatedClassId: (int) $report->class_id,
             details:        $details,
         );
+
+        if (
+            ($report->attendance_status ?? '') === 'absent'
+            && (bool) $this->settings->get('reminders.alert_admin_on_absence', true)
+        ) {
+            $this->notifications->notifyMany(
+                userIds:        $adminIds,
+                type:           'attendance_alert',
+                title:          'Student marked absent',
+                message:        "{$teacherName} marked a student absent for {$topic}.",
+                relatedClassId: (int) $report->class_id,
+                details:        $details,
+            );
+        }
     }
 
     // -------------------------------------------------------------------------

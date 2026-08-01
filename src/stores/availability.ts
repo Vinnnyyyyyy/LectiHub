@@ -24,6 +24,10 @@ interface AvailabilityState {
   timeSlots: string[]
   from: string | null
   to: string | null
+  earliestBookableDate: string | null
+  latestBookableDate: string | null
+  bookingLeadDays: number
+  minNoticeHours: number
   loadingOpen: boolean
   mySlots: WeeklyAvailabilitySlot[]
   loadingMine: boolean
@@ -38,6 +42,10 @@ export const useAvailabilityStore = defineStore('availability', {
     timeSlots: [...TIME_SLOTS],
     from: null,
     to: null,
+    earliestBookableDate: null,
+    latestBookableDate: null,
+    bookingLeadDays: 2,
+    minNoticeHours: 48,
     loadingOpen: false,
     mySlots: [],
     loadingMine: false,
@@ -62,6 +70,10 @@ export const useAvailabilityStore = defineStore('availability', {
           timeSlots: string[]
           dates: OpenDate[]
           openDates: string[]
+          earliestBookableDate?: string
+          latestBookableDate?: string | null
+          bookingLeadDays?: number
+          minNoticeHours?: number
         }>('/availability/open', {
           params: { from, to },
         })
@@ -69,6 +81,14 @@ export const useAvailabilityStore = defineStore('availability', {
         this.to = res.data.to
         this.timeSlots = res.data.timeSlots?.length ? res.data.timeSlots : [...TIME_SLOTS]
         this.openDates = res.data.openDates || []
+        this.earliestBookableDate = res.data.earliestBookableDate || res.data.from || null
+        this.latestBookableDate = res.data.latestBookableDate ?? null
+        if (typeof res.data.bookingLeadDays === 'number' && res.data.bookingLeadDays > 0) {
+          this.bookingLeadDays = res.data.bookingLeadDays
+        }
+        if (typeof res.data.minNoticeHours === 'number' && res.data.minNoticeHours > 0) {
+          this.minNoticeHours = res.data.minNoticeHours
+        }
         const map: Record<string, OpenSlot[]> = {}
         for (const day of res.data.dates || []) {
           map[day.date] = day.slots

@@ -6,7 +6,9 @@
         Pick the dates and times you want. Consecutive slots on the same day become
         <strong>one class</strong> (for example 09:30–12:00) with one teacher, one upcoming
         session, and one report/feedback. Gaps or different days become separate classes.
-        You can book starting <strong>2 days from today</strong>.
+        You can book starting
+        <strong>{{ minNoticeHours }} hours from now</strong>
+        <span v-if="latestBookableDate"> (until {{ formatDate(latestBookableDate) }})</span>.
       </p>
     </div>
 
@@ -136,7 +138,13 @@ import CalendarGrid from './CalendarGrid.vue'
 const scheduleStore = useScheduleStore()
 const availabilityStore = useAvailabilityStore()
 const { requests, loading, submitting } = storeToRefs(scheduleStore)
-const { openDates, loadingOpen } = storeToRefs(availabilityStore)
+const {
+  openDates,
+  loadingOpen,
+  earliestBookableDate,
+  latestBookableDate,
+  minNoticeHours,
+} = storeToRefs(availabilityStore)
 
 const selectedDate = ref('')
 const selectedTimeSlots = ref<string[]>([])
@@ -146,6 +154,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 const minDate = computed(() => {
+  if (earliestBookableDate.value) return earliestBookableDate.value
   const date = new Date()
   date.setHours(0, 0, 0, 0)
   date.setDate(date.getDate() + 2)
@@ -156,7 +165,11 @@ const minDate = computed(() => {
 })
 
 const bookableOpenDates = computed(() =>
-  openDates.value.filter((date) => date >= minDate.value),
+  openDates.value.filter((date) => {
+    if (date < minDate.value) return false
+    if (latestBookableDate.value && date > latestBookableDate.value) return false
+    return true
+  }),
 )
 
 const openSlotsForDay = computed(() =>
