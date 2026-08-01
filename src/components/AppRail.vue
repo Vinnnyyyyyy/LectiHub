@@ -182,14 +182,18 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .rail {
+  /* Stick to the viewport while the main dashboard column scrolls.
+     flex-start + viewport height is required — stretch makes the rail as
+     tall as the page, so sticky has no effect. */
   position: sticky;
   top: 0;
   width: var(--lh-rail-w);
-  align-self: stretch;
+  align-self: flex-start;
   flex: 0 0 var(--lh-rail-w);
-  min-height: 100vh;
-  min-height: 100dvh;
-  height: auto;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100vh;
+  max-height: 100dvh;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
