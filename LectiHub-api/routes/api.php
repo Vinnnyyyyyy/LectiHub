@@ -183,6 +183,10 @@ Route::middleware('auth:sanctum')->group(function () {
         // Students: 3 downloads per page; teachers view-only; admin unlimited.
         Route::get('/{id}/download', [CourseController::class, 'downloadMaterial'])
             ->middleware('role:student,admin');
+        Route::patch('/{id}', [CourseController::class, 'updateMaterial'])
+            ->middleware('role:admin');
+        Route::post('/{id}', [CourseController::class, 'updateMaterial'])
+            ->middleware('role:admin');
         Route::delete('/{id}', [CourseController::class, 'deleteMaterial'])
             ->middleware('role:admin');
     });

@@ -30,8 +30,8 @@ const materials = computed(() =>
 
 const hint = computed(() =>
   props.mode === 'teacher'
-    ? 'View materials online for class discussion. Downloads are managed by admin for students.'
-    : 'View any material online. Each page can be downloaded up to 3 times.',
+    ? 'Only courses assigned to you. Open materials for discussion — no upload, edit, or download.'
+    : 'Only courses you are enrolled in. View online anytime; each page has 3 download chances.',
 )
 
 function fileSize(bytes: number) {
@@ -94,8 +94,8 @@ onMounted(async () => {
     <p v-else-if="!courses.length" class="empty">
       {{
         mode === 'student'
-          ? 'You are not enrolled in a course yet.'
-          : 'No courses with materials yet. Admin uploads courses and materials.'
+          ? 'You are not enrolled in a course yet. Ask admin to assign you.'
+          : 'No courses assigned to you yet. Admin assigns teachers to courses.'
       }}
     </p>
 

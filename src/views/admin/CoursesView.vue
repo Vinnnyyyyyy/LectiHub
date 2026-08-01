@@ -31,7 +31,14 @@ const selectedId = ref<number | null>(null)
 const showNewCourse = ref(false)
 const subjectFilter = ref('')
 const fileInput = ref<HTMLInputElement | null>(null)
+const replaceFileInput = ref<HTMLInputElement | null>(null)
 const uploadAccess = ref<'enrolled' | 'all'>('enrolled')
+const editingId = ref<number | null>(null)
+const editDraft = ref<{ title: string; access: 'enrolled' | 'all' }>({
+  title: '',
+  access: 'enrolled',
+})
+const assignTeacherId = ref<number | ''>('')
 
 const newCourse = ref({ title: '', subject: '', description: '', teacherId: '' as number | '' })
 
@@ -67,11 +74,60 @@ function fileSize(bytes: number) {
 
 async function openCourse(course: Course) {
   selectedId.value = selectedId.value === course.id ? null : course.id
+  editingId.value = null
   if (selectedId.value === null) return
+  assignTeacherId.value = course.teacherId ?? ''
   await Promise.allSettled([
     coursesStore.fetchMaterials(course.id),
     coursesStore.fetchEnrolments(course.id),
   ])
+}
+
+async function saveTeacherAssignment() {
+  if (!selectedId.value) return
+  try {
+    await coursesStore.update(selectedId.value, {
+      teacherId: assignTeacherId.value === '' ? null : Number(assignTeacherId.value),
+    })
+  } catch {
+    // store surfaces the error
+  }
+}
+
+function startEdit(material: CourseMaterial) {
+  editingId.value = material.id
+  editDraft.value = { title: material.title, access: material.access }
+}
+
+async function saveEdit() {
+  if (editingId.value == null) return
+  try {
+    await coursesStore.updateMaterial(editingId.value, {
+      title: editDraft.value.title.trim(),
+      access: editDraft.value.access,
+    })
+    editingId.value = null
+  } catch {
+    // store surfaces the error
+  }
+}
+
+async function onReplaceFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file || editingId.value == null) return
+  try {
+    await coursesStore.updateMaterial(editingId.value, {
+      title: editDraft.value.title.trim() || undefined,
+      access: editDraft.value.access,
+      file,
+    })
+    editingId.value = null
+  } catch {
+    // store surfaces the error
+  } finally {
+    input.value = ''
+  }
 }
 
 async function createCourse() {
@@ -253,13 +309,23 @@ onMounted(async () => {
         </div>
         <div class="detail-actions">
           <label class="access">
-            <span class="access-label">Access</span>
+            <span class="access-label">Assign teacher</span>
+            <select v-model="assignTeacherId" @change="saveTeacherAssignment">
+              <option value="">Unassigned</option>
+              <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.id">
+                {{ teacher.fullName }}
+              </option>
+            </select>
+          </label>
+          <label class="access">
+            <span class="access-label">Upload access</span>
             <select v-model="uploadAccess">
-              <option value="enrolled">Enrolled only</option>
-              <option value="all">All students</option>
+              <option value="enrolled">Enrolled students</option>
+              <option value="all">All enrolled (labelled)</option>
             </select>
           </label>
           <input ref="fileInput" type="file" class="sr-only" @change="onFilePicked" />
+          <input ref="replaceFileInput" type="file" class="sr-only" @change="onReplaceFile" />
           <button
             type="button"
             class="btn-primary"
@@ -278,8 +344,8 @@ onMounted(async () => {
 
           <p v-if="loadingMaterials" class="empty small">Loading…</p>
           <p v-else-if="!materials.length" class="empty small">
-            Nothing uploaded yet. Teachers view these for discussion; students
-            get 3 downloads per page.
+            Nothing uploaded yet. Assigned teachers can view for discussion;
+            enrolled students get 3 downloads per page.
           </p>
 
           <div v-else class="table">
@@ -288,31 +354,57 @@ onMounted(async () => {
               <span class="col-action" />
             </div>
             <div v-for="material in materials" :key="material.id" class="row">
-              <span class="strong">{{ material.title }}</span>
-              <span class="muted">{{ fileSize(material.sizeBytes) }}</span>
-              <span class="muted">{{ formatDate(String(material.createdAt).slice(0, 10)) }}</span>
-              <span>
-                <span class="tag" :class="material.access === 'all' ? 'accent' : 'neutral'">
-                  {{ material.access === 'all' ? 'All students' : 'Enrolled only' }}
+              <template v-if="editingId === material.id">
+                <span class="edit-fields">
+                  <input v-model="editDraft.title" type="text" aria-label="Material title" />
+                  <select v-model="editDraft.access" aria-label="Material access">
+                    <option value="enrolled">Enrolled students</option>
+                    <option value="all">All enrolled (labelled)</option>
+                  </select>
                 </span>
-              </span>
-              <span class="col-action">
-                <button type="button" class="btn-mini" @click="download(material)">Get</button>
-                <button
-                  type="button"
-                  class="btn-mini ghost"
-                  @click="coursesStore.deleteMaterial(selected!.id, material.id)"
-                >
-                  Remove
-                </button>
-              </span>
+                <span class="muted">{{ fileSize(material.sizeBytes) }}</span>
+                <span class="muted">{{ formatDate(String(material.createdAt).slice(0, 10)) }}</span>
+                <span class="muted">Editing</span>
+                <span class="col-action">
+                  <button type="button" class="btn-mini" @click="saveEdit">Save</button>
+                  <button type="button" class="btn-mini ghost" @click="replaceFileInput?.click()">
+                    Replace file
+                  </button>
+                  <button type="button" class="btn-mini ghost" @click="editingId = null">
+                    Cancel
+                  </button>
+                </span>
+              </template>
+              <template v-else>
+                <span class="strong">{{ material.title }}</span>
+                <span class="muted">{{ fileSize(material.sizeBytes) }}</span>
+                <span class="muted">{{ formatDate(String(material.createdAt).slice(0, 10)) }}</span>
+                <span>
+                  <span class="tag" :class="material.access === 'all' ? 'accent' : 'neutral'">
+                    {{ material.access === 'all' ? 'All enrolled' : 'Enrolled' }}
+                  </span>
+                </span>
+                <span class="col-action">
+                  <button type="button" class="btn-mini" @click="download(material)">Get</button>
+                  <button type="button" class="btn-mini ghost" @click="startEdit(material)">
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-mini ghost"
+                    @click="coursesStore.deleteMaterial(selected!.id, material.id)"
+                  >
+                    Remove
+                  </button>
+                </span>
+              </template>
             </div>
           </div>
         </div>
 
         <aside class="col roster">
-          <p class="col-label">Enrolled · {{ roster.length }}</p>
-          <p class="col-note">Only enrolled students can open "enrolled only" material.</p>
+          <p class="col-label">Assign students · {{ roster.length }}</p>
+          <p class="col-note">Only assigned (enrolled) students can view and download materials.</p>
 
           <p v-if="!students.length" class="empty small">No students on the roll yet.</p>
 
@@ -718,6 +810,25 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.edit-fields input,
+.edit-fields select {
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--lh-radius-control);
+  background: color-mix(in srgb, var(--lh-ink) 6%, transparent);
+  color: var(--lh-ink);
+  font: inherit;
+  font-size: 12.5px;
 }
 
 .muted {

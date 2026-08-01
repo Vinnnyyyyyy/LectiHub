@@ -208,7 +208,7 @@
         <div class="dash-section-label">
           <div>
             <h2 id="tab-materials">Course materials</h2>
-            <p>View admin-uploaded materials for discussion. Download is for students only.</p>
+            <p>View materials for courses assigned to you. Discussion only — no upload, edit, or download.</p>
           </div>
         </div>
         <CourseMaterialsBrowse mode="teacher" />
@@ -295,7 +295,7 @@ const navItems: {
   {
     id: 'materials',
     label: 'Course materials',
-    intro: 'Open admin-uploaded materials to discuss in class. View only — no downloads.',
+    intro: 'Open materials for courses assigned to you. View only — no upload, edit, or download.',
     icon: 'book',
   },
   {

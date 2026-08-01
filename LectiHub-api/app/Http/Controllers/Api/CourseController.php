@@ -103,26 +103,30 @@ class CourseController extends Controller
         return $payload;
     }
 
+    /**
+     * Material access follows course assignment:
+     * admin → all; teacher → assigned course; student → enrolled only.
+     */
     private function canAccessMaterial(?User $user, CourseMaterial $material): bool
     {
-        if ($this->isStaff($user)) {
-            return true;
+        $course = $material->relationLoaded('course')
+            ? $material->course
+            : Course::find($material->course_id);
+
+        if (! $course) {
+            return false;
         }
 
-        if ($material->access === 'all') {
-            return $user !== null;
-        }
-
-        return $user !== null && $this->isEnrolled($material->course_id, $user->id);
+        return $this->canSeeCourse($user, $course);
     }
 
     // -----------------------------------------------------------------------
     // Access
     // -----------------------------------------------------------------------
 
-    private function isStaff(?User $user): bool
+    private function isAdmin(?User $user): bool
     {
-        return in_array($user?->role, ['admin', 'teacher'], true);
+        return $user?->role === 'admin';
     }
 
     private function isEnrolled(int $courseId, int $studentId): bool
@@ -133,14 +137,23 @@ class CourseController extends Controller
             ->exists();
     }
 
-    /** Students only see courses they are enrolled in. Staff see everything. */
+    private function isAssignedTeacher(?User $user, Course $course): bool
+    {
+        return $user?->role === 'teacher' && (int) $course->teacher_id === (int) $user->id;
+    }
+
+    /** Admin: all. Teacher: assigned courses only. Student: enrolled only. */
     private function canSeeCourse(?User $user, Course $course): bool
     {
-        if ($this->isStaff($user)) {
+        if ($this->isAdmin($user)) {
             return true;
         }
 
-        return $user !== null && $this->isEnrolled($course->id, $user->id);
+        if ($this->isAssignedTeacher($user, $course)) {
+            return true;
+        }
+
+        return $user?->role === 'student' && $this->isEnrolled($course->id, $user->id);
     }
 
     // -----------------------------------------------------------------------
@@ -158,13 +171,16 @@ class CourseController extends Controller
                 ->orderBy('subject')
                 ->orderBy('title');
 
-            if (! $this->isStaff($user)) {
+            if ($user?->role === 'teacher') {
+                $query->where('teacher_id', $user->id);
+            } elseif ($user?->role === 'student') {
                 $query->whereIn('id', function ($sub) use ($user) {
                     $sub->select('course_id')
                         ->from('course_enrolments')
                         ->where('student_id', $user->id);
                 });
             }
+            // Admin sees every course.
 
             $courses = $query->get();
 
@@ -280,16 +296,13 @@ class CourseController extends Controller
         }
 
         $user = $request->user();
+        if (! $this->canSeeCourse($user, $course)) {
+            return response()->json(['message' => 'You are not assigned to this course.'], 403);
+        }
 
         try {
             $query = CourseMaterial::where('course_id', $id)->with('uploader')->latest();
-
-            // A student not enrolled still sees anything marked open to all.
-            if (! $this->isStaff($user) && ! $this->isEnrolled($id, $user->id)) {
-                $query->where('access', 'all');
-            }
-
-            $page = max(1, (int) $request->query('page', 1));
+            $page  = max(1, (int) $request->query('page', 1));
 
             return response()->json([
                 'downloadLimit' => self::DOWNLOADS_PER_PAGE,
@@ -366,6 +379,78 @@ class CourseController extends Controller
     }
 
     // -----------------------------------------------------------------------
+    // PATCH /materials/{id}   (admin) — edit title/access and/or replace file
+    // -----------------------------------------------------------------------
+
+    public function updateMaterial(Request $request, int $id): JsonResponse
+    {
+        $material = CourseMaterial::with('course')->find($id);
+        if (! $material) {
+            return response()->json(['message' => 'Material not found.'], 404);
+        }
+
+        $data = $request->validate([
+            'title'  => ['sometimes', 'string', 'max:200'],
+            'access' => ['sometimes', 'string'],
+            'file'   => ['sometimes', 'file', 'max:20480'],
+        ]);
+
+        try {
+            if (array_key_exists('title', $data) && trim($data['title']) !== '') {
+                $material->title = trim($data['title']);
+            }
+
+            if (array_key_exists('access', $data)) {
+                if (! in_array($data['access'], self::ACCESS, true)) {
+                    return response()->json(['message' => 'Access must be enrolled or all.'], 422);
+                }
+                $material->access = $data['access'];
+            }
+
+            if ($request->hasFile('file')) {
+                $file      = $request->file('file');
+                $extension = strtolower($file->getClientOriginalExtension());
+
+                if (in_array($extension, self::BLOCKED_EXTENSIONS, true)) {
+                    return response()->json(['message' => 'That file type is not allowed.'], 422);
+                }
+
+                $oldPath = $material->storage_path;
+                $path    = $file->store(self::MATERIAL_DIR . '/' . $material->course_id, 'local');
+
+                $material->storage_path  = $path;
+                $material->original_name = $file->getClientOriginalName();
+                $material->mime_type     = $file->getClientMimeType();
+                $material->size_bytes    = $file->getSize();
+
+                if ($oldPath && $oldPath !== $path) {
+                    Storage::disk('local')->delete($oldPath);
+                }
+            }
+
+            $material->save();
+            $material->load('uploader');
+
+            $this->audit->record(
+                'materials',
+                'material.updated',
+                "Material updated — {$material->title}",
+                $request->user(),
+                'course_material',
+                $material->id,
+                ['course' => $material->course?->title, 'access' => $material->access],
+            );
+
+            return response()->json([
+                'message'  => 'Material updated.',
+                'material' => $this->mapMaterial($material, $request->user()),
+            ]);
+        } catch (Throwable $e) {
+            return response()->json(['message' => 'Unable to update material.', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // GET /materials/{id}/preview   — in-browser view (no quota)
     // -----------------------------------------------------------------------
 
@@ -378,7 +463,7 @@ class CourseController extends Controller
 
         $user = $request->user();
         if (! $this->canAccessMaterial($user, $material)) {
-            return response()->json(['message' => 'You are not enrolled in this course.'], 403);
+            return response()->json(['message' => 'You are not assigned to this course.'], 403);
         }
 
         if (! Storage::disk('local')->exists($material->storage_path)) {
@@ -408,10 +493,10 @@ class CourseController extends Controller
 
         $user = $request->user();
         if (! $this->canAccessMaterial($user, $material)) {
-            return response()->json(['message' => 'You are not enrolled in this course.'], 403);
+            return response()->json(['message' => 'You are not assigned to this course.'], 403);
         }
 
-        // Teachers discuss from the preview; downloads are for students (and admin).
+        // Teachers discuss from preview only — no unrestricted downloads.
         if ($user?->role === 'teacher') {
             return response()->json([
                 'message' => 'Teachers can view materials for discussion but cannot download them.',
