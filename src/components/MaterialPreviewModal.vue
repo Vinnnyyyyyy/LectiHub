@@ -2,10 +2,16 @@
 /**
  * In-app material viewer. Keeps teachers/students on-screen instead of
  * triggering a browser download (especially for .docx).
+ * Text and images are selectable/copyable for discussion.
  */
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { CourseMaterial } from '../stores/courses'
-import { docxBlobToHtml, previewKind, type PreviewKind } from '../utils/materialPreview'
+import {
+  docxBlobToHtml,
+  htmlToPlainText,
+  previewKind,
+  type PreviewKind,
+} from '../utils/materialPreview'
 
 const props = defineProps<{
   open: boolean
@@ -22,6 +28,8 @@ const htmlBody = ref('')
 const textBody = ref('')
 const converting = ref(false)
 const convertError = ref<string | null>(null)
+const copyStatus = ref<string | null>(null)
+const contentEl = ref<HTMLElement | null>(null)
 
 const kind = computed<PreviewKind>(() => {
   if (!props.material) return 'unsupported'
@@ -30,11 +38,23 @@ const kind = computed<PreviewKind>(() => {
 
 const title = computed(() => props.material?.title || 'Material')
 
+const canCopyText = computed(
+  () => kind.value === 'text' || kind.value === 'docx' || kind.value === 'pdf',
+)
+const canCopyImage = computed(() => kind.value === 'image' || kind.value === 'docx')
+
 function revokeUrl() {
   if (objectUrl.value) {
     URL.revokeObjectURL(objectUrl.value)
     objectUrl.value = null
   }
+}
+
+function flashStatus(message: string) {
+  copyStatus.value = message
+  window.setTimeout(() => {
+    if (copyStatus.value === message) copyStatus.value = null
+  }, 2200)
 }
 
 async function preparePreview() {
@@ -43,6 +63,7 @@ async function preparePreview() {
   textBody.value = ''
   convertError.value = null
   converting.value = false
+  copyStatus.value = null
 
   if (!props.open || !props.blob || !props.material) return
 
@@ -68,7 +89,7 @@ async function preparePreview() {
       htmlBody.value = await docxBlobToHtml(typed)
     } catch {
       convertError.value =
-        'Could not render this Word file in the browser. Ask admin to also upload a PDF for discussion.'
+        'Could not render this Word file. Run npm install in the project folder, restart the app, or ask admin to upload a PDF.'
     } finally {
       converting.value = false
     }
@@ -96,6 +117,96 @@ watch(
     else window.removeEventListener('keydown', onKey)
   },
 )
+
+function selectedPlainText(): string {
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed) return ''
+  const text = selection.toString().trim()
+  if (!text || !contentEl.value) return text
+  // Only use selection when it sits inside the preview body.
+  const anchor = selection.anchorNode
+  if (anchor && contentEl.value.contains(anchor)) return text
+  return ''
+}
+
+async function copyText() {
+  try {
+    let text = selectedPlainText()
+    if (!text) {
+      if (kind.value === 'text') text = textBody.value
+      else if (kind.value === 'docx') text = htmlToPlainText(htmlBody.value)
+      else if (kind.value === 'pdf') {
+        flashStatus('Select text in the PDF, then click Copy text (or Ctrl+C).')
+        return
+      }
+    }
+    if (!text.trim()) {
+      flashStatus('No text to copy.')
+      return
+    }
+    await navigator.clipboard.writeText(text)
+    flashStatus(selectedPlainText() ? 'Selected text copied.' : 'Text copied.')
+  } catch {
+    flashStatus('Could not copy text. Try selecting it and pressing Ctrl+C.')
+  }
+}
+
+async function blobToClipboardPng(blob: Blob): Promise<void> {
+  // Clipboard image write prefers PNG in Chromium.
+  if (blob.type === 'image/png' || blob.type === 'image/gif') {
+    await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
+    return
+  }
+  const bitmap = await createImageBitmap(blob)
+  const canvas = document.createElement('canvas')
+  canvas.width = bitmap.width
+  canvas.height = bitmap.height
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('canvas')
+  ctx.drawImage(bitmap, 0, 0)
+  const png = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob'))), 'image/png')
+  })
+  await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })])
+}
+
+async function copyImageFromSrc(src: string) {
+  const res = await fetch(src)
+  const blob = await res.blob()
+  await blobToClipboardPng(blob)
+}
+
+async function copyImage() {
+  try {
+    if (kind.value === 'image' && objectUrl.value) {
+      await copyImageFromSrc(objectUrl.value)
+      flashStatus('Image copied.')
+      return
+    }
+
+    if (kind.value === 'docx' && contentEl.value) {
+      await nextTick()
+      const images = [...contentEl.value.querySelectorAll('img')]
+      if (!images.length) {
+        flashStatus('No images in this material.')
+        return
+      }
+      // Prefer an image the user right-clicked/focused; else first image.
+      const active = images.find((img) => img.matches(':focus, :hover')) || images[0]
+      if (!active?.src) {
+        flashStatus('No images in this material.')
+        return
+      }
+      await copyImageFromSrc(active.src)
+      flashStatus(images.length > 1 ? 'Image copied (first/hovered).' : 'Image copied.')
+      return
+    }
+
+    flashStatus('No image to copy.')
+  } catch {
+    flashStatus('Could not copy image. Right-click the image → Copy image.')
+  }
+}
 </script>
 
 <template>
@@ -108,10 +219,34 @@ watch(
             <p class="eyebrow">On-screen view</p>
             <h2>{{ title }}</h2>
           </div>
-          <button type="button" class="close" @click="emit('close')">Close</button>
+          <div class="head-actions">
+            <button
+              v-if="canCopyText"
+              type="button"
+              class="action"
+              @click="copyText"
+            >
+              Copy text
+            </button>
+            <button
+              v-if="canCopyImage"
+              type="button"
+              class="action"
+              @click="copyImage"
+            >
+              Copy image
+            </button>
+            <button type="button" class="close" @click="emit('close')">Close</button>
+          </div>
         </header>
 
-        <div class="body">
+        <p v-if="copyStatus" class="copy-status" role="status">{{ copyStatus }}</p>
+        <p v-else class="copy-hint">
+          Select text to copy, or use the buttons. Images can be copied with
+          <strong>Copy image</strong> or right‑click → Copy image.
+        </p>
+
+        <div ref="contentEl" class="body selectable">
           <p v-if="loading || converting" class="state">Opening material…</p>
           <p v-else-if="error" class="state error">{{ error }}</p>
           <p v-else-if="convertError" class="state error">{{ convertError }}</p>
@@ -127,6 +262,7 @@ watch(
             class="image"
             :src="objectUrl"
             :alt="title"
+            draggable="true"
           />
           <pre v-else-if="kind === 'text'" class="text">{{ textBody }}</pre>
           <div v-else-if="kind === 'docx' && htmlBody" class="docx" v-html="htmlBody" />
@@ -181,6 +317,14 @@ watch(
   border-bottom: 1px solid color-mix(in srgb, var(--lh-ink) 10%, transparent);
 }
 
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .eyebrow {
   margin: 0 0 2px;
   font-size: 11px;
@@ -196,6 +340,7 @@ watch(
   line-height: 1.25;
 }
 
+.action,
 .close {
   height: 32px;
   padding: 0 12px;
@@ -209,11 +354,50 @@ watch(
   cursor: pointer;
 }
 
+.action {
+  background: color-mix(in srgb, var(--lh-accent) 18%, transparent);
+  color: var(--lh-accent);
+}
+
+.copy-hint,
+.copy-status {
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 12px;
+  line-height: 1.4;
+  border-bottom: 1px solid color-mix(in srgb, var(--lh-ink) 8%, transparent);
+}
+
+.copy-hint {
+  color: var(--lh-muted);
+}
+
+.copy-status {
+  color: var(--lh-accent);
+  background: color-mix(in srgb, var(--lh-accent) 10%, transparent);
+}
+
 .body {
   flex: 1;
   min-height: 0;
   overflow: auto;
   background: color-mix(in srgb, var(--lh-ink) 3%, transparent);
+}
+
+/* Allow selecting / copying text and images for discussion. */
+.selectable,
+.selectable :deep(*) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.selectable :deep(img),
+.image {
+  -webkit-user-select: all;
+  user-select: all;
+  -webkit-user-drag: auto;
+  user-drag: auto;
+  cursor: grab;
 }
 
 .state {
@@ -276,6 +460,12 @@ watch(
   padding-left: 1.4em;
 }
 
+.docx :deep(img) {
+  max-width: 100%;
+  height: auto;
+  margin: 0.6em 0;
+}
+
 .docx :deep(table) {
   width: 100%;
   border-collapse: collapse;
@@ -286,5 +476,12 @@ watch(
 .docx :deep(th) {
   border: 1px solid color-mix(in srgb, var(--lh-ink) 18%, transparent);
   padding: 6px 8px;
+}
+
+@media (max-width: 640px) {
+  .head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 </style>
