@@ -6,6 +6,7 @@ import { computed, onMounted, ref } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCoursesStore, type Course, type CourseMaterial } from '../stores/courses'
 import { formatDate } from '../utils/datetime'
+import MaterialPreviewModal from './MaterialPreviewModal.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -23,6 +24,12 @@ const selectedId = ref<number | null>(null)
 const pageByMaterial = ref<Record<number, number>>({})
 const busyId = ref<number | null>(null)
 
+const previewOpen = ref(false)
+const previewLoading = ref(false)
+const previewError = ref<string | null>(null)
+const previewMaterial = ref<CourseMaterial | null>(null)
+const previewBlob = ref<Blob | null>(null)
+
 const selected = computed(() => courses.value.find((c) => c.id === selectedId.value) ?? null)
 const materials = computed(() =>
   selectedId.value ? (materialsByCourse.value[selectedId.value] ?? []) : [],
@@ -30,8 +37,8 @@ const materials = computed(() =>
 
 const hint = computed(() =>
   props.mode === 'teacher'
-    ? 'Only courses assigned to you. Open materials for discussion — no upload, edit, or download.'
-    : 'Only courses you are enrolled in. View online anytime; each page has 3 download chances.',
+    ? 'Only courses assigned to you. View opens on screen for discussion — never downloads.'
+    : 'Only courses you are enrolled in. View on screen anytime; Download uses the 3/page quota.',
 )
 
 function fileSize(bytes: number) {
@@ -58,13 +65,27 @@ async function reloadPage(material: CourseMaterial) {
 
 async function viewMaterial(material: CourseMaterial) {
   busyId.value = material.id
+  previewMaterial.value = material
+  previewBlob.value = null
+  previewError.value = null
+  previewLoading.value = true
+  previewOpen.value = true
   try {
-    await coursesStore.previewMaterial(material)
+    previewBlob.value = await coursesStore.fetchPreviewBlob(material)
   } catch {
-    // store surfaces the error
+    previewError.value = coursesStore.error || 'Could not open that material'
   } finally {
+    previewLoading.value = false
     busyId.value = null
   }
+}
+
+function closePreview() {
+  previewOpen.value = false
+  previewBlob.value = null
+  previewMaterial.value = null
+  previewError.value = null
+  previewLoading.value = false
 }
 
 async function downloadMaterial(material: CourseMaterial) {
@@ -185,6 +206,15 @@ onMounted(async () => {
         </li>
       </ul>
     </div>
+
+    <MaterialPreviewModal
+      :open="previewOpen"
+      :material="previewMaterial"
+      :blob="previewBlob"
+      :loading="previewLoading"
+      :error="previewError"
+      @close="closePreview"
+    />
   </section>
 </template>
 

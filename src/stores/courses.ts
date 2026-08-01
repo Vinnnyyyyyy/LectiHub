@@ -293,19 +293,20 @@ export const useCoursesStore = defineStore('courses', {
       }
     },
 
-    /** In-browser view — does not consume student download quota. */
-    async previewMaterial(material: CourseMaterial) {
+    /**
+     * Fetch material bytes for the in-app viewer.
+     * Does not consume student download quota and never triggers a browser download.
+     */
+    async fetchPreviewBlob(material: CourseMaterial): Promise<Blob> {
       this.error = null
       try {
         const res = await api.get<Blob>(`/materials/${material.id}/preview`, {
           responseType: 'blob',
         })
         const mime = material.mimeType || res.data.type || 'application/octet-stream'
-        const blob = res.data.type ? res.data : new Blob([res.data], { type: mime })
-        const url = URL.createObjectURL(blob)
-        window.open(url, '_blank', 'noopener')
-        // Revoke later so the new tab can finish loading.
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+        return res.data.type && res.data.type !== 'application/octet-stream'
+          ? res.data
+          : new Blob([res.data], { type: mime })
       } catch (err) {
         this.error = messageFrom(err, 'Could not open that material')
         throw err
