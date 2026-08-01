@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
- * In-app material viewer. Keeps teachers/students on-screen instead of
- * triggering a browser download (especially for .docx).
+ * In-app material viewer (view-only).
+ * Text/images cannot be highlighted or copied — discussion viewing only.
  */
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { CourseMaterial } from '../stores/courses'
@@ -68,7 +68,7 @@ async function preparePreview() {
       htmlBody.value = await docxBlobToHtml(typed)
     } catch {
       convertError.value =
-        'Could not render this Word file in the browser. Ask admin to also upload a PDF for discussion.'
+        'Could not render this Word file. Run npm install in the project folder, restart the app, or ask admin to upload a PDF.'
     } finally {
       converting.value = false
     }
@@ -86,47 +86,83 @@ watch(
 onBeforeUnmount(revokeUrl)
 
 function onKey(event: KeyboardEvent) {
-  if (event.key === 'Escape') emit('close')
+  if (event.key === 'Escape') {
+    emit('close')
+    return
+  }
+  // Block common copy / select-all shortcuts while the viewer is open.
+  if ((event.ctrlKey || event.metaKey) && ['c', 'x', 'a', 'C', 'X', 'A'].includes(event.key)) {
+    event.preventDefault()
+  }
+}
+
+function blockClipboard(event: Event) {
+  event.preventDefault()
+}
+
+function blockContextMenu(event: Event) {
+  event.preventDefault()
 }
 
 watch(
   () => props.open,
   (isOpen) => {
-    if (isOpen) window.addEventListener('keydown', onKey)
-    else window.removeEventListener('keydown', onKey)
+    if (isOpen) {
+      window.addEventListener('keydown', onKey)
+    } else {
+      window.removeEventListener('keydown', onKey)
+    }
   },
 )
 </script>
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="preview-root" role="dialog" aria-modal="true" :aria-label="title">
+    <div
+      v-if="open"
+      class="preview-root"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="title"
+      @copy="blockClipboard"
+      @cut="blockClipboard"
+      @contextmenu="blockContextMenu"
+    >
       <button type="button" class="backdrop" aria-label="Close preview" @click="emit('close')" />
       <div class="panel">
         <header class="head">
           <div class="head-text">
-            <p class="eyebrow">On-screen view</p>
+            <p class="eyebrow">View only</p>
             <h2>{{ title }}</h2>
           </div>
           <button type="button" class="close" @click="emit('close')">Close</button>
         </header>
 
-        <div class="body">
+        <p class="view-hint">
+          Materials are for on-screen discussion. Highlighting, copying text, and copying images are
+          turned off.
+        </p>
+
+        <div class="body no-copy">
           <p v-if="loading || converting" class="state">Opening material…</p>
           <p v-else-if="error" class="state error">{{ error }}</p>
           <p v-else-if="convertError" class="state error">{{ convertError }}</p>
 
+          <!-- sandbox blocks script + download; PDF plugin may still allow some selection inside. -->
           <iframe
             v-else-if="kind === 'pdf' && objectUrl"
             class="frame"
             :src="objectUrl"
             title="PDF preview"
+            sandbox=""
           />
           <img
             v-else-if="kind === 'image' && objectUrl"
             class="image"
             :src="objectUrl"
             :alt="title"
+            draggable="false"
+            @dragstart="blockClipboard"
           />
           <pre v-else-if="kind === 'text'" class="text">{{ textBody }}</pre>
           <div v-else-if="kind === 'docx' && htmlBody" class="docx" v-html="htmlBody" />
@@ -209,11 +245,35 @@ watch(
   cursor: pointer;
 }
 
+.view-hint {
+  margin: 0;
+  padding: 8px 16px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--lh-muted);
+  border-bottom: 1px solid color-mix(in srgb, var(--lh-ink) 8%, transparent);
+}
+
 .body {
   flex: 1;
   min-height: 0;
   overflow: auto;
   background: color-mix(in srgb, var(--lh-ink) 3%, transparent);
+}
+
+/* Feature: no highlight / no copy of material content. */
+.no-copy,
+.no-copy :deep(*) {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none;
+}
+
+.no-copy :deep(img),
+.image {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
 }
 
 .state {
@@ -222,6 +282,8 @@ watch(
   color: var(--lh-muted);
   font-size: 13.5px;
   line-height: 1.45;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .state.error {
@@ -234,13 +296,8 @@ watch(
   height: 100%;
   border: 0;
   background: #111;
-}
-
-.image {
-  display: block;
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 16px;
+  /* Reduce pointer interaction with embedded PDF chrome where possible. */
+  pointer-events: none;
 }
 
 .text {
@@ -274,6 +331,12 @@ watch(
 .docx :deep(ol) {
   margin: 0 0 0.85em;
   padding-left: 1.4em;
+}
+
+.docx :deep(img) {
+  max-width: 100%;
+  height: auto;
+  margin: 0.6em 0;
 }
 
 .docx :deep(table) {

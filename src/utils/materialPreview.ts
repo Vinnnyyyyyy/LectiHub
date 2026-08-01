@@ -2,6 +2,30 @@
 
 export type PreviewKind = 'pdf' | 'image' | 'text' | 'docx' | 'unsupported'
 
+type MammothModule = {
+  convertToHtml: (
+    input: { arrayBuffer: ArrayBuffer },
+    options?: {
+      convertImage?: (element: {
+        read: (encoding: string) => Promise<string>
+        contentType: string
+      }) => Promise<{ src: string }>
+    },
+  ) => Promise<{ value: string }>
+  images?: {
+    imgElement: (
+      fn: (element: {
+        read: (encoding: string) => Promise<string>
+        contentType: string
+      }) => Promise<{ src: string }>,
+    ) => (element: {
+      read: (encoding: string) => Promise<string>
+      contentType: string
+    }) => Promise<{ src: string }>
+  }
+  default?: MammothModule
+}
+
 const IMAGE_PREFIX = 'image/'
 const TEXT_PREFIXES = ['text/', 'application/json', 'application/xml']
 
@@ -35,10 +59,36 @@ export function previewKind(mimeType: string, fileName: string): PreviewKind {
   return 'unsupported'
 }
 
-/** Convert a .docx blob to HTML for on-screen reading (no download). */
+async function loadMammoth(): Promise<MammothModule> {
+  const localId = 'mammoth'
+  try {
+    return (await import(/* @vite-ignore */ localId)) as MammothModule
+  } catch {
+    const cdnId = 'https://esm.sh/mammoth@1.9.0'
+    return (await import(/* @vite-ignore */ cdnId)) as MammothModule
+  }
+}
+
+/** Convert a .docx blob to HTML for on-screen reading (view only — no copy UI). */
 export async function docxBlobToHtml(blob: Blob): Promise<string> {
-  const mammoth = await import('mammoth')
+  const mammothMod = await loadMammoth()
+  const mammoth = mammothMod.default?.convertToHtml ? mammothMod.default : mammothMod
+  const convert = mammoth.convertToHtml
+  if (!convert) {
+    throw new Error('Word preview library is unavailable. Run npm install, then restart the app.')
+  }
+
   const buffer = await blob.arrayBuffer()
-  const result = await mammoth.convertToHtml({ arrayBuffer: buffer })
+  const imagesApi = mammoth.images ?? mammothMod.images
+  const options = imagesApi?.imgElement
+    ? {
+        convertImage: imagesApi.imgElement(async (image) => {
+          const base64 = await image.read('base64')
+          return { src: `data:${image.contentType};base64,${base64}` }
+        }),
+      }
+    : undefined
+
+  const result = await convert({ arrayBuffer: buffer }, options)
   return result.value || '<p><em>No readable text in this document.</em></p>'
 }
