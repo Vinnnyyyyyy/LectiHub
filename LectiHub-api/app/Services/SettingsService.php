@@ -58,6 +58,8 @@ class SettingsService
         'meetings.enabled_providers',
         'center.name',
         'center.timezone',
+        'center.term_start',
+        'center.term_end',
     ];
 
     /** Everything, defaults overlaid with whatever has been saved. */

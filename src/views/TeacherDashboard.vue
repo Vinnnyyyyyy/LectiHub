@@ -8,6 +8,7 @@
       :active-id="activeSection"
       :initials="initials"
       :display-name="displayName"
+      :brand-name="centreName"
       role-label="Teacher"
       @select="setSection($event as TeacherSection)"
       @logout="handleLogout"
@@ -220,6 +221,7 @@ import {
 } from '../stores/lessonReports'
 import { useNotificationsStore } from '../stores/notifications'
 import { useCalendarStore } from '../stores/calendar'
+import { useSettingsStore } from '../stores/settings'
 import UpcomingClassesPanel from '../components/UpcomingClassesPanel.vue'
 import ConductLessonPanel from '../components/ConductLessonPanel.vue'
 import LessonReportFormPanel from '../components/LessonReportFormPanel.vue'
@@ -430,6 +432,11 @@ async function handleLogout() {
   await router.push('/login')
 }
 
+const settingsStore = useSettingsStore()
+const centreName = computed(
+  () => String(settingsStore.settings['center.name'] || 'LectiHub'),
+)
+
 onMounted(async () => {
   await Promise.allSettled([
     classesStore.fetchMine(),
@@ -437,6 +444,7 @@ onMounted(async () => {
     lessonReportsStore.fetchMine(),
     notificationsStore.fetchMine(),
     calendarStore.fetchMine(),
+    settingsStore.fetchPublic(),
   ])
 })
 </script>

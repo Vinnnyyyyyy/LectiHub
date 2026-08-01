@@ -49,7 +49,8 @@ class ScheduleRequestController extends Controller
         /** @var User $authUser */
         $authUser  = $request->user();
         $earliest  = $this->availability->earliestBookableDate();
-        $leadDays  = $this->availability->bookingLeadDays();
+        $latest    = $this->availability->latestBookableDate();
+        $leadHours = $this->availability->minNoticeHours();
 
         $normalizedSlots = [];
         $seen            = [];
@@ -66,7 +67,12 @@ class ScheduleRequestController extends Controller
             }
             if ($preferredDate < $earliest) {
                 return response()->json([
-                    'message' => "Booked dates must be at least {$leadDays} days from today (earliest: {$earliest}).",
+                    'message' => "Booked dates must be at least {$leadHours} hours from now (earliest: {$earliest}).",
+                ], 400);
+            }
+            if ($latest !== null && $preferredDate > $latest) {
+                return response()->json([
+                    'message' => "Booked dates must be on or before the term end ({$latest}).",
                 ], 400);
             }
 
@@ -132,24 +138,53 @@ class ScheduleRequestController extends Controller
                     $createdIds[] = $scheduleRequest->id;
                 }
 
-                $this->booking->notifyAdminsAboutRequests($createdIds, $studentName, count($createdIds));
+                // Skip admin inbox noise when every request can be auto-approved.
+                if (!$this->booking->shouldAutoApproveSingleMatch()) {
+                    $this->booking->notifyAdminsAboutRequests($createdIds, $studentName, count($createdIds));
+                }
 
                 return $createdIds;
             });
 
+            $autoApproved = 0;
+            if ($this->booking->shouldAutoApproveSingleMatch()) {
+                foreach ($requestIds as $reqId) {
+                    if ($this->tryAutoApproveRequest($reqId, $authUser)) {
+                        $autoApproved++;
+                    }
+                }
+                // Any leftovers still need admin attention.
+                $pendingIds = array_values(array_filter(
+                    $requestIds,
+                    fn (int $id) => ScheduleRequest::where('id', $id)->where('status', 'pending')->exists()
+                ));
+                if ($pendingIds) {
+                    $this->booking->notifyAdminsAboutRequests($pendingIds, $studentName, count($pendingIds));
+                }
+            }
+
             $mappedRequests = array_map(function (int $reqId) use ($student) {
                 $req   = ScheduleRequest::find($reqId);
                 $slots = $this->booking->getSlotsForRequest($reqId);
-                return $this->booking->mapRequestRow($req, $slots, $student);
+                $teacher = $req?->assigned_teacher_id ? User::find($req->assigned_teacher_id) : null;
+                return $this->booking->mapRequestRow($req, $slots, $student, $teacher);
             }, $requestIds);
 
             $count   = count($mappedRequests);
-            $message = $count === 1
-                ? 'Class booking submitted. An admin will assign one teacher to the full session.'
-                : "{$count} class bookings submitted (non-consecutive times become separate classes). An admin will assign a teacher to each.";
+            if ($autoApproved === $count && $count > 0) {
+                $message = $count === 1
+                    ? 'Class booking confirmed — a matching teacher was assigned automatically.'
+                    : "{$count} class bookings confirmed — matching teachers were assigned automatically.";
+            } elseif ($autoApproved > 0) {
+                $message = "{$autoApproved} of {$count} bookings auto-assigned; the rest await admin review.";
+            } else {
+                $message = $count === 1
+                    ? 'Class booking submitted. An admin will assign one teacher to the full session.'
+                    : "{$count} class bookings submitted (non-consecutive times become separate classes). An admin will assign a teacher to each.";
+            }
 
             return response()->json(array_merge(
-                ['message' => $message, 'count' => $count, 'requests' => $mappedRequests],
+                ['message' => $message, 'count' => $count, 'autoApproved' => $autoApproved, 'requests' => $mappedRequests],
                 $mappedRequests[0]
             ), 201);
         } catch (\Throwable $e) {
@@ -394,48 +429,64 @@ class ScheduleRequestController extends Controller
 
                 $classId = $cls->id;
 
-                $studentMessage = implode("\n", [
-                    "Assigned teacher: {$teacherName}",
-                    "Schedule: {$classDate} {$startTime} – {$endTime} ({$durationMinutes} minutes)",
-                    "Meeting information: {$meetingInfo}",
-                    "Meeting link: {$meetingLink}",
-                    'Reminders: you will also receive notifications 24 hours and 1 hour before class begins.',
-                ]);
-
-                $this->notifications->createNotification(
-                    $scheduleRequest->student_id,
-                    'schedule_confirmed',
-                    'Your class schedule is confirmed',
-                    $studentMessage,
-                    $requestId,
-                    $classId,
-                    array_merge($scheduleDetails, ['remindersScheduled' => ['24h', '1h']])
-                );
-
-                $this->booking->scheduleStudentReminders(
+                $reminderKeys = $this->booking->scheduleStudentReminders(
                     $scheduleRequest->student_id,
                     $requestId,
                     $classId,
                     $scheduleDetails
                 );
-
-                $teacherMessage = implode("\n", [
-                    "Assigned student: {$studentName}",
-                    "Date and time: {$classDate} {$startTime} – {$endTime}",
-                    "Class duration: {$durationMinutes} minutes",
-                    "Meeting details: {$meetingInfo}",
-                    "Meeting link: {$meetingLink}",
-                ]);
-
-                $this->notifications->createNotification(
-                    $teacherId,
-                    'schedule_confirmed',
-                    'New class assignment confirmed',
-                    $teacherMessage,
-                    $requestId,
-                    $classId,
-                    $scheduleDetails
+                $reminderLabels = array_map(
+                    fn ($w) => $w['label'],
+                    array_filter(
+                        $this->booking->reminderWindows(),
+                        fn ($w) => in_array($w['key'], $reminderKeys, true)
+                    )
                 );
+                $reminderCopy = $reminderLabels
+                    ? 'Reminders: you will also receive notifications '
+                        . implode(' and ', $reminderLabels)
+                        . ' before class begins.'
+                    : 'Reminders: none are scheduled for this class.';
+
+                if ($this->booking->shouldNotifyOnDecision()) {
+                    $studentMessage = implode("\n", [
+                        "Assigned teacher: {$teacherName}",
+                        "Schedule: {$classDate} {$startTime} – {$endTime} ({$durationMinutes} minutes)",
+                        "Meeting information: {$meetingInfo}",
+                        "Meeting link: {$meetingLink}",
+                        $reminderCopy,
+                    ]);
+
+                    $this->notifications->createNotification(
+                        $scheduleRequest->student_id,
+                        'schedule_confirmed',
+                        'Your class schedule is confirmed',
+                        $studentMessage,
+                        $requestId,
+                        $classId,
+                        array_merge($scheduleDetails, ['remindersScheduled' => $reminderKeys])
+                    );
+                }
+
+                if ($this->booking->shouldNotifyTeacherOnAssignment()) {
+                    $teacherMessage = implode("\n", [
+                        "Assigned student: {$studentName}",
+                        "Date and time: {$classDate} {$startTime} – {$endTime}",
+                        "Class duration: {$durationMinutes} minutes",
+                        "Meeting details: {$meetingInfo}",
+                        "Meeting link: {$meetingLink}",
+                    ]);
+
+                    $this->notifications->createNotification(
+                        $teacherId,
+                        'schedule_confirmed',
+                        'New class assignment confirmed',
+                        $teacherMessage,
+                        $requestId,
+                        $classId,
+                        $scheduleDetails
+                    );
+                }
 
                 return $cls;
             });
@@ -476,6 +527,53 @@ class ScheduleRequestController extends Controller
     // -----------------------------------------------------------------------
     // Internal helpers
     // -----------------------------------------------------------------------
+
+    /**
+     * When auto-approve is on and exactly one teacher can take the full block,
+     * assign them using the same path as the admin assign endpoint.
+     */
+    private function tryAutoApproveRequest(int $requestId, User $actor): bool
+    {
+        $scheduleRequest = ScheduleRequest::where('id', $requestId)
+            ->where('status', 'pending')
+            ->first();
+        if (!$scheduleRequest) {
+            return false;
+        }
+
+        $slots = $this->booking->getSlotsForRequest($requestId);
+        if (empty($slots)) {
+            return false;
+        }
+
+        $camelSlots = array_map(fn ($s) => [
+            'id'            => $s['id'],
+            'preferredDate' => $s['preferred_date'],
+            'timeSlot'      => $s['time_slot'],
+        ], $slots);
+
+        $availability = $this->booking->buildAvailability($camelSlots, $scheduleRequest->remarks);
+        $fully = $availability['fullyAvailableTeachers'] ?? [];
+        if (count($fully) !== 1) {
+            return false;
+        }
+
+        $teacherId = (int) ($fully[0]['id'] ?? 0);
+        if ($teacherId < 1) {
+            return false;
+        }
+
+        $synthetic = Request::create(
+            "/api/admin/schedule-requests/{$requestId}/assign",
+            'POST',
+            ['teacherId' => $teacherId]
+        );
+        $synthetic->setUserResolver(fn () => $actor);
+
+        $response = $this->assignTeacherToRequest($synthetic, $requestId);
+
+        return $response->getStatusCode() >= 200 && $response->getStatusCode() < 300;
+    }
 
     private function resolveConfirmedSchedule(int $requestId): ?array
     {

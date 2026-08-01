@@ -8,7 +8,9 @@ use App\Models\LessonReport;
 use App\Models\StudentFeedback;
 use App\Models\User;
 use App\Services\ClassLifecycleService;
+use App\Services\NotificationService;
 use App\Services\ScheduleMapper;
+use App\Services\SettingsService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +20,8 @@ class ClassController extends Controller
     public function __construct(
         private readonly ScheduleMapper $mapper,
         private readonly ClassLifecycleService $lifecycle,
+        private readonly NotificationService $notifications,
+        private readonly SettingsService $settings,
     ) {}
 
     // -------------------------------------------------------------------------
@@ -299,9 +303,11 @@ class ClassController extends Controller
             : null;
 
         if ($reqProvider !== null) {
-            if (!in_array($reqProvider, ScheduleMapper::VIDEO_PROVIDERS, true)) {
+            if (!$this->mapper->isEnabledMeetingProvider($reqProvider)) {
+                $allowed = implode(', ', $this->mapper->enabledMeetingProviders());
+
                 return response()->json([
-                    'message' => 'meetingProvider must be jitsi, google_meet, or zoom.',
+                    'message' => "meetingProvider must be one of: {$allowed}.",
                 ], 400);
             }
             $meeting     = $this->mapper->buildMeetingDetails(
@@ -395,9 +401,11 @@ class ClassController extends Controller
         }
 
         $raw = strtolower(trim((string) $request->input('meetingProvider', '')));
-        if (!in_array($raw, ScheduleMapper::VIDEO_PROVIDERS, true)) {
+        if (!$this->mapper->isEnabledMeetingProvider($raw)) {
+            $allowed = implode(', ', $this->mapper->enabledMeetingProviders());
+
             return response()->json([
-                'message' => 'meetingProvider must be jitsi, google_meet, or zoom.',
+                'message' => "meetingProvider must be one of: {$allowed}.",
             ], 400);
         }
 
@@ -473,8 +481,33 @@ class ClassController extends Controller
             ], 400);
         }
 
+        $previousAttendance = (string) ($class->attendance_status ?? 'not_recorded');
         $class->update($updates);
         $class->refresh();
+
+        $newAttendance = (string) ($class->attendance_status ?? 'not_recorded');
+        if (
+            $newAttendance === 'absent'
+            && $previousAttendance !== 'absent'
+            && (bool) $this->settings->get('reminders.alert_admin_on_absence', true)
+        ) {
+            $class->loadMissing(['teacher', 'student']);
+            $teacherName = $class->teacher?->full_name ?: $class->teacher?->username ?: 'A teacher';
+            $studentName = $class->student?->full_name ?: $class->student?->username ?: 'A student';
+            $adminIds = User::where('role', 'admin')->pluck('id')->all();
+            $this->notifications->notifyMany(
+                userIds:        $adminIds,
+                type:           'attendance_alert',
+                title:          'Student marked absent',
+                message:        "{$teacherName} marked {$studentName} absent.",
+                relatedClassId: (int) $class->id,
+                details:        [
+                    'classId'          => $class->id,
+                    'attendanceStatus' => 'absent',
+                    'studentId'        => $class->student_id,
+                ],
+            );
+        }
 
         return response()->json([
             'message' => 'Lesson conduct details saved.',

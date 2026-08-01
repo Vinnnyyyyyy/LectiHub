@@ -24,6 +24,7 @@ class ScheduleBookingService
         protected AvailabilityService $availability,
         protected ConflictService    $conflict,
         protected NotificationService $notifications,
+        protected SettingsService    $settings,
     ) {}
 
     // -----------------------------------------------------------------------
@@ -417,34 +418,99 @@ class ScheduleBookingService
     }
 
     /**
-     * Queue 24-hour and 1-hour in-app reminders for a student.
+     * Reminder windows from centre settings (hours before class).
+     *
+     * @return list<array{key: string, seconds: int, label: string, hours: float}>
+     */
+    public function reminderWindows(): array
+    {
+        $configured = $this->settings->get('reminders.class_reminder_hours', [24, 1]);
+        if (! is_array($configured) || $configured === []) {
+            $configured = [24, 1];
+        }
+
+        $windows = [];
+        foreach ($configured as $hours) {
+            if (! is_numeric($hours)) {
+                continue;
+            }
+            $hours = (float) $hours;
+            if ($hours <= 0) {
+                continue;
+            }
+            $seconds = (int) round($hours * 3600);
+            $windows[] = [
+                'key'     => $this->reminderWindowKey($hours),
+                'seconds' => $seconds,
+                'label'   => $this->reminderWindowLabel($hours),
+                'hours'   => $hours,
+            ];
+        }
+
+        usort($windows, fn ($a, $b) => $b['seconds'] <=> $a['seconds']);
+
+        return $windows !== [] ? $windows : [
+            ['key' => '24h', 'seconds' => 86400, 'label' => '24 hours', 'hours' => 24.0],
+            ['key' => '1h', 'seconds' => 3600, 'label' => '1 hour', 'hours' => 1.0],
+        ];
+    }
+
+    private function reminderWindowKey(float $hours): string
+    {
+        if ($hours >= 1 && fmod($hours, 1.0) === 0.0) {
+            return ((int) $hours) . 'h';
+        }
+        if (abs($hours - 0.25) < 0.001) {
+            return '15m';
+        }
+
+        return rtrim(rtrim(number_format($hours, 2, '.', ''), '0'), '.') . 'h';
+    }
+
+    private function reminderWindowLabel(float $hours): string
+    {
+        if (abs($hours - 0.25) < 0.001) {
+            return '15 minutes';
+        }
+        if ($hours >= 1 && fmod($hours, 1.0) === 0.0) {
+            $n = (int) $hours;
+
+            return $n === 1 ? '1 hour' : "{$n} hours";
+        }
+
+        $mins = (int) round($hours * 60);
+
+        return "{$mins} minutes";
+    }
+
+    /**
+     * Queue in-app reminders for a student using centre reminder settings.
      *
      * @param  array{teacherName: string, classDate: string, startTime: string, endTime: string, durationMinutes: int, meetingInfo: string, meetingLink: string}  $scheduleDetails
+     * @return list<string> reminder window keys that were queued
      */
     public function scheduleStudentReminders(
         int   $studentId,
         int   $requestId,
         int   $classId,
         array $scheduleDetails
-    ): void {
+    ): array {
         $startTime = $scheduleDetails['startTime'] ?? '09:00';
         $classDate = $scheduleDetails['classDate'] ?? '';
+        $tz = $this->availability->centreTimezone();
 
         try {
-            $classStart = Carbon::createFromFormat('Y-m-d H:i', "{$classDate} {$startTime}");
+            $classStart = Carbon::createFromFormat('Y-m-d H:i', "{$classDate} {$startTime}", $tz);
         } catch (\Throwable) {
-            return;
+            return [];
         }
 
-        $now     = Carbon::now();
-        $windows = [
-            ['key' => '24h', 'seconds' => 86400, 'label' => '24 hours'],
-            ['key' => '1h',  'seconds' => 3600,  'label' => '1 hour'],
-        ];
+        $now = Carbon::now($tz);
+        $queued = [];
 
-        foreach ($windows as $window) {
+        foreach ($this->reminderWindows() as $window) {
             $deliverAtDate = $classStart->copy()->subSeconds($window['seconds']);
-            $deliverAt     = $deliverAtDate->lte($now) ? null : $deliverAtDate->format('Y-m-d H:i:s');
+            $deliverAt     = $deliverAtDate->lte($now) ? null : $deliverAtDate->timezone('UTC')->format('Y-m-d H:i:s');
 
             $reminderMessage = implode("\n", [
                 "Reminder: your class begins in {$window['label']}.",
@@ -467,7 +533,25 @@ class ScheduleBookingService
                 ]),
                 $deliverAt
             );
+            $queued[] = $window['key'];
         }
+
+        return $queued;
+    }
+
+    public function shouldNotifyOnDecision(): bool
+    {
+        return (bool) $this->settings->get('reminders.notify_on_decision', true);
+    }
+
+    public function shouldNotifyTeacherOnAssignment(): bool
+    {
+        return (bool) $this->settings->get('reminders.notify_teacher_on_assignment', true);
+    }
+
+    public function shouldAutoApproveSingleMatch(): bool
+    {
+        return (bool) $this->settings->get('scheduling.auto_approve_single_match', false);
     }
 
     // -----------------------------------------------------------------------

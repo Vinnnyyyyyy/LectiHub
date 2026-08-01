@@ -42,12 +42,12 @@
           <div class="provider-row">
             <select
               :id="`provider-${item.id}`"
-              :value="draftProviders[item.id] ?? item.meetingProvider ?? 'jitsi'"
+              :value="draftProviders[item.id] ?? item.meetingProvider ?? defaultProvider"
               :disabled="updatingProviderId === item.id || joiningId === item.id"
               @change="onProviderChange(item, ($event.target as HTMLSelectElement).value)"
             >
               <option
-                v-for="option in VIDEO_PROVIDER_OPTIONS"
+                v-for="option in providerOptions"
                 :key="option.value"
                 :value="option.value"
               >
@@ -122,9 +122,10 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, watch } from 'vue'
+import { computed, onMounted, reactive, watch } from 'vue'
 import type { ConfirmedSchedule } from '../stores/classes'
-import { VIDEO_PROVIDER_OPTIONS } from '../constants/videoProviders'
+import { useSettingsStore } from '../stores/settings'
+import { enabledProviderOptions, providerLabel } from '../constants/videoProviders'
 
 const props = defineProps<{
   title: string
@@ -138,6 +139,23 @@ const props = defineProps<{
   joiningId?: number | null
   updatingProviderId?: number | null
 }>()
+
+const settingsStore = useSettingsStore()
+const providerOptions = computed(() =>
+  enabledProviderOptions(settingsStore.settings['meetings.enabled_providers']),
+)
+const defaultProvider = computed(() => {
+  const value = String(settingsStore.settings['meetings.default_provider'] || '')
+  return providerOptions.value.some((option) => option.value === value)
+    ? value
+    : providerOptions.value[0]?.value || 'jitsi'
+})
+
+onMounted(() => {
+  if (!Object.keys(settingsStore.settings).length) {
+    void settingsStore.fetchPublic().catch(() => undefined)
+  }
+})
 
 const emit = defineEmits<{
   join: [item: ConfirmedSchedule, meetingProvider?: string]
@@ -192,10 +210,7 @@ function formatStatus(status: string) {
 }
 
 function formatProvider(provider: string) {
-  if (provider === 'google_meet') return 'Google Meet'
-  if (provider === 'zoom') return 'Zoom'
-  if (provider === 'jitsi') return 'Jitsi'
-  return provider
+  return providerLabel(provider)
 }
 </script>
 

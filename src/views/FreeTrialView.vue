@@ -91,7 +91,7 @@
       <select id="trial-platform" v-model="videoPlatform" required>
         <option disabled value="">Select a platform</option>
         <option
-          v-for="option in TRIAL_VIDEO_PLATFORM_OPTIONS"
+          v-for="option in videoPlatformOptions"
           :key="option.value"
           :value="option.value"
         >
@@ -154,6 +154,7 @@ const submittedName = ref('')
 const submittedSlot = ref('')
 const durationMinutes = ref(30)
 const timeSlots = ref<string[]>([...TRIAL_TIME_SLOTS])
+const videoPlatformOptions = ref([...TRIAL_VIDEO_PLATFORM_OPTIONS])
 
 const minDate = computed(() => {
   const today = new Date()
@@ -168,6 +169,7 @@ onMounted(async () => {
     const res = await api.get<{
       timeSlots?: string[]
       durationMinutes?: number
+      videoPlatforms?: { value: string; label: string }[]
     }>('/trial-requests/config')
     if (res.data.timeSlots?.length) {
       timeSlots.value = res.data.timeSlots
@@ -176,6 +178,12 @@ onMounted(async () => {
     }
     if (res.data.durationMinutes === 30 || res.data.durationMinutes === 60) {
       durationMinutes.value = res.data.durationMinutes
+    }
+    if (res.data.videoPlatforms?.length) {
+      videoPlatformOptions.value = res.data.videoPlatforms.map((item) => ({
+        value: item.value as TrialVideoPlatform,
+        label: item.label,
+      }))
     }
   } catch {
     // Keep built-in fallbacks if config cannot load.
