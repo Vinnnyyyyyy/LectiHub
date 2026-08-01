@@ -10,16 +10,23 @@ const calendarStore = useCalendarStore()
 const availabilityStore = useAvailabilityStore()
 
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
-const { openDates } = storeToRefs(availabilityStore)
+const { openDates, openByDate, timeSlots } = storeToRefs(availabilityStore)
 
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 const openHighlightDates = computed(() => openDates.value)
+const openSlotsByDate = computed(() => {
+  const map: Record<string, string[]> = {}
+  for (const [date, slots] of Object.entries(openByDate.value)) {
+    map[date] = slots.map((slot) => slot.timeSlot)
+  }
+  return map
+})
 
 usePageEyebrow(() => {
   const count = calendarUpcoming.value.length
   return count
     ? `${count} upcoming class${count === 1 ? '' : 'es'}`
-    : 'Month and year view of your classes'
+    : 'Day, month, and year view of your classes'
 })
 
 onMounted(async () => {
@@ -30,11 +37,13 @@ onMounted(async () => {
 <template>
   <CalendarPanel
     title="My calendar"
-    subtitle="Gold days mark scheduled classes or open teacher availability."
+    subtitle="Use day view to see vacant open slots vs your booked classes."
     empty-text="Nothing on this day yet."
     :events="calendarUpcoming"
     :loading="loadingCalendar"
     :highlight-dates="openHighlightDates"
     highlight-label="Teachers available"
+    :time-slots="timeSlots"
+    :open-slots-by-date="openSlotsByDate"
   />
 </template>

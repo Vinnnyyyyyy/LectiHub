@@ -10,20 +10,35 @@
       <p class="cal-title">{{ headerLabel }}</p>
 
       <div class="mode-toggle" role="group" aria-label="Calendar view">
-        <button
-          type="button"
-          :class="{ active: mode === 'month' }"
-          @click="mode = 'month'"
-        >
+        <button type="button" :class="{ active: mode === 'day' }" @click="setMode('day')">
+          day
+        </button>
+        <button type="button" :class="{ active: mode === 'month' }" @click="setMode('month')">
           month
         </button>
-        <button type="button" :class="{ active: mode === 'year' }" @click="mode = 'year'">
+        <button type="button" :class="{ active: mode === 'year' }" @click="setMode('year')">
           year
         </button>
       </div>
     </div>
 
-    <div v-if="mode === 'month'" class="month-view">
+    <div v-if="mode === 'day'" class="day-view">
+      <p class="day-hint">Vacant slots are open; gold marks booked time.</p>
+      <ul v-if="daySlots.length" class="slot-timeline" aria-label="Day timeline">
+        <li
+          v-for="slot in daySlots"
+          :key="slot.timeSlot"
+          class="slot-row"
+          :class="slot.status"
+        >
+          <span class="slot-time">{{ formatSlot(slot.timeSlot) }}</span>
+          <span class="slot-status">{{ slotLabel(slot) }}</span>
+        </li>
+      </ul>
+      <p v-else class="day-empty">No centre hours configured for this day.</p>
+    </div>
+
+    <div v-else-if="mode === 'month'" class="month-view">
       <div class="weekday-row">
         <span v-for="label in WEEKDAY_LABELS" :key="label">{{ label }}</span>
       </div>
@@ -85,6 +100,14 @@
 import { computed, ref, watch } from 'vue'
 import { WEEKDAY_LABELS } from '../constants/timeSlots'
 
+export type CalendarMode = 'day' | 'month' | 'year'
+
+export interface DaySlotRow {
+  timeSlot: string
+  status: 'vacant' | 'booked' | 'closed'
+  label?: string
+}
+
 const props = withDefaults(
   defineProps<{
     selectedDate?: string | null
@@ -93,6 +116,8 @@ const props = withDefaults(
     eventLabelsByDate?: Record<string, string[]>
     minDate?: string | null
     onlyHighlightSelectable?: boolean
+    /** Timeline rows for day view (vacant / booked / closed). */
+    daySlots?: DaySlotRow[]
   }>(),
   {
     selectedDate: null,
@@ -101,6 +126,7 @@ const props = withDefaults(
     eventLabelsByDate: () => ({}),
     minDate: null,
     onlyHighlightSelectable: false,
+    daySlots: () => [],
   },
 )
 
@@ -113,7 +139,7 @@ const initial = props.selectedDate || todayIso
 const start = new Date(`${initial}T00:00:00`)
 const cursorYear = ref(start.getFullYear())
 const cursorMonth = ref(start.getMonth())
-const mode = ref<'month' | 'year'>('month')
+const mode = ref<CalendarMode>('month')
 
 const eventSet = computed(() => new Set(props.eventDates))
 const highlightSet = computed(() => new Set(props.highlightDates))
@@ -131,6 +157,16 @@ watch(
 
 const headerLabel = computed(() => {
   if (mode.value === 'year') return String(cursorYear.value)
+  if (mode.value === 'day') {
+    const iso = props.selectedDate || todayIso
+    const date = new Date(`${iso}T00:00:00`)
+    return date.toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
   const date = new Date(cursorYear.value, cursorMonth.value, 1)
   return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 })
@@ -141,10 +177,34 @@ function toIso(year: number, month: number, day: number) {
   return `${year}-${m}-${d}`
 }
 
+function shiftIso(iso: string, days: number) {
+  const date = new Date(`${iso}T00:00:00`)
+  date.setDate(date.getDate() + days)
+  return toIso(date.getFullYear(), date.getMonth(), date.getDate())
+}
+
 function isDisabled(iso: string, hasHighlight: boolean) {
   if (props.minDate && iso < props.minDate) return true
   if (props.onlyHighlightSelectable && !hasHighlight) return true
   return false
+}
+
+function formatSlot(slot: string) {
+  return slot.replace('-', ' – ')
+}
+
+function slotLabel(slot: DaySlotRow) {
+  if (slot.label) return slot.label
+  if (slot.status === 'booked') return 'Booked'
+  if (slot.status === 'vacant') return 'Vacant'
+  return 'Closed'
+}
+
+function setMode(next: CalendarMode) {
+  mode.value = next
+  if (next === 'day' && !props.selectedDate) {
+    emit('select-date', todayIso)
+  }
 }
 
 const monthCells = computed(() => {
@@ -193,8 +253,6 @@ const monthCells = computed(() => {
     }
 
     const iso = toIso(cellYear, cellMonth, day)
-    // Only mark gold highlights/events for days in the viewed month
-    // so adjacent-month spillover cells stay visually separate.
     const hasEvent = inMonth && eventSet.value.has(iso)
     const hasHighlight = inMonth && highlightSet.value.has(iso)
     cells.push({
@@ -250,6 +308,11 @@ function step(delta: number) {
     cursorYear.value += delta
     return
   }
+  if (mode.value === 'day') {
+    const current = props.selectedDate || todayIso
+    emit('select-date', shiftIso(current, delta))
+    return
+  }
   const next = new Date(cursorYear.value, cursorMonth.value + delta, 1)
   cursorYear.value = next.getFullYear()
   cursorMonth.value = next.getMonth()
@@ -259,7 +322,7 @@ function goToday() {
   const now = new Date()
   cursorYear.value = now.getFullYear()
   cursorMonth.value = now.getMonth()
-  mode.value = 'month'
+  if (mode.value === 'year') mode.value = 'month'
   emit('select-date', todayIso)
 }
 
@@ -325,6 +388,76 @@ function onSelect(cell: { iso: string; disabled: boolean }) {
   font-weight: 600;
   color: var(--lh-warm);
   margin: 0;
+}
+
+.day-view {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.day-hint,
+.day-empty {
+  font-family: 'Manrope', sans-serif;
+  margin: 0;
+  color: var(--lh-muted);
+  font-size: 0.86rem;
+}
+
+.day-empty {
+  font-style: italic;
+  color: var(--lh-faint);
+}
+
+.slot-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid var(--lh-line);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: var(--lh-line);
+}
+
+.slot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  background: var(--lh-bg-elevated);
+  font-family: 'Manrope', sans-serif;
+}
+
+.slot-row.vacant {
+  background: rgba(126, 184, 158, 0.12);
+}
+
+.slot-row.booked {
+  background: rgba(196, 165, 116, 0.18);
+  color: var(--lh-warm);
+}
+
+.slot-row.closed {
+  background: #14181e;
+  color: var(--lh-faint);
+}
+
+.slot-time {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.slot-status {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.slot-row.vacant .slot-status {
+  color: var(--lh-accent);
 }
 
 .weekday-row,

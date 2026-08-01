@@ -88,17 +88,19 @@
         <div class="dash-section-label">
           <div>
             <h2 id="student-calendar">Calendar</h2>
-            <p>Month and year view of your classes, plus days teachers still have open.</p>
+            <p>Day, month, and year view — day shows vacant open teacher slots.</p>
           </div>
         </div>
         <CalendarPanel
           title="My calendar"
-          subtitle="Gold days mark scheduled classes or open teacher availability."
+          subtitle="Use day view to see vacant open slots vs your booked classes."
           empty-text="Nothing on this day yet."
           :events="calendarUpcoming"
           :loading="loadingCalendar"
           :highlight-dates="openHighlightDates"
           highlight-label="Teachers available"
+          :time-slots="availabilityTimeSlots"
+          :open-slots-by-date="openSlotsByDate"
         />
       </section>
 
@@ -213,7 +215,7 @@ const navItems: {
   {
     id: 'calendar',
     label: 'Calendar',
-    intro: 'Month and year view of your classes, plus days teachers still have open.',
+    intro: 'Day, month, and year view — day shows vacant open teacher slots.',
     icon: 'grid',
   },
   {
@@ -269,12 +271,23 @@ const {
 } = storeToRefs(studentFeedbackStore)
 const { notifications } = storeToRefs(notificationsStore)
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
-const { openDates } = storeToRefs(availabilityStore)
+const {
+  openDates,
+  openByDate,
+  timeSlots: availabilityTimeSlots,
+} = storeToRefs(availabilityStore)
 const upcoming = computed(() => classesStore.upcoming)
 const past = computed(() => classesStore.past)
 const archivedHistory = computed(() => classesStore.archived)
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 const openHighlightDates = computed(() => openDates.value)
+const openSlotsByDate = computed(() => {
+  const map: Record<string, string[]> = {}
+  for (const [date, slots] of Object.entries(openByDate.value)) {
+    map[date] = slots.map((slot) => slot.timeSlot)
+  }
+  return map
+})
 
 /**
  * Gold dot when feedback is ready after a class ends:

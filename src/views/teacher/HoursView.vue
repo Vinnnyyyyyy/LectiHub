@@ -232,10 +232,12 @@ onMounted(() => {
 
     <CalendarPanel
       title="My calendar"
-      subtitle="Gold days mark your scheduled classes."
+      subtitle="Use day view to see vacant open hours vs booked lessons."
       empty-text="Nothing on this day yet."
       :events="calendarUpcoming"
       :loading="loadingCalendar"
+      :time-slots="bookableSlots"
+      :weekly-open-slots="mySlots"
     />
   </section>
 </template>
