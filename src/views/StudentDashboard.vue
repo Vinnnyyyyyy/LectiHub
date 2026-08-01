@@ -252,7 +252,12 @@ const railItems = computed<RailItem[]>(() =>
 
 function setSection(section: StudentSection) {
   activeSection.value = section
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  const main = document.querySelector('.dashboard-main')
+  if (main instanceof HTMLElement) {
+    main.scrollTo({ top: 0, behavior: 'smooth' })
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 }
 
 const authStore = useAuthStore()

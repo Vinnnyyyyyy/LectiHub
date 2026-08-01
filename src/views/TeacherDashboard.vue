@@ -299,7 +299,12 @@ const activeIntro = computed(
 
 async function setSection(section: TeacherSection) {
   activeSection.value = section
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  const main = document.querySelector('.dashboard-main')
+  if (main instanceof HTMLElement) {
+    main.scrollTo({ top: 0, behavior: 'smooth' })
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // Clear the My calendar assignment dot once the teacher opens that view.
   if (section === 'my-calendar') {
