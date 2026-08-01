@@ -122,50 +122,6 @@ async function listUsers(req, res) {
   }
 }
 
-async function updateUserPassword(req, res) {
-  try {
-    const userId = Number(req.params.id);
-    if (!Number.isInteger(userId) || userId < 1) {
-      return res.status(400).json({ message: 'Invalid user id.' });
-    }
-
-    const password = typeof req.body?.password === 'string' ? req.body.password : '';
-    if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters.' });
-    }
-    if (password.length > 80) {
-      return res.status(400).json({ message: 'Password must be at most 80 characters.' });
-    }
-
-    const target = db
-      .prepare(`SELECT id, username, role, full_name FROM users WHERE id = ?`)
-      .get(userId);
-    if (!target) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-    const mustChange = Number(req.user.id) === userId ? 0 : 1;
-    db.prepare(
-      `UPDATE users
-       SET password_hash = ?, must_change_password = ?
-       WHERE id = ?`,
-    ).run(passwordHash, mustChange, userId);
-
-    const displayName = target.full_name || target.username;
-    return res.json({
-      message: `Password updated for ${displayName} (@${target.username}).`,
-      userId,
-    });
-  } catch (err) {
-    console.error('Update user password error:', err);
-    return res.status(500).json({
-      message: 'Unable to update password right now.',
-      error: err.message,
-    });
-  }
-}
-
 async function deleteUser(req, res) {
   try {
     const userId = Number(req.params.id);
@@ -272,4 +228,4 @@ async function deleteUser(req, res) {
   }
 }
 
-module.exports = { createUser, listUsers, updateUserPassword, deleteUser };
+module.exports = { createUser, listUsers, deleteUser };

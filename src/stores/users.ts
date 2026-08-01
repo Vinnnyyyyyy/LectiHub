@@ -19,7 +19,6 @@ interface UsersState {
   users: ManagedUser[]
   loading: boolean
   deletingId: number | null
-  passwordUserId: number | null
   error: string | null
   message: string | null
 }
@@ -29,7 +28,6 @@ export const useUsersStore = defineStore('users', {
     users: [],
     loading: false,
     deletingId: null,
-    passwordUserId: null,
     error: null,
     message: null,
   }),
@@ -79,24 +77,6 @@ export const useUsersStore = defineStore('users', {
         const axiosErr = err as { response?: { data?: { message?: string } } }
         this.error = axiosErr.response?.data?.message || 'Could not create teacher'
         throw err
-      }
-    },
-
-    async changePassword(userId: number, password: string) {
-      this.passwordUserId = userId
-      this.error = null
-      this.message = null
-      try {
-        const res = await api.patch<{ message: string }>(`/users/${userId}/password`, {
-          password,
-        })
-        this.message = res.data.message
-      } catch (err: unknown) {
-        const axiosErr = err as { response?: { data?: { message?: string } } }
-        this.error = axiosErr.response?.data?.message || 'Could not change password'
-        throw err
-      } finally {
-        this.passwordUserId = null
       }
     },
 
