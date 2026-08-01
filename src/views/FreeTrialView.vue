@@ -6,8 +6,8 @@
       <p class="brand">LectiHub</p>
       <h1>Free {{ durationMinutes }}‑minute trial</h1>
       <p class="lede">
-        Fill in your details and preferred slot. We’ll send it to Dolibarr and queue it in LectiHub’s
-        scheduler for confirmation.
+        Fill in your details and preferred slot. We’ll queue it in LectiHub’s scheduler for
+        confirmation.
       </p>
 
       <label for="trial-name">Name</label>
@@ -100,7 +100,7 @@
       </select>
 
       <button type="submit" :disabled="loading">
-        {{ loading ? 'Sending to Dolibarr…' : 'Request free trial' }}
+        {{ loading ? 'Sending request…' : 'Request free trial' }}
       </button>
 
       <p v-if="error" class="error" role="alert">{{ error }}</p>
@@ -116,7 +116,7 @@
       <p class="success-kicker">Request sent</p>
       <h1>Thanks, {{ submittedName }}</h1>
       <p class="lede">
-        Your request was sent to Dolibarr and queued in the E-Scheduler. We’ll confirm your
+        Your request was queued in the E-Scheduler. We’ll confirm your
         {{ submittedSlot }} session by email.
       </p>
       <RouterLink class="back-link" to="/login">Back to log in</RouterLink>

@@ -1,5 +1,3 @@
-const { submitFreeTrialToDolibarr, isDolibarrEnabled, getDolibarrMode } =
-  require('../utils/dolibarrClient');
 const { createTrialScheduleRequest } = require('../utils/trialScheduler');
 const { standardTimeSlotsFor } = require('../utils/availabilityHelpers');
 
@@ -36,8 +34,6 @@ function getTrialConfig(req, res) {
   try {
     res.json({
       enabled: true,
-      dolibarrEnabled: isDolibarrEnabled(),
-      dolibarrMode: isDolibarrEnabled() ? getDolibarrMode() : null,
       durationMinutes: SLOT_MINUTES,
       programs: PROGRAMS,
       timeSlots: TIME_SLOTS,
@@ -45,9 +41,7 @@ function getTrialConfig(req, res) {
         value,
         label,
       })),
-      message: isDolibarrEnabled()
-        ? 'Free trial posts to Dolibarr and the E-Scheduler assign queue.'
-        : 'Free trial posts to the E-Scheduler assign queue. Enable DOLIBARR_ENABLED to also send leads to Dolibarr.',
+      message: 'Free trial posts to the E-Scheduler assign queue.',
     });
   } catch (err) {
     res.status(500).json({ message: 'Error loading trial config', error: err.message });
@@ -112,58 +106,10 @@ async function createFreeTrialRequest(req, res) {
       videoPlatformLabel: VIDEO_PLATFORMS[videoPlatform],
     };
 
-    // Action 1 — Dolibarr CRM (optional when disabled)
-    let dolibarr = {
-      mode: null,
-      thirdpartyId: null,
-      ticketId: null,
-      skipped: true,
-      error: null,
-    };
-
-    if (isDolibarrEnabled()) {
-      try {
-        const result = await submitFreeTrialToDolibarr(trial);
-        dolibarr = {
-          mode: result.mode,
-          thirdpartyId: result.thirdpartyId,
-          ticketId: result.ticketId,
-          skipped: false,
-          error: null,
-        };
-      } catch (err) {
-        dolibarr = {
-          mode: null,
-          thirdpartyId: null,
-          ticketId: null,
-          skipped: false,
-          error: err.message || 'Dolibarr submit failed',
-        };
-      }
-    }
-
-    // Action 2 — E-Scheduler pending booking (date/slot + video platform)
-    const schedule = await createTrialScheduleRequest(trial, {
-      thirdpartyId: dolibarr.thirdpartyId,
-      ticketId: dolibarr.ticketId,
-    });
-
-    const parts = ['Free trial request received.'];
-    if (dolibarr.skipped) {
-      parts.push('Saved to the E-Scheduler review queue (Dolibarr not enabled).');
-    } else if (dolibarr.error) {
-      parts.push(
-        `Saved to the E-Scheduler review queue. Dolibarr sync failed: ${dolibarr.error}`,
-      );
-    } else if (dolibarr.mode === 'log') {
-      parts.push('Posted to Dolibarr (log mode) and the E-Scheduler review queue.');
-    } else {
-      parts.push('Posted to Dolibarr and the E-Scheduler review queue.');
-    }
+    const schedule = await createTrialScheduleRequest(trial);
 
     res.status(201).json({
-      message: parts.join(' '),
-      dolibarr,
+      message: 'Free trial request received. Saved to the E-Scheduler review queue.',
       schedule: {
         requestId: schedule.requestId,
         studentId: schedule.studentId,

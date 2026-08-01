@@ -1,9 +1,4 @@
 const db = require('../config/db');
-const {
-  isDolibarrEnabled,
-  getDolibarrMode,
-  createInvoiceForReceipt,
-} = require('../utils/dolibarrClient');
 
 const METHODS = new Set(['cash', 'card', 'transfer', 'other']);
 const STATUSES = new Set(['recorded', 'confirmed', 'void']);
@@ -35,8 +30,6 @@ function mapReceipt(row) {
     description: row.description || '',
     paidAt: row.paid_at,
     receiptNumber: row.receipt_number,
-    dolibarrInvoiceId: row.dolibarr_invoice_id || null,
-    dolibarrThirdpartyId: row.dolibarr_thirdparty_id || null,
     notes: row.notes || '',
     createdAt: row.created_at,
   };
@@ -79,21 +72,6 @@ function nextReceiptNumber() {
     if (Number.isFinite(n)) seq = n + 1;
   }
   return `${prefix}${String(seq).padStart(4, '0')}`;
-}
-
-function resolveDolibarrThirdpartyId(studentId) {
-  const row = db
-    .prepare(
-      `SELECT dolibarr_thirdparty_id
-       FROM schedule_requests
-       WHERE student_id = ?
-         AND dolibarr_thirdparty_id IS NOT NULL
-         AND TRIM(dolibarr_thirdparty_id) != ''
-       ORDER BY id DESC
-       LIMIT 1`,
-    )
-    .get(studentId);
-  return row?.dolibarr_thirdparty_id || null;
 }
 
 function notifyAdminsAboutReceipt(receiptId, studentName, amountLabel) {
@@ -168,15 +146,14 @@ async function createPaymentReceipt(req, res) {
 
     const status = role === 'admin' ? 'confirmed' : 'recorded';
     const receiptNumber = nextReceiptNumber();
-    const thirdpartyId = resolveDolibarrThirdpartyId(studentId);
 
     const insert = db
       .prepare(
         `INSERT INTO payment_receipts (
            student_id, recorded_by, amount_cents, currency, method, status,
-           description, paid_at, receipt_number, dolibarr_thirdparty_id, notes
+           description, paid_at, receipt_number, notes
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         studentId,
@@ -188,37 +165,10 @@ async function createPaymentReceipt(req, res) {
         description || null,
         paidAt,
         receiptNumber,
-        thirdpartyId,
         notes || null,
       );
 
     const receiptId = Number(insert.lastInsertRowid);
-    let dolibarr = { skipped: true, invoiceId: null, error: null };
-
-    if (isDolibarrEnabled() && getDolibarrMode() === 'api' && thirdpartyId) {
-      try {
-        const invoiceId = await createInvoiceForReceipt({
-          thirdpartyId,
-          amount: amountCents / 100,
-          currency,
-          receiptNumber,
-          description: description || `LectiHub payment ${receiptNumber}`,
-          paidAt,
-        });
-        if (invoiceId != null) {
-          db.prepare(
-            `UPDATE payment_receipts SET dolibarr_invoice_id = ? WHERE id = ?`,
-          ).run(String(invoiceId), receiptId);
-          dolibarr = { skipped: false, invoiceId: String(invoiceId), error: null };
-        }
-      } catch (err) {
-        dolibarr = {
-          skipped: false,
-          invoiceId: null,
-          error: err.message || 'Dolibarr invoice create failed',
-        };
-      }
-    }
 
     if (role === 'student') {
       const studentName = student.full_name || student.username;
@@ -233,7 +183,6 @@ async function createPaymentReceipt(req, res) {
           ? 'Payment receipt recorded for the student.'
           : 'Payment receipt submitted. An admin can confirm it in Payments.',
       receipt,
-      dolibarr,
     });
   } catch (err) {
     res.status(500).json({ message: 'Error creating payment receipt', error: err.message });

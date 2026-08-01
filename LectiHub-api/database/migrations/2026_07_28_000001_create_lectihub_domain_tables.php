@@ -22,8 +22,6 @@ return new class extends Migration
             $table->string('program')->nullable();
             $table->string('entity_type')->nullable();
             $table->string('preferred_meeting_provider')->nullable();
-            $table->string('dolibarr_thirdparty_id')->nullable();
-            $table->string('dolibarr_ticket_id')->nullable();
             $table->timestamps();
         });
 
@@ -183,8 +181,6 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('paid_at');
             $table->string('receipt_number')->unique()->nullable();
-            $table->string('dolibarr_invoice_id')->nullable();
-            $table->string('dolibarr_thirdparty_id')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
         });

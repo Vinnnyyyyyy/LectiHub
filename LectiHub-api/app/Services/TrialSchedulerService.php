@@ -153,11 +153,9 @@ class TrialSchedulerService
      *   Required: email, name, program, entityType, videoPlatform,
      *             videoPlatformLabel, preferredDate, preferredSlot
      *
-     * @param  array{thirdpartyId?: int|null, ticketId?: int|null}  $dolibarrMeta
-     *
      * @return array{requestId: int, studentId: int, studentUsername: string}
      */
-    public function createTrialScheduleRequest(array $trial, array $dolibarrMeta = []): array
+    public function createTrialScheduleRequest(array $trial): array
     {
         ['student' => $student] = $this->findOrCreateTrialStudent($trial);
 
@@ -173,7 +171,7 @@ class TrialSchedulerService
             'Preferred platform: ' . ($trial['videoPlatformLabel'] ?? $trial['videoPlatform'] ?? ''),
         ]));
 
-        $requestId = DB::transaction(function () use ($student, $trial, $remarks, $dolibarrMeta): int {
+        $requestId = DB::transaction(function () use ($student, $trial, $remarks): int {
             $scheduleRequest = ScheduleRequest::create([
                 'student_id'                 => $student->id,
                 'remarks'                    => $remarks,
@@ -182,12 +180,6 @@ class TrialSchedulerService
                 'program'                    => $trial['program']       ?? null,
                 'entity_type'                => $trial['entityType']    ?? null,
                 'preferred_meeting_provider' => $trial['videoPlatform'] ?? null,
-                'dolibarr_thirdparty_id'     => isset($dolibarrMeta['thirdpartyId'])
-                    ? (string) $dolibarrMeta['thirdpartyId']
-                    : null,
-                'dolibarr_ticket_id'         => isset($dolibarrMeta['ticketId'])
-                    ? (string) $dolibarrMeta['ticketId']
-                    : null,
             ]);
 
             ScheduleRequestSlot::create([

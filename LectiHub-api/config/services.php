@@ -37,23 +37,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Dolibarr CRM
-    |--------------------------------------------------------------------------
-    |
-    | Used by DolibarrClient for free-trial intake and optional invoicing.
-    | Set DOLIBARR_MODE=log for local dev (no real API calls).
-    |
-    */
-
-    'dolibarr' => [
-        'enabled' => env('DOLIBARR_ENABLED', false),
-        'mode'    => env('DOLIBARR_MODE', 'log'),
-        'api_url' => env('DOLIBARR_API_URL', ''),
-        'api_key' => env('DOLIBARR_API_KEY', ''),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Meeting / Video providers
     |--------------------------------------------------------------------------
     |

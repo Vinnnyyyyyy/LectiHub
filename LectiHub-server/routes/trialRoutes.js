@@ -5,7 +5,7 @@ const {
   createFreeTrialRequest,
 } = require('../controllers/trialController');
 
-// Public free-trial intake (no auth) — posts leads to Dolibarr from the LectiHub web form.
+// Public free-trial intake (no auth) — queues leads in the E-Scheduler review queue.
 router.get('/config', getTrialConfig);
 router.post('/', createFreeTrialRequest);
 

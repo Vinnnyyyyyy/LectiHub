@@ -24,8 +24,6 @@ export interface PaymentReceipt {
   description: string
   paidAt: string
   receiptNumber: string
-  dolibarrInvoiceId?: string | null
-  dolibarrThirdpartyId?: string | null
   notes: string
   createdAt: string
 }

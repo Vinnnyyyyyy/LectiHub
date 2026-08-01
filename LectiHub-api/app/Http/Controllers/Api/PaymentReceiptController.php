@@ -4,13 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\PaymentReceipt;
-use App\Models\ScheduleRequest;
 use App\Models\User;
-use App\Services\DolibarrClient;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Throwable;
 
 class PaymentReceiptController extends Controller
 {
@@ -18,7 +15,6 @@ class PaymentReceiptController extends Controller
     private const STATUSES = ['recorded', 'confirmed', 'void'];
 
     public function __construct(
-        private readonly DolibarrClient      $dolibarr,
         private readonly NotificationService $notifications,
     ) {}
 
@@ -52,12 +48,10 @@ class PaymentReceiptController extends Controller
             'method'               => $r->method,
             'status'               => $r->status,
             'description'          => $r->description ?? '',
-            'paidAt'               => $r->paid_at,
-            'receiptNumber'        => $r->receipt_number,
-            'dolibarrInvoiceId'    => $r->dolibarr_invoice_id    ?? null,
-            'dolibarrThirdpartyId' => $r->dolibarr_thirdparty_id ?? null,
-            'notes'                => $r->notes ?? '',
-            'createdAt'            => $r->created_at,
+            'paidAt'        => $r->paid_at,
+            'receiptNumber' => $r->receipt_number,
+            'notes'         => $r->notes ?? '',
+            'createdAt'     => $r->created_at,
         ];
     }
 
@@ -87,19 +81,6 @@ class PaymentReceiptController extends Controller
         }
 
         return $prefix . str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * Resolve the Dolibarr thirdparty id from the student's most recent
-     * schedule request that has one.
-     */
-    private function resolveDolibarrThirdpartyId(int $studentId): ?string
-    {
-        return ScheduleRequest::where('student_id', $studentId)
-            ->whereNotNull('dolibarr_thirdparty_id')
-            ->whereRaw("TRIM(dolibarr_thirdparty_id) != ''")
-            ->orderByDesc('id')
-            ->value('dolibarr_thirdparty_id');
     }
 
     /**
@@ -143,7 +124,7 @@ class PaymentReceiptController extends Controller
      * one on behalf of a student.
      *
      * Body: { amount, method, currency?, description?, notes?, paidAt?, studentId? (admin) }
-     * Response 201: { message, receipt, dolibarr }
+     * Response 201: { message, receipt }
      */
     public function createPaymentReceipt(Request $request): JsonResponse
     {
@@ -189,53 +170,24 @@ class PaymentReceiptController extends Controller
 
         $status        = $role === 'admin' ? 'confirmed' : 'recorded';
         $receiptNumber = $this->nextReceiptNumber();
-        $thirdpartyId  = $this->resolveDolibarrThirdpartyId($studentId);
 
         $receipt = PaymentReceipt::create([
-            'student_id'             => $studentId,
-            'recorded_by'            => $authUser->id,
-            'amount_cents'           => $amountCents,
-            'currency'               => $currency,
-            'method'                 => $method,
-            'status'                 => $status,
-            'description'            => $description ?: null,
-            'paid_at'                => $paidAt,
-            'receipt_number'         => $receiptNumber,
-            'dolibarr_thirdparty_id' => $thirdpartyId,
-            'notes'                  => $notes ?: null,
+            'student_id'     => $studentId,
+            'recorded_by'    => $authUser->id,
+            'amount_cents'   => $amountCents,
+            'currency'       => $currency,
+            'method'         => $method,
+            'status'         => $status,
+            'description'    => $description ?: null,
+            'paid_at'        => $paidAt,
+            'receipt_number' => $receiptNumber,
+            'notes'          => $notes ?: null,
         ]);
-
-        // ── Optional Dolibarr invoice ──────────────────────────────────────
-        $dolibarr = ['skipped' => true, 'invoiceId' => null, 'error' => null];
-
-        if ($this->dolibarr->isEnabled() && $this->dolibarr->getMode() === 'api' && $thirdpartyId) {
-            try {
-                $invoiceId = $this->dolibarr->createInvoiceForReceipt(
-                    thirdpartyId:  (int) $thirdpartyId,
-                    amount:        $amountCents / 100,
-                    currency:      $currency,
-                    receiptNumber: $receiptNumber,
-                    description:   $description ?: "LectiHub payment {$receiptNumber}",
-                    paidAt:        $paidAt,
-                );
-
-                if ($invoiceId !== null) {
-                    $receipt->update(['dolibarr_invoice_id' => (string) $invoiceId]);
-                    $dolibarr = ['skipped' => false, 'invoiceId' => (string) $invoiceId, 'error' => null];
-                }
-            } catch (Throwable $e) {
-                $dolibarr = [
-                    'skipped'   => false,
-                    'invoiceId' => null,
-                    'error'     => $e->getMessage() ?: 'Dolibarr invoice create failed',
-                ];
-            }
-        }
 
         // ── Notify admins when a student submits ──────────────────────────
         if ($role === 'student') {
-            $studentName  = $student->full_name ?: $student->username;
-            $amountLabel  = "{$currency} " . number_format($amountCents / 100, 2);
+            $studentName = $student->full_name ?: $student->username;
+            $amountLabel = "{$currency} " . number_format($amountCents / 100, 2);
             $this->notifyAdmins($receipt->id, $studentName, $amountLabel);
         }
 
@@ -246,9 +198,8 @@ class PaymentReceiptController extends Controller
             : 'Payment receipt submitted. An admin can confirm it in Payments.';
 
         return response()->json([
-            'message'  => $message,
-            'receipt'  => $this->mapReceipt($receipt),
-            'dolibarr' => $dolibarr,
+            'message' => $message,
+            'receipt' => $this->mapReceipt($receipt),
         ], 201);
     }
 

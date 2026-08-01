@@ -20,8 +20,6 @@ class ScheduleRequest extends Model
         'program',
         'entity_type',
         'preferred_meeting_provider',
-        'dolibarr_thirdparty_id',
-        'dolibarr_ticket_id',
     ];
 
     protected function casts(): array

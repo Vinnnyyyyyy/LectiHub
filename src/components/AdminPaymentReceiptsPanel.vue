@@ -45,7 +45,7 @@
             {{
               view === 'record'
                 ? 'Save a payment receipt for a student. Confirmed receipts appear in this Payments list.'
-                : 'Open a receipt to confirm or void it. Dolibarr invoice id is stored when sync succeeds.'
+                : 'Open a receipt to confirm or void it.'
             }}
           </p>
         </div>
@@ -171,10 +171,6 @@
               <div v-if="selected.notes" class="span-2">
                 <dt>Notes</dt>
                 <dd>{{ selected.notes }}</dd>
-              </div>
-              <div v-if="selected.dolibarrInvoiceId" class="span-2">
-                <dt>Dolibarr invoice</dt>
-                <dd>{{ selected.dolibarrInvoiceId }}</dd>
               </div>
             </dl>
 

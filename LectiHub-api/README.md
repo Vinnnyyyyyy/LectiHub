@@ -51,7 +51,7 @@ Enable `extension=zip` (and `fileinfo`, `mbstring`, `openssl`, `pdo_sqlite`, `sq
 | Chat | `/api/chat/*` |
 | Calendar | `/api/calendar/*` |
 | Admin monitoring | `/api/admin/monitoring` |
-| Free trial + Dolibarr | `/api/trial-requests` |
+| Free trial | `/api/trial-requests` |
 | Payment receipts | `/api/payment-receipts` |
 
 JSON responses stay **camelCase** to match Pinia stores.
@@ -59,10 +59,6 @@ JSON responses stay **camelCase** to match Pinia stores.
 ## Env (see `.env.example`)
 
 ```env
-DOLIBARR_ENABLED=false
-DOLIBARR_MODE=log
-DOLIBARR_API_URL=
-DOLIBARR_API_KEY=
 MEETING_PROVIDER=jitsi
 MEETING_ALLOW_EARLY_JOIN=true
 BOOKING_LEAD_DAYS=2
