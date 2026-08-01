@@ -141,15 +141,31 @@ onMounted(async () => {
 
     <div class="bar">
       <p class="bar-note">
-        {{ dirty ? 'You have unsaved changes.' : 'Everything is saved.' }}
+        {{
+          error
+            ? 'Settings could not be loaded from the server.'
+            : dirty
+              ? 'You have unsaved changes.'
+              : 'Everything is saved.'
+        }}
       </p>
-      <button type="button" class="btn-ghost" :disabled="!dirty" @click="reset">Discard</button>
-      <button type="button" class="btn-primary" :disabled="!dirty || saving" @click="save">
+      <button type="button" class="btn-ghost" :disabled="!dirty || !!error" @click="reset">
+        Discard
+      </button>
+      <button
+        type="button"
+        class="btn-primary"
+        :disabled="!dirty || saving || !!error"
+        @click="save"
+      >
         {{ saving ? 'Saving…' : 'Save changes' }}
       </button>
     </div>
 
     <p v-if="loading" class="empty">Loading settings…</p>
+    <p v-else-if="error && !Object.keys(draft).length" class="empty">
+      Run <code>php artisan migrate</code> in <code>LectiHub-api</code>, then refresh this page.
+    </p>
 
     <div v-else class="groups">
       <!-- Scheduling -->
