@@ -174,6 +174,22 @@
         </div>
         <CourseMaterialsBrowse mode="student" />
       </section>
+
+      <section
+        v-show="activeSection === 'settings'"
+        id="panel-settings"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-settings"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="tab-settings">Settings</h2>
+            <p>Update your account password.</p>
+          </div>
+        </div>
+        <ChangePasswordPanel />
+      </section>
       </main>
     </div>
     </div>
@@ -208,6 +224,7 @@ import ClassChatWidget from '../components/ClassChatWidget.vue'
 import StudentPaymentReceiptsPanel from '../components/StudentPaymentReceiptsPanel.vue'
 import HomeworkView from './student/HomeworkView.vue'
 import CourseMaterialsBrowse from '../components/CourseMaterialsBrowse.vue'
+import ChangePasswordPanel from '../components/ChangePasswordPanel.vue'
 
 type StudentSection =
   | 'schedule'
@@ -217,6 +234,7 @@ type StudentSection =
   | 'payments'
   | 'homework'
   | 'materials'
+  | 'settings'
 
 const navItems: {
   id: StudentSection
@@ -265,6 +283,12 @@ const navItems: {
     label: 'Payments',
     intro: 'Submit a payment receipt for admin review and keep your invoice history here.',
     icon: 'chart',
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    intro: 'Manage your account password.',
+    icon: 'gear',
   },
 ]
 

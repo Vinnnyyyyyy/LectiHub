@@ -213,6 +213,22 @@
         </div>
         <CourseMaterialsBrowse mode="teacher" />
       </section>
+
+      <section
+        v-show="activeSection === 'settings'"
+        id="panel-settings"
+        class="dash-section"
+        role="tabpanel"
+        aria-labelledby="tab-settings"
+      >
+        <div class="dash-section-label">
+          <div>
+            <h2 id="tab-settings">Settings</h2>
+            <p>Update your account password.</p>
+          </div>
+        </div>
+        <ChangePasswordPanel />
+      </section>
       </main>
     </div>
     </div>
@@ -252,6 +268,7 @@ import CalendarConnectionsPanel from '../components/CalendarConnectionsPanel.vue
 import TeacherAvailabilityPanel from '../components/TeacherAvailabilityPanel.vue'
 import CourseMaterialsBrowse from '../components/CourseMaterialsBrowse.vue'
 import ClassChatWidget from '../components/ClassChatWidget.vue'
+import ChangePasswordPanel from '../components/ChangePasswordPanel.vue'
 
 type TeacherSection =
   | 'today'
@@ -261,6 +278,7 @@ type TeacherSection =
   | 'calendar-connections'
   | 'my-calendar'
   | 'weekly-availability'
+  | 'settings'
 
 const CALENDAR_CHILD_IDS: TeacherSection[] = [
   'calendar-connections',
@@ -315,6 +333,12 @@ const navItems: {
     label: 'My weekly availability',
     intro: 'Set the weekly open hours students can book against.',
     icon: 'list',
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    intro: 'Manage your account password.',
+    icon: 'gear',
   },
 ]
 
@@ -387,8 +411,11 @@ const displayName = computed(() => authStore.fullName || authStore.username || '
 const initials = computed(() => initialsFrom(displayName.value))
 
 const railItems = computed<RailItem[]>(() => {
-  const top = navItems.filter((item) => !CALENDAR_CHILD_IDS.includes(item.id))
+  const top = navItems.filter(
+    (item) => !CALENDAR_CHILD_IDS.includes(item.id) && item.id !== 'settings',
+  )
   const calendarChildren = navItems.filter((item) => CALENDAR_CHILD_IDS.includes(item.id))
+  const settingsItem = navItems.find((item) => item.id === 'settings')
 
   return [
     ...top.map((item) => ({
@@ -414,6 +441,15 @@ const railItems = computed<RailItem[]>(() => {
       child: true,
       badge: item.id === 'my-calendar' && hasUnreadAssignment.value,
     })),
+    ...(settingsItem
+      ? [
+          {
+            id: settingsItem.id,
+            label: settingsItem.label,
+            icon: settingsItem.icon,
+          },
+        ]
+      : []),
   ]
 })
 

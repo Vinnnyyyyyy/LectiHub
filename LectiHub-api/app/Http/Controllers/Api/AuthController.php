@@ -4,12 +4,17 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AuditService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
+    public function __construct(
+        private readonly AuditService $audit,
+    ) {}
+
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -67,6 +72,53 @@ class AuthController extends Controller
         $request->user()?->currentAccessToken()?->delete();
 
         return response()->json(['message' => 'Logged out']);
+    }
+
+    /**
+     * Authenticated user changes their own password (students, teachers, admins).
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'currentPassword' => ['required', 'string'],
+            'newPassword' => ['required', 'string', 'min:6', 'max:80'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+
+        if (! Hash::check($data['currentPassword'], $user->password)) {
+            return response()->json(['message' => 'Current password is incorrect.'], 400);
+        }
+
+        if (Hash::check($data['newPassword'], $user->password)) {
+            return response()->json(['message' => 'New password must be different from the current password.'], 400);
+        }
+
+        $user->password = $data['newPassword'];
+        $user->must_change_password = false;
+        $user->save();
+
+        // Keep this session; drop other tokens so old devices must sign in again.
+        $currentId = $user->currentAccessToken()?->id;
+        if (is_int($currentId) || is_string($currentId)) {
+            $user->tokens()->where('id', '!=', $currentId)->delete();
+        }
+
+        $this->audit->record(
+            'accounts',
+            'user.password_changed',
+            'Password changed by account owner',
+            $user,
+            'user',
+            $user->id,
+            ['role' => $user->role, 'self' => true],
+        );
+
+        return response()->json([
+            'message' => 'Password updated.',
+            'mustChangePassword' => false,
+        ]);
     }
 
     /**
