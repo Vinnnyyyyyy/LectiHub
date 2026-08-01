@@ -242,24 +242,6 @@ const activeIntro = computed(
   () => navItems.find((item) => item.id === activeSection.value)?.intro ?? '',
 )
 
-const railItems = computed<RailItem[]>(() =>
-  navItems.map((item) => ({
-    id: item.id,
-    label: item.label,
-    icon: item.icon,
-  })),
-)
-
-function setSection(section: StudentSection) {
-  activeSection.value = section
-  const main = document.querySelector('.dashboard-main')
-  if (main instanceof HTMLElement) {
-    main.scrollTo({ top: 0, behavior: 'smooth' })
-  } else {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-}
-
 const authStore = useAuthStore()
 const classesStore = useClassesStore()
 const lessonReportsStore = useLessonReportsStore()
@@ -285,6 +267,7 @@ const {
   error: feedbackError,
   feedback: myFeedback,
 } = storeToRefs(studentFeedbackStore)
+const { notifications } = storeToRefs(notificationsStore)
 const { loading: loadingCalendar } = storeToRefs(calendarStore)
 const { openDates } = storeToRefs(availabilityStore)
 const upcoming = computed(() => classesStore.upcoming)
@@ -292,6 +275,56 @@ const past = computed(() => classesStore.past)
 const archivedHistory = computed(() => classesStore.archived)
 const calendarUpcoming = computed(() => calendarStore.upcoming)
 const openHighlightDates = computed(() => openDates.value)
+
+/**
+ * Gold dot when feedback is ready after a class ends:
+ * teacher report exists and the student has not submitted yet,
+ * or an unread "lesson report ready" notification is waiting.
+ */
+const hasFeedbackReady = computed(() => {
+  const pendingReports = lessonReports.value.some((report) => !report.hasFeedback)
+  const endedAwaitingFeedback = past.value.some(
+    (item) =>
+      (item.status === 'completed' || Boolean(item.completedAt)) &&
+      Boolean(item.hasLessonReport) &&
+      !item.hasStudentFeedback,
+  )
+  const unreadReportNotice = notifications.value.some(
+    (item) => !item.isRead && item.type === 'lesson_report',
+  )
+  return pendingReports || endedAwaitingFeedback || unreadReportNotice
+})
+
+const railItems = computed<RailItem[]>(() =>
+  navItems.map((item) => ({
+    id: item.id,
+    label: item.label,
+    icon: item.icon,
+    badge: item.id === 'history' && hasFeedbackReady.value,
+  })),
+)
+
+async function setSection(section: StudentSection) {
+  activeSection.value = section
+  const main = document.querySelector('.dashboard-main')
+  if (main instanceof HTMLElement) {
+    main.scrollTo({ top: 0, behavior: 'smooth' })
+  } else {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (section === 'history') {
+    const unread = notificationsStore.notifications.filter(
+      (item) => !item.isRead && item.type === 'lesson_report',
+    )
+    await Promise.allSettled(unread.map((item) => notificationsStore.markRead(item.id)))
+    await Promise.allSettled([
+      lessonReportsStore.fetchMine(),
+      classesStore.fetchMine(),
+      classesStore.fetchHistory(),
+    ])
+  }
+}
 
 const displayName = computed(
   () => authStore.fullName || authStore.username || 'student',
