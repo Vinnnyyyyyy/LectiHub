@@ -16,21 +16,19 @@ function buildSlots(startMinutes, endMinutes, slotMinutes) {
   return slots;
 }
 
-/**
- * Default 30-minute reservation slots (lunch gap 12:00–13:00).
- * Laravel AvailabilityService::standardTimeSlots() is the live source of truth
- * when using LectiHub-api; this list remains the Express fallback.
- */
-const STANDARD_TIME_SLOTS = [
-  ...buildSlots(9 * 60, 12 * 60, 30),
-  ...buildSlots(13 * 60, 18 * 60, 30),
-];
-
-/** Build a slot grid for an explicit duration (used by tests / optional config). */
+/** Build a slot grid for an explicit duration. */
 function standardTimeSlotsFor(slotMinutes = 30) {
-  const step = slotMinutes === 60 ? 60 : 30;
+  const step = Number(slotMinutes) === 60 ? 60 : 30;
   return [...buildSlots(9 * 60, 12 * 60, step), ...buildSlots(13 * 60, 18 * 60, step)];
 }
+
+/**
+ * Bookable slots for Express. Prefer SCHEDULING_SLOT_MINUTES=60 when not using
+ * LectiHub-api (Laravel reads the same value from centre settings).
+ */
+const STANDARD_TIME_SLOTS = standardTimeSlotsFor(
+  Number(process.env.SCHEDULING_SLOT_MINUTES) === 60 ? 60 : 30,
+);
 
 /** Students may only book on/after today + this many calendar days. */
 const BOOKING_LEAD_DAYS = 2;
@@ -85,9 +83,15 @@ function ensureDefaultTeacherAvailability(db) {
     INSERT OR IGNORE INTO teacher_availability (teacher_id, weekday, time_slot, is_open)
     VALUES (?, ?, ?, 1)
   `);
+  const placeholders = STANDARD_TIME_SLOTS.map(() => '?').join(', ');
+  const prune = db.prepare(
+    `DELETE FROM teacher_availability
+     WHERE teacher_id = ? AND time_slot NOT IN (${placeholders})`,
+  );
 
   const seedOne = db.transaction((teacherId) => {
-    // Always ensure every current standard slot exists (supports slot-length upgrades).
+    // Drop obsolete intervals (e.g. 30-min rows after switching to 60).
+    prune.run(teacherId, ...STANDARD_TIME_SLOTS);
     for (const weekday of DEFAULT_WEEKDAYS) {
       for (const slot of STANDARD_TIME_SLOTS) {
         insert.run(teacherId, weekday, slot);
