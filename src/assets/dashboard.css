@@ -70,10 +70,18 @@
   background: var(--lh-bg);
 }
 
-.dashboard.dashboard-with-rail .content {
-  max-width: none;
+/* Keep the sticky head full-bleed; center its copy with the content column. */
+.dashboard.dashboard-with-rail .page-head .intro {
+  max-width: var(--lh-dash-max);
   width: 100%;
-  margin: 0;
+  margin-inline: auto;
+}
+
+/* Center the working column in the wide main pane (avoids a left-stuck layout). */
+.dashboard.dashboard-with-rail .content {
+  max-width: var(--lh-dash-max);
+  width: 100%;
+  margin-inline: auto;
   padding: 0.75rem 1.5rem 2.75rem;
   display: grid;
   gap: var(--lh-dash-gap);

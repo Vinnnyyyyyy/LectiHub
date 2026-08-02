@@ -376,7 +376,9 @@ onMounted(async () => {
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+  width: 100%;
   max-width: 60rem;
+  margin-inline: auto;
 }
 
 .banner {
