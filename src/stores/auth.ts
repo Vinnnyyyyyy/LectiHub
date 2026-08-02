@@ -68,6 +68,16 @@ export const useAuthStore = defineStore('auth', {
       applyAuthPayload(this, res.data)
     },
 
+    async changePassword(currentPassword: string, newPassword: string) {
+      const res = await api.patch<{ message: string; mustChangePassword: boolean }>(
+        '/auth/password',
+        { currentPassword, newPassword },
+      )
+      this.mustChangePassword = !!res.data.mustChangePassword
+      persistSession(this)
+      return res.data.message
+    },
+
     logout() {
       this.token = null
       this.role = null

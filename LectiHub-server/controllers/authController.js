@@ -64,4 +64,39 @@ async function login(req, res) {
   res.json(issueAuthResponse(user));
 }
 
-module.exports = { login, register };
+async function changePassword(req, res) {
+  const currentPassword = req.body?.currentPassword;
+  const newPassword = req.body?.newPassword;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'currentPassword and newPassword are required.' });
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    return res.status(400).json({ message: 'Password must be at least 6 characters.' });
+  }
+  if (newPassword.length > 80) {
+    return res.status(400).json({ message: 'Password must be at most 80 characters.' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return res.status(404).json({ message: 'User not found.' });
+
+  const match = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!match) {
+    return res.status(400).json({ message: 'Current password is incorrect.' });
+  }
+
+  const same = await bcrypt.compare(newPassword, user.password_hash);
+  if (same) {
+    return res.status(400).json({ message: 'New password must be different from the current password.' });
+  }
+
+  const password_hash = await bcrypt.hash(newPassword, 10);
+  db.prepare(
+    'UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?',
+  ).run(password_hash, user.id);
+
+  res.json({ message: 'Password updated.', mustChangePassword: false });
+}
+
+module.exports = { login, register, changePassword };
